@@ -2072,7 +2072,7 @@ class InvoicePrintHandler {
                 height: 100,
                 colorDark: "#2563eb",
                 colorLight: "#ffffff",
-                correctLevel: this.printWindow.QRCode.CorrectLevel.H
+                correctLevel: this.printWindow.QRCode.CorrectLevel.L
             });
         }
 
