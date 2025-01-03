@@ -43,6 +43,29 @@ document.addEventListener('DOMContentLoaded', function() {
         const element = document.getElementById(elementId);
         setupInlineEditing(element);
     });
+
+    // Add currency code validation
+    const currencyInputs = document.querySelectorAll('[name="documentCurrencyCode"], [name="taxCurrencyCode"]');
+    currencyInputs.forEach(input => {
+        input.addEventListener('input', function(e) {
+            // Convert to uppercase
+            this.value = this.value.toUpperCase();
+            // Remove any non-letter characters
+            this.value = this.value.replace(/[^A-Z]/g, '');
+            // Limit to 3 characters
+            if (this.value.length > 3) {
+                this.value = this.value.slice(0, 3);
+            }
+        });
+    });
+    
+    // Make document currency code required
+    const documentCurrencyInput = document.querySelector('[name="documentCurrencyCode"]');
+    if (documentCurrencyInput) {
+        documentCurrencyInput.required = true;
+    }    
+
+    addExchangeRateField();
 });
 
 // Inline editing setup function
@@ -316,7 +339,6 @@ function validateForm(silent = false) {
         'supplierName',
         'supplierVAT',
         'customerName',
-        'customerVAT'
     ];
 
     let isValid = true;
@@ -369,6 +391,24 @@ function validateForm(silent = false) {
             if (!firstInvalidField) firstInvalidField = input;
         }
     });
+
+
+    // Validate exchange rate if tax currency is present
+    const taxCurrencyCode = document.querySelector('[name="taxCurrencyCode"]').value.trim();
+    const documentCurrencyCode = document.querySelector('[name="documentCurrencyCode"]').value.trim();
+    
+    if (taxCurrencyCode && taxCurrencyCode !== documentCurrencyCode) {
+        const exchangeRate = document.querySelector('[name="exchangeRate"]');
+        if (!exchangeRate || !exchangeRate.value || parseFloat(exchangeRate.value) <= 0) {
+            exchangeRate.classList.add('invalid');
+            isValid = false;
+            if (!firstInvalidField) {
+                firstInvalidField = exchangeRate;
+            }
+        } else {
+            exchangeRate.classList.remove('invalid');
+        }
+    }
 
     if (!isValid && !silent) {
         if (firstInvalidField) {
@@ -656,6 +696,13 @@ function populateBasicDetails(xmlDoc) {
         const [year, month, day] = dueDate.split('-');
         document.querySelector('[name="dueDate"]').value = `${day}.${month}.${year}`;
     }
+
+    // Add currency code handling
+    const documentCurrencyCode = getXMLValue(xmlDoc, 'cbc\\:DocumentCurrencyCode, DocumentCurrencyCode', 'RON');
+    const taxCurrencyCode = getXMLValue(xmlDoc, 'cbc\\:TaxCurrencyCode, TaxCurrencyCode', '');
+    
+    document.querySelector('[name="documentCurrencyCode"]').value = documentCurrencyCode;
+    document.querySelector('[name="taxCurrencyCode"]').value = taxCurrencyCode;
 }
 
 function populatePartyDetails(xmlDoc) {
@@ -1237,12 +1284,35 @@ function saveXML() {
 
     try {
         const xmlDoc = currentInvoice;
+        
+        // First update all the data
         updateBasicDetails(xmlDoc);
         updatePartyDetails(xmlDoc);
         updateAllowanceCharges(xmlDoc);
-        updateLineItems(xmlDoc);
+        
+        // Remove existing TaxTotal and LegalMonetaryTotal elements
+        const existingTaxTotals = xmlDoc.querySelectorAll('cac\\:TaxTotal, TaxTotal');
+        existingTaxTotals.forEach(el => el.remove());
+        
+        const existingMonetaryTotal = xmlDoc.querySelector('cac\\:LegalMonetaryTotal, LegalMonetaryTotal');
+        if (existingMonetaryTotal) {
+            existingMonetaryTotal.remove();
+        }
+        
+        // Remove existing InvoiceLine elements
+        const existingLines = xmlDoc.querySelectorAll('cac\\:InvoiceLine, InvoiceLine');
+        existingLines.forEach(el => el.remove());
+        
+        // Now add elements in the correct order:
+        // 1. TaxTotal elements
         updateTaxTotals(xmlDoc);
+        
+        // 2. LegalMonetaryTotal
         updateMonetaryTotals(xmlDoc);
+        
+        // 3. InvoiceLine elements
+        updateLineItems(xmlDoc);
+        
         downloadXML(xmlDoc);
     } catch (error) {
         handleError(error, 'Eroare la salvarea fișierului XML');
@@ -1257,6 +1327,29 @@ function updateBasicDetails(xmlDoc) {
     
     setXMLValue(xmlDoc, 'cbc\\:IssueDate, IssueDate', parseRomanianDate(issueDateValue));
     setXMLValue(xmlDoc, 'cbc\\:DueDate, DueDate', parseRomanianDate(dueDateValue));
+
+   // Update currency codes
+   const documentCurrencyCode = document.querySelector('[name="documentCurrencyCode"]').value.toUpperCase() || 'RON';
+   setXMLValue(xmlDoc, 'cbc\\:DocumentCurrencyCode, DocumentCurrencyCode', documentCurrencyCode);
+   
+   const taxCurrencyCode = document.querySelector('[name="taxCurrencyCode"]').value.toUpperCase();
+   if (taxCurrencyCode) {
+       let taxCurrencyElement = xmlDoc.querySelector('cbc\\:TaxCurrencyCode, TaxCurrencyCode');
+       if (!taxCurrencyElement) {
+           taxCurrencyElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:TaxCurrencyCode");
+           const insertAfter = xmlDoc.querySelector('cbc\\:DocumentCurrencyCode, DocumentCurrencyCode');
+           if (insertAfter && insertAfter.parentNode) {
+               insertAfter.parentNode.insertBefore(taxCurrencyElement, insertAfter.nextSibling);
+           }
+       }
+       taxCurrencyElement.textContent = taxCurrencyCode;
+   } else {
+       // Remove TaxCurrencyCode if it exists and is empty
+       const taxCurrencyElement = xmlDoc.querySelector('cbc\\:TaxCurrencyCode, TaxCurrencyCode');
+       if (taxCurrencyElement) {
+           taxCurrencyElement.parentNode.removeChild(taxCurrencyElement);
+       }
+   }    
 }
 
 function updatePartyDetails(xmlDoc) {
@@ -1477,24 +1570,22 @@ function updateLineItems(xmlDoc) {
 }
 
 function updateTaxTotals(xmlDoc) {
-    const currencyID = xmlDoc.querySelector('cbc\\:DocumentCurrencyCode, DocumentCurrencyCode').textContent;
+    const currencyID = document.querySelector('[name="documentCurrencyCode"]').value.toUpperCase() || 'RON';
+    const taxCurrencyCode = document.querySelector('[name="taxCurrencyCode"]').value.toUpperCase();
     
-    const { vatBreakdown, totalVat } = calculateVATBreakdown();
-    
-    let taxTotal = xmlDoc.querySelector('cac\\:TaxTotal, TaxTotal');
-    if (!taxTotal) {
-        taxTotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxTotal");
-        xmlDoc.documentElement.appendChild(taxTotal);
-    } else {
-        while (taxTotal.firstChild) {
-            taxTotal.removeChild(taxTotal.firstChild);
-        }
-    }
+    // Remove existing TaxTotal elements
+    const existingTaxTotals = xmlDoc.querySelectorAll('cac\\:TaxTotal, TaxTotal');
+    existingTaxTotals.forEach(element => element.parentNode.removeChild(element));
 
+    // Create main TaxTotal for document currency
+    const taxTotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxTotal");
+    
     const uiTotalVat = parseFloat(document.getElementById('vat').textContent);
-    taxTotal.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:TaxAmount", 
-        uiTotalVat.toFixed(2), { currencyID }));
+    const taxAmountElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:TaxAmount", 
+        uiTotalVat.toFixed(2), { currencyID });
+    taxTotal.appendChild(taxAmountElement);
 
+    // Add TaxSubtotal elements to the main TaxTotal
     const vatRows = document.querySelectorAll('.vat-row');
     vatRows.forEach(row => {
         const taxSubtotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxSubtotal");
@@ -1528,10 +1619,48 @@ function updateTaxTotals(xmlDoc) {
         taxSubtotal.appendChild(taxCategory);
         taxTotal.appendChild(taxSubtotal);
     });
+
+    // Find the correct insertion point - after AllowanceCharge elements
+    let insertionPoint = xmlDoc.querySelector('cac\\:AllowanceCharge, AllowanceCharge');
+    if (insertionPoint) {
+        // Find the last AllowanceCharge
+        while (insertionPoint.nextElementSibling && 
+               (insertionPoint.nextElementSibling.localName === 'AllowanceCharge' ||
+                insertionPoint.nextElementSibling.localName === 'TaxTotal')) {
+            insertionPoint = insertionPoint.nextElementSibling;
+        }
+        insertionPoint.parentNode.insertBefore(taxTotal, insertionPoint.nextSibling);
+    } else {
+        // If no AllowanceCharge, insert before LegalMonetaryTotal
+        const monetaryTotal = xmlDoc.querySelector('cac\\:LegalMonetaryTotal, LegalMonetaryTotal');
+        if (monetaryTotal) {
+            monetaryTotal.parentNode.insertBefore(taxTotal, monetaryTotal);
+        } else {
+            xmlDoc.documentElement.appendChild(taxTotal);
+        }
+    }
+
+    // If tax currency is specified, add another TaxTotal element
+    if (taxCurrencyCode) {
+        const taxCurrencyTotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxTotal");
+        
+        const exchangeRateInput = document.querySelector('[name="exchangeRate"]');
+        const exchangeRate = exchangeRateInput ? parseFloat(exchangeRateInput.value) || 1 : 1;
+        const taxCurrencyVAT = uiTotalVat * exchangeRate;
+
+        const taxCurrencyAmountElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:TaxAmount",
+            taxCurrencyVAT.toFixed(2), { currencyID: taxCurrencyCode });
+        taxCurrencyTotal.appendChild(taxCurrencyAmountElement);
+        
+        // Insert after the main TaxTotal
+        taxTotal.parentNode.insertBefore(taxCurrencyTotal, taxTotal.nextSibling);
+    }
 }
 
+
+
 function updateMonetaryTotals(xmlDoc) {
-    const currencyID = xmlDoc.querySelector('cbc\\:DocumentCurrencyCode, DocumentCurrencyCode').textContent;
+    const currencyID = document.querySelector('[name="documentCurrencyCode"]').value.toUpperCase() || 'RON';
 
     const subtotal = parseFloat(document.getElementById('subtotal').textContent) || 0;
     const allowances = parseFloat(document.getElementById('totalAllowances').textContent) || 0;
@@ -1540,16 +1669,16 @@ function updateMonetaryTotals(xmlDoc) {
     const totalVat = parseFloat(document.getElementById('vat').textContent) || 0;
     const total = parseFloat(document.getElementById('total').textContent) || 0;
 
-    let monetaryTotal = xmlDoc.querySelector('cac\\:LegalMonetaryTotal, LegalMonetaryTotal');
-    if (!monetaryTotal) {
-        monetaryTotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:LegalMonetaryTotal");
-        xmlDoc.documentElement.appendChild(monetaryTotal);
-    } else {
-        while (monetaryTotal.firstChild) {
-            monetaryTotal.removeChild(monetaryTotal.firstChild);
-        }
+    // Remove existing LegalMonetaryTotal if present
+    const existingMonetaryTotal = xmlDoc.querySelector('cac\\:LegalMonetaryTotal, LegalMonetaryTotal');
+    if (existingMonetaryTotal) {
+        existingMonetaryTotal.parentNode.removeChild(existingMonetaryTotal);
     }
 
+    // Create new LegalMonetaryTotal
+    const monetaryTotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:LegalMonetaryTotal");
+
+    // Add all required monetary amounts
     const amounts = {
         "LineExtensionAmount": subtotal,
         "TaxExclusiveAmount": netAmount,
@@ -1563,7 +1692,72 @@ function updateMonetaryTotals(xmlDoc) {
         monetaryTotal.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
             `cbc:${elementName}`, value.toFixed(2), { currencyID }));
     });
+
+    // Find the correct insertion point - after last TaxTotal
+    let insertionPoint = xmlDoc.querySelector('cac\\:TaxTotal, TaxTotal');
+    if (insertionPoint) {
+        // Find the last TaxTotal
+        while (insertionPoint.nextElementSibling && 
+               insertionPoint.nextElementSibling.localName === 'TaxTotal') {
+            insertionPoint = insertionPoint.nextElementSibling;
+        }
+        insertionPoint.parentNode.insertBefore(monetaryTotal, insertionPoint.nextSibling);
+    } else {
+        // If no TaxTotal, insert before first InvoiceLine
+        const firstInvoiceLine = xmlDoc.querySelector('cac\\:InvoiceLine, InvoiceLine');
+        if (firstInvoiceLine) {
+            firstInvoiceLine.parentNode.insertBefore(monetaryTotal, firstInvoiceLine);
+        } else {
+            xmlDoc.documentElement.appendChild(monetaryTotal);
+        }
+    }
 }
+
+function getExchangeRate(fromCurrency, toCurrency) {
+    // For now, return 1 as default exchange rate
+    // TODO: Implement proper exchange rate handling
+    return 1;
+}
+
+// Update the invoice form to include exchange rate when tax currency is different
+function addExchangeRateField() {
+    const taxCurrencyInput = document.querySelector('[name="taxCurrencyCode"]');
+    const documentCurrencyInput = document.querySelector('[name="documentCurrencyCode"]');
+    
+    function updateExchangeRateVisibility() {
+        const taxCurrency = taxCurrencyInput.value.toUpperCase();
+        const documentCurrency = documentCurrencyInput.value.toUpperCase();
+        
+        let exchangeRateContainer = document.getElementById('exchangeRateContainer');
+        if (taxCurrency && taxCurrency !== documentCurrency) {
+            if (!exchangeRateContainer) {
+                const container = document.createElement('div');
+                container.id = 'exchangeRateContainer';
+                container.className = 'form-group';
+                container.innerHTML = `
+                    <label class="form-label">Curs Valutar ${documentCurrency}/${taxCurrency}</label>
+                    <input type="number" class="form-input" name="exchangeRate" 
+                           step="0.0001" min="0" value="1" 
+                           onchange="refreshTotals()">
+                `;
+                taxCurrencyInput.parentNode.after(container);
+            } else {
+                // Update label if currencies changed
+                const label = exchangeRateContainer.querySelector('label');
+                label.textContent = `Curs Valutar ${documentCurrency}/${taxCurrency}`;
+            }
+        } else if (exchangeRateContainer) {
+            exchangeRateContainer.remove();
+        }
+    }
+
+    taxCurrencyInput.addEventListener('input', updateExchangeRateVisibility);
+    documentCurrencyInput.addEventListener('input', updateExchangeRateVisibility);
+    
+    // Initial check
+    updateExchangeRateVisibility();
+}
+
 
 // Utility functions
 function getXMLValue(xmlDoc, selector, defaultValue = '') {
@@ -1661,10 +1855,8 @@ if (typeof module !== 'undefined' && module.exports) {
 // Currency formatter utility
 class InvoiceFormatter {
     constructor() {
-        // Get system locale
         this.locale = navigator.language || 'en-US';
         
-        // Initialize formatters
         this.currencyFormatter = new Intl.NumberFormat(this.locale, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
@@ -1674,6 +1866,12 @@ class InvoiceFormatter {
         this.quantityFormatter = new Intl.NumberFormat(this.locale, {
             minimumFractionDigits: 3,
             maximumFractionDigits: 3,
+            useGrouping: true
+        });
+
+        this.numberFormatter = new Intl.NumberFormat(this.locale, {
+            minimumFractionDigits: 4,
+            maximumFractionDigits: 4,
             useGrouping: true
         });
     }
@@ -1688,6 +1886,12 @@ class InvoiceFormatter {
         const numValue = parseFloat(value);
         if (isNaN(numValue)) return '0.000';
         return this.quantityFormatter.format(numValue);
+    }
+
+    formatNumber(value) {
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) return '0.0000';
+        return this.numberFormatter.format(numValue);
     }
 }
 
@@ -1719,6 +1923,10 @@ class InvoicePrintHandler {
 
                         .no-print {
                             display: none;
+                        }
+
+                        .show-in-print {
+                            display: flex !important;
                         }
                     }
 
@@ -1844,9 +2052,33 @@ class InvoicePrintHandler {
                         text-align: right;
                     }
 
+                    .totals-container {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        gap: 2rem;
+                    }
+
+                    .currency-info {
+                        flex: 1;
+                        padding: 0.5rem;
+                        background: #f8fafc;
+                        border-radius: 4px;
+                        border: 1px solid #e2e8f0;
+                        font-size: 12px;
+                    }
+                    
+                    .currency-info p {
+                        margin: 0.25rem 0;
+                    }
+
+                    .currency-code {
+                        font-weight: bold;
+                        color: #2563eb;
+                    }
+
                     .totals-section {
                         width: 300px;
-                        margin-left: auto;
                     }
 
                     .total-row {
@@ -1881,6 +2113,23 @@ class InvoicePrintHandler {
                         grid-template-columns: repeat(4, 1fr);
                         gap: 0.5rem;
                         font-size: 11px;
+                        margin-bottom: 1rem;
+                    }
+
+                    .vat-grid-header {
+                        font-weight: bold;
+                        color: #64748b;
+                    }
+
+                    .vat-amount-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 0.5rem 0;
+                        border-top: 1px solid #e2e8f0;
+                    }
+
+                    #print-vat-secondary {
+                        border-top: none;
                     }
 
                     .footer {
@@ -1936,13 +2185,11 @@ class InvoicePrintHandler {
                     <div class="party-details">
                         <div class="party-box">
                             <div class="party-title">Furnizor</div>
-                            <div class="party-info" id="print-supplier-details">
-                            </div>
+                            <div class="party-info" id="print-supplier-details"></div>
                         </div>
                         <div class="party-box">
                             <div class="party-title">Client</div>
-                            <div class="party-info" id="print-customer-details">
-                            </div>
+                            <div class="party-info" id="print-customer-details"></div>
                         </div>
                     </div>
 
@@ -1958,37 +2205,61 @@ class InvoicePrintHandler {
                                 <th>Total</th>
                             </tr>
                         </thead>
-                        <tbody id="print-items">
-                        </tbody>
+                        <tbody id="print-items"></tbody>
                     </table>
 
-                    <div class="totals-section">
-                        <div class="total-row">
-                            <span>Subtotal:</span>
-                            <span id="print-subtotal"></span>
+                    <div class="totals-container">
+                        <div class="currency-info">
+                            <p>Monedă Factură: <span class="currency-code" id="print-document-currency"></span></p>
+                            <p id="print-tax-currency-container" style="display: none;">
+                                Monedă TVA: <span class="currency-code" id="print-tax-currency"></span>
+                                <br>
+                                Curs valutar: <span id="print-exchange-rate"></span>
+                            </p>
                         </div>
-                        <div class="total-row">
-                            <span>Total Reduceri:</span>
-                            <span id="print-allowances"></span>
-                        </div>
-                        <div class="total-row">
-                            <span>Total Taxe:</span>
-                            <span id="print-charges"></span>
-                        </div>
-                        <div class="total-row">
-                            <span>Valoare Netă:</span>
-                            <span id="print-net-amount"></span>
-                        </div>
-                        
-                        <div class="vat-breakdown">
-                            <div class="vat-title">Defalcare TVA</div>
-                            <div class="vat-grid" id="print-vat-breakdown">
+
+                        <div class="totals-section">
+                            <div class="total-row">
+                                <span>Subtotal:</span>
+                                <span id="print-subtotal"></span>
                             </div>
-                        </div>
-                        
-                        <div class="total-row final">
-                            <span>Total de Plată:</span>
-                            <span id="print-total"></span>
+                            <div class="total-row">
+                                <span>Total Reduceri:</span>
+                                <span id="print-allowances"></span>
+                            </div>
+                            <div class="total-row">
+                                <span>Total Taxe:</span>
+                                <span id="print-charges"></span>
+                            </div>
+                            <div class="total-row">
+                                <span>Valoare Netă:</span>
+                                <span id="print-net-amount"></span>
+                            </div>
+                            
+                            <div class="vat-breakdown">
+                                <div class="vat-title">Defalcare TVA</div>
+                                <div class="vat-grid">
+                                    <div class="vat-grid-header">Tip TVA</div>
+                                    <div class="vat-grid-header">Cotă</div>
+                                    <div class="vat-grid-header">Bază</div>
+                                    <div class="vat-grid-header">TVA</div>
+                                </div>
+                                <div class="vat-grid" id="print-vat-breakdown"></div>
+                                
+                                <div id="print-vat-currencies" class="vat-amount-row">
+                                    <span>Total TVA (<span id="print-vat-currency-main"></span>):</span>
+                                    <span id="print-vat-main"></span>
+                                </div>
+                                <div id="print-vat-secondary" class="vat-amount-row" style="display: none;">
+                                    <span>Total TVA (<span id="print-vat-currency-secondary"></span>):</span>
+                                    <span id="print-vat-secondary-amount"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="total-row total-row-final">
+                                <span>Total de Plată:</span>
+                                <span id="print-total"></span>
+                            </div>
                         </div>
                     </div>
 
@@ -1999,10 +2270,6 @@ class InvoicePrintHandler {
             </body>
             </html>
         `;
-    }
-
-    formatCurrency(value) {
-        return parseFloat(value).toFixed(2);
     }
 
     getVATTypeLabel(type) {
@@ -2016,12 +2283,27 @@ class InvoicePrintHandler {
         return labels[type] || type;
     }
 
+    createPartyHTML(party) {
+        return `
+            <p><strong>${party.name}</strong></p>
+            <p>CUI: ${party.vat}</p>
+            <p>Nr. Reg. Com.: ${party.companyId}</p>
+            <p>${party.address}</p>
+            <p>${party.city}${party.county ? ', ' + party.county : ''}</p>
+            <p>${party.country}</p>
+            ${party.phone ? `<p>Tel: ${party.phone}</p>` : ''}
+        `;
+    }
+
     collectInvoiceData() {
         return {
             // Basic details
             invoiceNumber: document.querySelector('[name="invoiceNumber"]').value,
             issueDate: document.querySelector('[name="issueDate"]').value,
             dueDate: document.querySelector('[name="dueDate"]').value,
+            documentCurrencyCode: document.querySelector('[name="documentCurrencyCode"]').value.toUpperCase() || 'RON',
+            taxCurrencyCode: document.querySelector('[name="taxCurrencyCode"]').value.toUpperCase(),
+            exchangeRate: parseFloat(document.querySelector('[name="exchangeRate"]')?.value || 1),
 
             // Supplier details
             supplier: {
@@ -2060,12 +2342,12 @@ class InvoicePrintHandler {
 
             // Totals
             totals: {
-                subtotal: document.getElementById('subtotal').textContent,
-                allowances: document.getElementById('totalAllowances').textContent,
-                charges: document.getElementById('totalCharges').textContent,
-                netAmount: document.getElementById('netAmount').textContent,
-                vat: document.getElementById('vat').textContent,
-                total: document.getElementById('total').textContent
+                subtotal: parseFloat(document.getElementById('subtotal').textContent),
+                allowances: parseFloat(document.getElementById('totalAllowances').textContent),
+                charges: parseFloat(document.getElementById('totalCharges').textContent),
+                netAmount: parseFloat(document.getElementById('netAmount').textContent),
+                vat: parseFloat(document.getElementById('vat').textContent),
+                total: parseFloat(document.getElementById('total').textContent)
             },
 
             // VAT Breakdown
@@ -2088,6 +2370,18 @@ class InvoicePrintHandler {
         doc.getElementById('print-issue-date').textContent = data.issueDate;
         doc.getElementById('print-due-date').textContent = data.dueDate;
 
+        // Currency information
+        doc.getElementById('print-document-currency').textContent = data.documentCurrencyCode;
+        
+        const taxCurrencyContainer = doc.getElementById('print-tax-currency-container');
+        if (data.taxCurrencyCode && data.taxCurrencyCode !== data.documentCurrencyCode) {
+            taxCurrencyContainer.style.display = 'block';
+            doc.getElementById('print-tax-currency').textContent = data.taxCurrencyCode;
+            doc.getElementById('print-exchange-rate').textContent = this.formatter.formatNumber(data.exchangeRate);
+        } else {
+            taxCurrencyContainer.style.display = 'none';
+        }
+
         // Generate QR code
         const qrData = {
             invoiceNumber: data.invoiceNumber,
@@ -2097,7 +2391,6 @@ class InvoicePrintHandler {
             total: this.formatter.formatCurrency(data.totals.total)
         };
 
-        // QR code generation...
         const qrElement = doc.getElementById('qrcode');
         if (qrElement && typeof this.printWindow.QRCode !== 'undefined') {
             new this.printWindow.QRCode(qrElement, {
@@ -2110,11 +2403,11 @@ class InvoicePrintHandler {
             });
         }
 
-        // Supplier and customer details
+        // Party details
         doc.getElementById('print-supplier-details').innerHTML = this.createPartyHTML(data.supplier);
         doc.getElementById('print-customer-details').innerHTML = this.createPartyHTML(data.customer);
 
-        // Line items with formatted numbers
+        // Line items
         doc.getElementById('print-items').innerHTML = data.items.map(item => `
             <tr>
                 <td>${item.number}</td>
@@ -2127,32 +2420,37 @@ class InvoicePrintHandler {
             </tr>
         `).join('');
 
-        // Totals with formatted numbers
+        // Totals
         doc.getElementById('print-subtotal').textContent = this.formatter.formatCurrency(data.totals.subtotal);
         doc.getElementById('print-allowances').textContent = this.formatter.formatCurrency(data.totals.allowances);
         doc.getElementById('print-charges').textContent = this.formatter.formatCurrency(data.totals.charges);
         doc.getElementById('print-net-amount').textContent = this.formatter.formatCurrency(data.totals.netAmount);
         doc.getElementById('print-total').textContent = this.formatter.formatCurrency(data.totals.total);
 
-        // VAT Breakdown with formatted numbers
+        // VAT Breakdown grid
         doc.getElementById('print-vat-breakdown').innerHTML = data.vatBreakdown.map(vat => `
             <div>${this.getVATTypeLabel(vat.type)}</div>
             <div>${this.formatter.formatCurrency(vat.rate)}%</div>
             <div>${this.formatter.formatCurrency(vat.base)}</div>
             <div>${this.formatter.formatCurrency(vat.amount)}</div>
         `).join('');
-    }
 
-    createPartyHTML(party) {
-        return `
-            <p><strong>${party.name}</strong></p>
-            <p>CUI: ${party.vat}</p>
-            <p>Nr. Reg. Com.: ${party.companyId}</p>
-            <p>${party.address}</p>
-            <p>${party.city}${party.county ? ', ' + party.county : ''}</p>
-            <p>${party.country}</p>
-            ${party.phone ? `<p>Tel: ${party.phone}</p>` : ''}
-        `;
+        // VAT amounts in both currencies
+        doc.getElementById('print-vat-currency-main').textContent = data.documentCurrencyCode;
+        doc.getElementById('print-vat-main').textContent = this.formatter.formatCurrency(data.totals.vat);
+
+        const secondaryVatRow = doc.getElementById('print-vat-secondary');
+        if (data.taxCurrencyCode && data.taxCurrencyCode !== data.documentCurrencyCode) {
+            secondaryVatRow.style.display = 'flex';
+            doc.getElementById('print-vat-currency-secondary').textContent = data.taxCurrencyCode;
+            
+            // Calculate VAT in tax currency
+            const vatInTaxCurrency = data.totals.vat * data.exchangeRate;
+            doc.getElementById('print-vat-secondary-amount').textContent = 
+                this.formatter.formatCurrency(vatInTaxCurrency);
+        } else {
+            secondaryVatRow.style.display = 'none';
+        }
     }
 
     async print() {
@@ -2208,14 +2506,6 @@ class InvoicePrintHandler {
 const formatter = new InvoiceFormatter();
 const printHandler = new InvoicePrintHandler();
 
-// Export for use in other modules if needed
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        InvoiceFormatter,
-        InvoicePrintHandler
-    };
-}
-
 // Add print button to the UI
 function addPrintButton() {
     const headerButtonGroup = document.querySelector('.button-group');
@@ -2230,3 +2520,11 @@ function addPrintButton() {
 
 // Initialize when the document is ready
 document.addEventListener('DOMContentLoaded', addPrintButton);
+
+// Export for use in other modules if needed
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        InvoiceFormatter,
+        InvoicePrintHandler
+    };
+}
