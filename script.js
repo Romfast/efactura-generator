@@ -1658,11 +1658,44 @@ if (typeof module !== 'undefined' && module.exports) {
     };
 }                
 
-// Print functions
+// Currency formatter utility
+class InvoiceFormatter {
+    constructor() {
+        // Get system locale
+        this.locale = navigator.language || 'en-US';
+        
+        // Initialize formatters
+        this.currencyFormatter = new Intl.NumberFormat(this.locale, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+            useGrouping: true
+        });
+        
+        this.quantityFormatter = new Intl.NumberFormat(this.locale, {
+            minimumFractionDigits: 3,
+            maximumFractionDigits: 3,
+            useGrouping: true
+        });
+    }
+
+    formatCurrency(value) {
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) return '0.00';
+        return this.currencyFormatter.format(numValue);
+    }
+
+    formatQuantity(value) {
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) return '0.000';
+        return this.quantityFormatter.format(numValue);
+    }
+}
+
 // Print handler class
 class InvoicePrintHandler {
     constructor() {
         this.printWindow = null;
+        this.formatter = new InvoiceFormatter();
     }
 
     getPrintTemplate() {
@@ -2061,9 +2094,10 @@ class InvoicePrintHandler {
             issueDate: data.issueDate,
             supplier: data.supplier.name,
             customer: data.customer.name,
-            total: data.totals.total
+            total: this.formatter.formatCurrency(data.totals.total)
         };
 
+        // QR code generation...
         const qrElement = doc.getElementById('qrcode');
         if (qrElement && typeof this.printWindow.QRCode !== 'undefined') {
             new this.printWindow.QRCode(qrElement, {
@@ -2076,38 +2110,36 @@ class InvoicePrintHandler {
             });
         }
 
-        // Supplier details
+        // Supplier and customer details
         doc.getElementById('print-supplier-details').innerHTML = this.createPartyHTML(data.supplier);
-
-        // Customer details
         doc.getElementById('print-customer-details').innerHTML = this.createPartyHTML(data.customer);
 
-        // Line items
+        // Line items with formatted numbers
         doc.getElementById('print-items').innerHTML = data.items.map(item => `
             <tr>
                 <td>${item.number}</td>
                 <td>${item.description}</td>
                 <td>${item.unit}</td>
-                <td class="number-cell">${this.formatCurrency(item.quantity)}</td>
-                <td class="number-cell">${this.formatCurrency(item.price)}</td>
-                <td class="number-cell">${item.vatRate}%</td>
-                <td class="number-cell">${this.formatCurrency(item.quantity * item.price)}</td>
+                <td class="number-cell">${this.formatter.formatQuantity(item.quantity)}</td>
+                <td class="number-cell">${this.formatter.formatCurrency(item.price)}</td>
+                <td class="number-cell">${this.formatter.formatCurrency(item.vatRate)}%</td>
+                <td class="number-cell">${this.formatter.formatCurrency(item.quantity * item.price)}</td>
             </tr>
         `).join('');
 
-        // Totals
-        doc.getElementById('print-subtotal').textContent = this.formatCurrency(data.totals.subtotal);
-        doc.getElementById('print-allowances').textContent = this.formatCurrency(data.totals.allowances);
-        doc.getElementById('print-charges').textContent = this.formatCurrency(data.totals.charges);
-        doc.getElementById('print-net-amount').textContent = this.formatCurrency(data.totals.netAmount);
-        doc.getElementById('print-total').textContent = this.formatCurrency(data.totals.total);
+        // Totals with formatted numbers
+        doc.getElementById('print-subtotal').textContent = this.formatter.formatCurrency(data.totals.subtotal);
+        doc.getElementById('print-allowances').textContent = this.formatter.formatCurrency(data.totals.allowances);
+        doc.getElementById('print-charges').textContent = this.formatter.formatCurrency(data.totals.charges);
+        doc.getElementById('print-net-amount').textContent = this.formatter.formatCurrency(data.totals.netAmount);
+        doc.getElementById('print-total').textContent = this.formatter.formatCurrency(data.totals.total);
 
-        // VAT Breakdown
+        // VAT Breakdown with formatted numbers
         doc.getElementById('print-vat-breakdown').innerHTML = data.vatBreakdown.map(vat => `
             <div>${this.getVATTypeLabel(vat.type)}</div>
-            <div>${vat.rate}%</div>
-            <div>${this.formatCurrency(vat.base)}</div>
-            <div>${this.formatCurrency(vat.amount)}</div>
+            <div>${this.formatter.formatCurrency(vat.rate)}%</div>
+            <div>${this.formatter.formatCurrency(vat.base)}</div>
+            <div>${this.formatter.formatCurrency(vat.amount)}</div>
         `).join('');
     }
 
@@ -2173,7 +2205,16 @@ class InvoicePrintHandler {
 }
 
 // Create instance and export
+const formatter = new InvoiceFormatter();
 const printHandler = new InvoicePrintHandler();
+
+// Export for use in other modules if needed
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        InvoiceFormatter,
+        InvoicePrintHandler
+    };
+}
 
 // Add print button to the UI
 function addPrintButton() {
