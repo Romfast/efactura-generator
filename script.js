@@ -203,28 +203,67 @@ function populateBasicDetails(xmlDoc) {
 }
 
 function populatePartyDetails(xmlDoc) {
-    // Supplier details
+    // Populate supplier details
     const supplierParty = xmlDoc.querySelector('cac\\:AccountingSupplierParty, AccountingSupplierParty');
     if (supplierParty) {
+        // Name from PartyLegalEntity
         document.querySelector('[name="supplierName"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, RegistrationName');
+            getXMLValue(supplierParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName');
+        
+        // VAT Number from PartyTaxScheme
         document.querySelector('[name="supplierVAT"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, CompanyID');
+            getXMLValue(supplierParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID');
+        
+        // Company Registration ID (should get J40/14205/1994)
+        document.querySelector('[name="supplierCompanyId"]').value = 
+            getXMLValue(supplierParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID');
+
+        // Address details
         document.querySelector('[name="supplierAddress"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, StreetName');
+            getXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, PostalAddress StreetName');
+        document.querySelector('[name="supplierCity"]').value = 
+            getXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CityName, PostalAddress CityName');
+        document.querySelector('[name="supplierCountrySubentity"]').value = 
+            getXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CountrySubentity, PostalAddress CountrySubentity');
+        document.querySelector('[name="supplierCountry"]').value = 
+            getXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cac\\:Country cbc\\:IdentificationCode, Country IdentificationCode');
+            
+        // Phone number
+        document.querySelector('[name="supplierPhone"]').value = 
+            getXMLValue(supplierParty, 'cac\\:Party cac\\:Contact cbc\\:Telephone, Contact Telephone');
     }
 
-    // Customer details
+    // Populate customer details
     const customerParty = xmlDoc.querySelector('cac\\:AccountingCustomerParty, AccountingCustomerParty');
     if (customerParty) {
+        // Name from PartyLegalEntity
         document.querySelector('[name="customerName"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, RegistrationName');
+            getXMLValue(customerParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName');
+        
+        // VAT Number from PartyTaxScheme
         document.querySelector('[name="customerVAT"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, CompanyID');
+            getXMLValue(customerParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID');
+        
+        // Company Registration ID
+        document.querySelector('[name="customerCompanyId"]').value = 
+            getXMLValue(customerParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID');
+
+        // Address details
         document.querySelector('[name="customerAddress"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, StreetName');
+            getXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, PostalAddress StreetName');
+        document.querySelector('[name="customerCity"]').value = 
+            getXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CityName, PostalAddress CityName');
+        document.querySelector('[name="customerCountrySubentity"]').value = 
+            getXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CountrySubentity, PostalAddress CountrySubentity');
+        document.querySelector('[name="customerCountry"]').value = 
+            getXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cac\\:Country cbc\\:IdentificationCode, Country IdentificationCode');
+            
+        // Phone number
+        document.querySelector('[name="customerPhone"]').value = 
+            getXMLValue(customerParty, 'cac\\:Party cac\\:Contact cbc\\:Telephone, Contact Telephone');
     }
 }
+
 
 function populateAllowanceCharges(xmlDoc) {
     const charges = parseAllowanceCharges(xmlDoc);
@@ -370,8 +409,8 @@ function createLineItemHTML(index, description, quantity, price, vatRate, unitCo
     sellersItemIdentification = '', standardItemId = '', standardItemSchemeId = '0160') {
     return `
         <div class="line-item" data-index="${index}">
+            <!-- Essential fields in a compact grid -->
             <div class="grid">
-                <!-- Essential fields -->
                 <div class="form-group">
                     <label class="form-label">Name</label>
                     <input type="text" class="form-input" name="description${index}" value="${description}">
@@ -401,21 +440,20 @@ function createLineItemHTML(index, description, quantity, price, vatRate, unitCo
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">VAT Rate (%)</label>
+                    <label class="form-label">VAT %</label>
                     <input type="number" step="1" class="form-input" name="vatRate${index}" 
                         value="${vatRate}" onchange="updateTotals()">
                 </div>
             </div>
 
-            <!-- Optional details toggle -->
+            <!-- Optional details section -->
             <div class="optional-details-toggle">
-                <button type="button" class="button button-small button-secondary" 
+                <button type="button" class="button button-secondary" 
                     onclick="toggleOptionalDetails(${index})">
-                    Additional Details ▼
+                    ▼ Details
                 </button>
             </div>
 
-            <!-- Optional details section -->
             <div class="optional-details" id="optionalDetails${index}" style="display: none;">
                 <div class="grid">
                     <div class="form-group">
@@ -433,7 +471,7 @@ function createLineItemHTML(index, description, quantity, price, vatRate, unitCo
                             <input type="text" class="form-input" name="standardItemId${index}" 
                                 placeholder="ID" value="${standardItemId}">
                             <input type="text" class="form-input" name="standardItemSchemeId${index}" 
-                                placeholder="Scheme ID" value="${standardItemSchemeId}">
+                                placeholder="Scheme" value="${standardItemSchemeId}">
                         </div>
                     </div>
                     <div class="form-group">
@@ -442,14 +480,14 @@ function createLineItemHTML(index, description, quantity, price, vatRate, unitCo
                             <input type="text" class="form-input" name="commodityCode${index}" 
                                 placeholder="Code" value="${commodityCode}">
                             <input type="text" class="form-input" name="commodityListId${index}" 
-                                placeholder="List ID" value="${commodityListId}">
+                                placeholder="List" value="${commodityListId}">
                         </div>
                     </div>
                 </div>
             </div>
 
             <button type="button" class="button button-danger remove-line-item" onclick="removeLineItem(${index})">
-                Remove
+                ✕
             </button>
         </div>
     `;
@@ -461,10 +499,10 @@ function toggleOptionalDetails(index) {
     
     if (optionalDetails.style.display === 'none') {
         optionalDetails.style.display = 'block';
-        button.innerHTML = 'Additional Details ▲';
+        button.innerHTML = '▲ Details';
     } else {
         optionalDetails.style.display = 'none';
-        button.innerHTML = 'Additional Details ▼';
+        button.innerHTML = '▼ Details';
     }
 }
 
@@ -562,8 +600,33 @@ function handleStorno() {
         amountInput.value = -currentAmount;
     });
 
-    // Update totals after reversing signs
+    // Handle VAT breakdown rows
+    document.querySelectorAll('.vat-row').forEach(row => {
+        const baseInput = row.querySelector('.vat-base');
+        const amountInput = row.querySelector('.vat-amount');
+        
+        // Reverse the signs for base amount and VAT amount
+        if (baseInput) {
+            const currentBase = parseFloat(baseInput.value) || 0;
+            baseInput.value = (-currentBase).toFixed(2);
+        }
+        
+        if (amountInput) {
+            const currentAmount = parseFloat(amountInput.value) || 0;
+            amountInput.value = (-currentAmount).toFixed(2);
+        }
+    });
+
+    // Clear manually edited VAT rows to allow recalculation
+    manuallyEditedVatRows.clear();
+
+    // Update totals and VAT breakdown
     refreshTotals();
+    
+    // Ensure XML TaxTotal is updated
+    if (currentInvoice) {
+        updateTaxTotals(currentInvoice);
+    }
 }
 
 function updateTotals() {
@@ -734,23 +797,75 @@ function updatePartyDetails(xmlDoc) {
     // Update supplier details
     const supplierParty = xmlDoc.querySelector('cac\\:AccountingSupplierParty, AccountingSupplierParty');
     if (supplierParty) {
-        setXMLValue(supplierParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, RegistrationName',
+        setXMLValue(supplierParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName',
             document.querySelector('[name="supplierName"]').value);
-        setXMLValue(supplierParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, CompanyID',
+        setXMLValue(supplierParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID',
             document.querySelector('[name="supplierVAT"]').value);
-        setXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, StreetName',
+        setXMLValue(supplierParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID',
+            document.querySelector('[name="supplierCompanyId"]').value);
+        setXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, PostalAddress StreetName',
             document.querySelector('[name="supplierAddress"]').value);
+        setXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CityName, PostalAddress CityName',
+            document.querySelector('[name="supplierCity"]').value);
+        setXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CountrySubentity, PostalAddress CountrySubentity',
+            document.querySelector('[name="supplierCountrySubentity"]').value);
+        setXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cac\\:Country cbc\\:IdentificationCode, Country IdentificationCode',
+            document.querySelector('[name="supplierCountry"]').value);
+            
+        // Update or create Contact element for phone
+        const phone = document.querySelector('[name="supplierPhone"]').value;
+        if (phone) {
+            let contactElement = supplierParty.querySelector('cac\\:Party cac\\:Contact, Contact');
+            if (!contactElement) {
+                const partyElement = supplierParty.querySelector('cac\\:Party, Party');
+                contactElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Contact");
+                partyElement.appendChild(contactElement);
+            }
+            
+            let telephoneElement = contactElement.querySelector('cbc\\:Telephone, Telephone');
+            if (!telephoneElement) {
+                telephoneElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Telephone");
+                contactElement.appendChild(telephoneElement);
+            }
+            telephoneElement.textContent = phone;
+        }
     }
 
     // Update customer details
     const customerParty = xmlDoc.querySelector('cac\\:AccountingCustomerParty, AccountingCustomerParty');
     if (customerParty) {
-        setXMLValue(customerParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, RegistrationName',
+        setXMLValue(customerParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName',
             document.querySelector('[name="customerName"]').value);
-        setXMLValue(customerParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, CompanyID',
+        setXMLValue(customerParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID',
             document.querySelector('[name="customerVAT"]').value);
-        setXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, StreetName',
+        setXMLValue(customerParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID',
+            document.querySelector('[name="customerCompanyId"]').value);
+        setXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, PostalAddress StreetName',
             document.querySelector('[name="customerAddress"]').value);
+        setXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CityName, PostalAddress CityName',
+            document.querySelector('[name="customerCity"]').value);
+        setXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CountrySubentity, PostalAddress CountrySubentity',
+            document.querySelector('[name="customerCountrySubentity"]').value);
+        setXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cac\\:Country cbc\\:IdentificationCode, Country IdentificationCode',
+            document.querySelector('[name="customerCountry"]').value);
+
+        // Update or create Contact element for phone
+        const phone = document.querySelector('[name="customerPhone"]').value;
+        if (phone) {
+            let contactElement = customerParty.querySelector('cac\\:Party cac\\:Contact, Contact');
+            if (!contactElement) {
+                const partyElement = customerParty.querySelector('cac\\:Party, Party');
+                contactElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Contact");
+                partyElement.appendChild(contactElement);
+            }
+            
+            let telephoneElement = contactElement.querySelector('cbc\\:Telephone, Telephone');
+            if (!telephoneElement) {
+                telephoneElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Telephone");
+                contactElement.appendChild(telephoneElement);
+            }
+            telephoneElement.textContent = phone;
+        }
     }
 }
 
@@ -1226,38 +1341,41 @@ function updateTaxTotals(xmlDoc) {
     taxTotal.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:TaxAmount", 
         uiTotalVat.toFixed(2), { currencyID }));
 
-    // Add TaxSubtotals for each VAT type/rate combination
-    vatBreakdown.forEach((data, key) => {
-        if (Math.abs(data.baseAmount) > 0) {
-            const taxSubtotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxSubtotal");
-            
-            taxSubtotal.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:TaxableAmount", 
-                Math.abs(data.baseAmount).toFixed(2), { currencyID }));
-            
-            // Use the actual VAT amount from UI
-            const taxAmount = data.type === 'AE' ? 0 : Math.abs(data.vatAmount);
-            taxSubtotal.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:TaxAmount", 
-                taxAmount.toFixed(2), { currencyID }));
+    // Get all VAT rows from the UI
+    const vatRows = document.querySelectorAll('.vat-row');
+    vatRows.forEach(row => {
+        const taxSubtotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxSubtotal");
+        
+        // Get values directly from UI inputs
+        const baseAmount = parseFloat(row.querySelector('.vat-base').value) || 0;
+        const vatAmount = parseFloat(row.querySelector('.vat-amount').value) || 0;
+        const vatType = row.querySelector('.vat-type').value;
+        const vatRate = parseFloat(row.querySelector('.vat-rate').value) || 0;
 
-            const taxCategory = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxCategory");
-            taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", data.type));
-            
-            const percent = data.type === 'AE' ? 0 : data.rate;
-            taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Percent", 
-                percent.toFixed(2)));
-            
-            if (data.type === 'AE') {
-                taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
-                    "cbc:TaxExemptionReasonCode", "VATEX-EU-AE"));
-            }
-            
-            const taxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme");
-            taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
-            taxCategory.appendChild(taxScheme);
-            
-            taxSubtotal.appendChild(taxCategory);
-            taxTotal.appendChild(taxSubtotal);
+        // Add TaxableAmount and TaxAmount directly from UI values
+        taxSubtotal.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:TaxableAmount", 
+            baseAmount.toFixed(2), { currencyID }));
+        taxSubtotal.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:TaxAmount", 
+            vatAmount.toFixed(2), { currencyID }));
+
+        const taxCategory = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxCategory");
+        taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", vatType));
+        
+        const percent = vatType === 'AE' ? 0 : vatRate;
+        taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Percent", 
+            percent.toFixed(2)));
+        
+        if (vatType === 'AE') {
+            taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
+                "cbc:TaxExemptionReasonCode", "VATEX-EU-AE"));
         }
+        
+        const taxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme");
+        taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
+        taxCategory.appendChild(taxScheme);
+        
+        taxSubtotal.appendChild(taxCategory);
+        taxTotal.appendChild(taxSubtotal);
     });
 }
 
