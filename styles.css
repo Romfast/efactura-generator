@@ -212,6 +212,7 @@ body {
 
 /* Allowances & Charges */
 .allowance-charge {
+    position: relative;
     padding: 12px;
     background-color: var(--background-color);
     border-radius: 4px;
@@ -224,6 +225,15 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 8px;
     margin-bottom: 0;
+    padding-right: 30px; /* Make space for the remove button */
+}
+
+.allowance-charge .remove-line-item {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
 }
 
 /* Totals Section */
@@ -317,6 +327,52 @@ body {
 .commodity-group {
     display: flex;
     gap: 4px;
+}
+
+.date-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.date-input {
+    padding-right: 30px;
+}
+
+.calendar-button {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px 8px;
+    font-size: 16px;
+}
+
+.calendar-button:hover {
+    opacity: 0.8;
+}
+
+/* Style the Pikaday calendar */
+.pika-single {
+    z-index: 9999;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-family: inherit;
+}
+
+.pika-button {
+    background: var(--background-color);
+    border-radius: 4px;
+}
+
+.pika-button:hover {
+    background: var(--primary-color) !important;
+    color: white !important;
+    box-shadow: none !important;
 }
 
 /* Responsive Design */

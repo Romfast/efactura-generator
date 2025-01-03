@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editor Factură Electronică</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/css/pikaday.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -31,11 +32,17 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Data Emiterii</label>
-                            <input type="date" class="form-input" name="issueDate">
+                            <div class="date-input-container">
+                                <input type="text" class="form-input date-input" name="issueDate" placeholder="dd.mm.yyyy" maxlength="10" pattern="\d{2}.\d{2}.\d{4}">
+                                <button type="button" class="calendar-button" tabindex="-1">📅</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Data Scadentă</label>
-                            <input type="date" class="form-input" name="dueDate">
+                            <div class="date-input-container">
+                                <input type="text" class="form-input date-input" name="dueDate" placeholder="dd.mm.yyyy" maxlength="10" pattern="\d{2}.\d{2}.\d{4}">
+                                <button type="button" class="calendar-button" tabindex="-1">📅</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -53,7 +60,7 @@
                             <input type="text" class="form-input" name="supplierVAT">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">CUI</label>
+                            <label class="form-label">Nr. înregistrare</label>
                             <input type="text" class="form-input" name="supplierCompanyId">
                         </div>
                         <div class="form-group">
@@ -92,7 +99,7 @@
                             <input type="text" class="form-input" name="customerVAT">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">CUI</label>
+                            <label class="form-label">Nr. înregistrare</label>
                             <input type="text" class="form-input" name="customerCompanyId">
                         </div>
                         <div class="form-group">
@@ -182,6 +189,7 @@
         </form>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/pikaday.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
