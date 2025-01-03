@@ -1657,3 +1657,535 @@ if (typeof module !== 'undefined' && module.exports) {
         setXMLValue
     };
 }                
+
+// Print functions
+// Print handler class
+class InvoicePrintHandler {
+    constructor() {
+        this.printWindow = null;
+    }
+
+    getPrintTemplate() {
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Factură</title>
+                <style>
+                    @media print {
+                        @page {
+                            size: A4;
+                            margin: 1cm;
+                        }
+                        
+                        body {
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+
+                        .no-print {
+                            display: none;
+                        }
+                    }
+
+                    * {
+                        box-sizing: border-box;
+                        margin: 0;
+                        padding: 0;
+                    }
+
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        line-height: 1.5;
+                        color: #1e293b;
+                        background: white;
+                        font-size: 12px;
+                    }
+
+                    .invoice-container {
+                        max-width: 210mm;
+                        margin: 0 auto;
+                        padding: 2cm;
+                        background: white;
+                    }
+
+                    .invoice-header {
+                        margin-bottom: 2rem;
+                        padding-bottom: 1rem;
+                        border-bottom: 2px solid #2563eb;
+                    }
+
+                    .invoice-header-content {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                    }
+
+                    .invoice-title-section {
+                        flex: 1;
+                    }
+
+                    .invoice-title {
+                        color: #2563eb;
+                        font-size: 24px;
+                        font-weight: bold;
+                        margin-bottom: 0.5rem;
+                    }
+
+                    .invoice-number {
+                        font-size: 16px;
+                        color: #64748b;
+                        margin-bottom: 0.5rem;
+                    }
+
+                    .invoice-dates {
+                        color: #64748b;
+                        font-size: 14px;
+                    }
+
+                    .qr-section {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        margin-left: 2rem;
+                    }
+
+                    #qrcode {
+                        width: 100px;
+                        height: 100px;
+                        margin-bottom: 0.5rem;
+                    }
+
+                    .e-invoice-info {
+                        font-size: 10px;
+                        color: #64748b;
+                        text-align: center;
+                        max-width: 120px;
+                    }
+
+                    .party-details {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 2rem;
+                        margin-bottom: 2rem;
+                    }
+
+                    .party-box {
+                        padding: 1rem;
+                        background: #f8fafc;
+                        border-radius: 4px;
+                        border: 1px solid #e2e8f0;
+                    }
+
+                    .party-title {
+                        font-weight: bold;
+                        color: #2563eb;
+                        margin-bottom: 0.5rem;
+                    }
+
+                    .party-info p {
+                        margin: 0.25rem 0;
+                    }
+
+                    .items-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 2rem;
+                    }
+
+                    .items-table th {
+                        background: #f1f5f9;
+                        padding: 0.5rem;
+                        text-align: left;
+                        font-weight: 600;
+                        border-bottom: 2px solid #e2e8f0;
+                    }
+
+                    .items-table td {
+                        padding: 0.5rem;
+                        border-bottom: 1px solid #e2e8f0;
+                    }
+
+                    .items-table .number-cell {
+                        text-align: right;
+                    }
+
+                    .totals-section {
+                        width: 300px;
+                        margin-left: auto;
+                    }
+
+                    .total-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 0.5rem 0;
+                        border-bottom: 1px solid #e2e8f0;
+                    }
+
+                    .total-row.final {
+                        border-bottom: 2px solid #2563eb;
+                        font-weight: bold;
+                        font-size: 14px;
+                        color: #2563eb;
+                    }
+
+                    .vat-breakdown {
+                        margin: 1rem 0;
+                        padding: 1rem;
+                        background: #f8fafc;
+                        border-radius: 4px;
+                    }
+
+                    .vat-title {
+                        font-weight: bold;
+                        color: #64748b;
+                        margin-bottom: 0.5rem;
+                    }
+
+                    .vat-grid {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 0.5rem;
+                        font-size: 11px;
+                    }
+
+                    .footer {
+                        margin-top: 2rem;
+                        padding-top: 1rem;
+                        border-top: 1px solid #e2e8f0;
+                        font-size: 10px;
+                        color: #64748b;
+                        text-align: center;
+                    }
+
+                    .print-button {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        padding: 8px 16px;
+                        background: #2563eb;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    }
+
+                    .print-button:hover {
+                        background: #1e40af;
+                    }
+                </style>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+            </head>
+            <body>
+                <button onclick="window.print()" class="print-button no-print">Printează Factura</button>
+                <div class="invoice-container">
+                    <div class="invoice-header">
+                        <div class="invoice-header-content">
+                            <div class="invoice-title-section">
+                                <h1 class="invoice-title">FACTURĂ ELECTRONICĂ</h1>
+                                <div class="invoice-number">Seria & Nr: <span id="print-invoice-number"></span></div>
+                                <div class="invoice-dates">
+                                    <div>Data emiterii: <span id="print-issue-date"></span></div>
+                                    <div>Data scadentă: <span id="print-due-date"></span></div>
+                                </div>
+                            </div>
+                            <div class="qr-section">
+                                <div id="qrcode"></div>
+                                <div class="e-invoice-info">
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="party-details">
+                        <div class="party-box">
+                            <div class="party-title">Furnizor</div>
+                            <div class="party-info" id="print-supplier-details">
+                            </div>
+                        </div>
+                        <div class="party-box">
+                            <div class="party-title">Client</div>
+                            <div class="party-info" id="print-customer-details">
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Nr.</th>
+                                <th>Denumire</th>
+                                <th>UM</th>
+                                <th>Cant.</th>
+                                <th>Preț</th>
+                                <th>TVA</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="print-items">
+                        </tbody>
+                    </table>
+
+                    <div class="totals-section">
+                        <div class="total-row">
+                            <span>Subtotal:</span>
+                            <span id="print-subtotal"></span>
+                        </div>
+                        <div class="total-row">
+                            <span>Total Reduceri:</span>
+                            <span id="print-allowances"></span>
+                        </div>
+                        <div class="total-row">
+                            <span>Total Taxe:</span>
+                            <span id="print-charges"></span>
+                        </div>
+                        <div class="total-row">
+                            <span>Valoare Netă:</span>
+                            <span id="print-net-amount"></span>
+                        </div>
+                        
+                        <div class="vat-breakdown">
+                            <div class="vat-title">Defalcare TVA</div>
+                            <div class="vat-grid" id="print-vat-breakdown">
+                            </div>
+                        </div>
+                        
+                        <div class="total-row final">
+                            <span>Total de Plată:</span>
+                            <span id="print-total"></span>
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        Document generat electronic - www.romfast.ro
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+    }
+
+    formatCurrency(value) {
+        return parseFloat(value).toFixed(2);
+    }
+
+    getVATTypeLabel(type) {
+        const labels = {
+            'S': 'Standard',
+            'AE': 'Taxare Inversă',
+            'O': 'Neplătitor TVA',
+            'Z': 'Cotă 0%',
+            'E': 'Scutit'
+        };
+        return labels[type] || type;
+    }
+
+    collectInvoiceData() {
+        return {
+            // Basic details
+            invoiceNumber: document.querySelector('[name="invoiceNumber"]').value,
+            issueDate: document.querySelector('[name="issueDate"]').value,
+            dueDate: document.querySelector('[name="dueDate"]').value,
+
+            // Supplier details
+            supplier: {
+                name: document.querySelector('[name="supplierName"]').value,
+                vat: document.querySelector('[name="supplierVAT"]').value,
+                companyId: document.querySelector('[name="supplierCompanyId"]').value,
+                address: document.querySelector('[name="supplierAddress"]').value,
+                city: document.querySelector('[name="supplierCity"]').value,
+                county: document.querySelector('[name="supplierCountrySubentity"]').value,
+                country: document.querySelector('[name="supplierCountry"]').value,
+                phone: document.querySelector('[name="supplierPhone"]').value
+            },
+
+            // Customer details
+            customer: {
+                name: document.querySelector('[name="customerName"]').value,
+                vat: document.querySelector('[name="customerVAT"]').value,
+                companyId: document.querySelector('[name="customerCompanyId"]').value,
+                address: document.querySelector('[name="customerAddress"]').value,
+                city: document.querySelector('[name="customerCity"]').value,
+                county: document.querySelector('[name="customerCountrySubentity"]').value,
+                country: document.querySelector('[name="customerCountry"]').value,
+                phone: document.querySelector('[name="customerPhone"]').value
+            },
+
+            // Line items
+            items: Array.from(document.querySelectorAll('.line-item')).map((item, index) => ({
+                number: index + 1,
+                description: item.querySelector('[name^="description"]').value,
+                quantity: parseFloat(item.querySelector('[name^="quantity"]').value),
+                unit: item.querySelector('[name^="unit"]').value,
+                price: parseFloat(item.querySelector('[name^="price"]').value),
+                vatType: item.querySelector('[name^="vatType"]').value,
+                vatRate: parseFloat(item.querySelector('[name^="vatRate"]').value)
+            })),
+
+            // Totals
+            totals: {
+                subtotal: document.getElementById('subtotal').textContent,
+                allowances: document.getElementById('totalAllowances').textContent,
+                charges: document.getElementById('totalCharges').textContent,
+                netAmount: document.getElementById('netAmount').textContent,
+                vat: document.getElementById('vat').textContent,
+                total: document.getElementById('total').textContent
+            },
+
+            // VAT Breakdown
+            vatBreakdown: Array.from(document.querySelectorAll('.vat-row')).map(row => ({
+                type: row.querySelector('.vat-type').value,
+                rate: parseFloat(row.querySelector('.vat-rate').value),
+                base: parseFloat(row.querySelector('.vat-base').value),
+                amount: parseFloat(row.querySelector('.vat-amount').value)
+            }))
+        };
+    }
+
+    populatePrintWindow(data) {
+        if (!this.printWindow) return;
+
+        const doc = this.printWindow.document;
+
+        // Basic details
+        doc.getElementById('print-invoice-number').textContent = data.invoiceNumber;
+        doc.getElementById('print-issue-date').textContent = data.issueDate;
+        doc.getElementById('print-due-date').textContent = data.dueDate;
+
+        // Generate QR code
+        const qrData = {
+            invoiceNumber: data.invoiceNumber,
+            issueDate: data.issueDate,
+            supplier: data.supplier.name,
+            customer: data.customer.name,
+            total: data.totals.total
+        };
+
+        const qrElement = doc.getElementById('qrcode');
+        if (qrElement && typeof this.printWindow.QRCode !== 'undefined') {
+            new this.printWindow.QRCode(qrElement, {
+                text: JSON.stringify(qrData),
+                width: 100,
+                height: 100,
+                colorDark: "#2563eb",
+                colorLight: "#ffffff",
+                correctLevel: this.printWindow.QRCode.CorrectLevel.H
+            });
+        }
+
+        // Supplier details
+        doc.getElementById('print-supplier-details').innerHTML = this.createPartyHTML(data.supplier);
+
+        // Customer details
+        doc.getElementById('print-customer-details').innerHTML = this.createPartyHTML(data.customer);
+
+        // Line items
+        doc.getElementById('print-items').innerHTML = data.items.map(item => `
+            <tr>
+                <td>${item.number}</td>
+                <td>${item.description}</td>
+                <td>${item.unit}</td>
+                <td class="number-cell">${this.formatCurrency(item.quantity)}</td>
+                <td class="number-cell">${this.formatCurrency(item.price)}</td>
+                <td class="number-cell">${item.vatRate}%</td>
+                <td class="number-cell">${this.formatCurrency(item.quantity * item.price)}</td>
+            </tr>
+        `).join('');
+
+        // Totals
+        doc.getElementById('print-subtotal').textContent = this.formatCurrency(data.totals.subtotal);
+        doc.getElementById('print-allowances').textContent = this.formatCurrency(data.totals.allowances);
+        doc.getElementById('print-charges').textContent = this.formatCurrency(data.totals.charges);
+        doc.getElementById('print-net-amount').textContent = this.formatCurrency(data.totals.netAmount);
+        doc.getElementById('print-total').textContent = this.formatCurrency(data.totals.total);
+
+        // VAT Breakdown
+        doc.getElementById('print-vat-breakdown').innerHTML = data.vatBreakdown.map(vat => `
+            <div>${this.getVATTypeLabel(vat.type)}</div>
+            <div>${vat.rate}%</div>
+            <div>${this.formatCurrency(vat.base)}</div>
+            <div>${this.formatCurrency(vat.amount)}</div>
+        `).join('');
+    }
+
+    createPartyHTML(party) {
+        return `
+            <p><strong>${party.name}</strong></p>
+            <p>CUI: ${party.vat}</p>
+            <p>Nr. Reg. Com.: ${party.companyId}</p>
+            <p>${party.address}</p>
+            <p>${party.city}${party.county ? ', ' + party.county : ''}</p>
+            <p>${party.country}</p>
+            ${party.phone ? `<p>Tel: ${party.phone}</p>` : ''}
+        `;
+    }
+
+    async print() {
+        try {
+            // Collect all the data
+            const invoiceData = this.collectInvoiceData();
+
+            // Open new window
+            this.printWindow = window.open('', '_blank', 'width=800,height=600');
+            
+            // Write the template
+            this.printWindow.document.write(this.getPrintTemplate());
+            
+            // Close the document to finish loading
+            this.printWindow.document.close();
+            
+            // Wait for both DOM and QR code script to be ready
+            await new Promise(resolve => {
+                if (this.printWindow.document.readyState === 'complete') {
+                    resolve();
+                } else {
+                    this.printWindow.onload = resolve;
+                }
+            });
+
+            // Additional safety delay to ensure DOM is ready
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Now populate the data
+            this.populatePrintWindow(invoiceData);
+
+            // Print the window
+            this.printWindow.print();
+
+            // Clean up
+            this.printWindow.onafterprint = () => {
+                this.printWindow.close();
+                this.printWindow = null;
+            };
+
+        } catch (error) {
+            console.error('Print failed:', error);
+            if (this.printWindow) {
+                this.printWindow.close();
+                this.printWindow = null;
+            }
+            alert('A apărut o eroare la printare. Vă rugăm să încercați din nou.');
+        }
+    }
+}
+
+// Create instance and export
+const printHandler = new InvoicePrintHandler();
+
+// Add print button to the UI
+function addPrintButton() {
+    const headerButtonGroup = document.querySelector('.button-group');
+    if (!headerButtonGroup) return;
+
+    const printButton = document.createElement('button');
+    printButton.className = 'button';
+    printButton.onclick = () => printHandler.print();
+    printButton.innerHTML = 'Printează';
+    headerButtonGroup.appendChild(printButton);
+}
+
+// Initialize when the document is ready
+document.addEventListener('DOMContentLoaded', addPrintButton);
