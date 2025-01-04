@@ -23,6 +23,34 @@ const UNIT_CODES = new Map([
     ['MTQ', 'Metri cubi (MTQ)']
 ]);
 
+const ISO_3166_1_CODES = new Set([
+    'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AW', 'AX', 
+    'AZ', 'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BL', 'BM', 'BN', 'BO', 'BQ', 
+    'BR', 'BS', 'BT', 'BV', 'BW', 'BY', 'BZ', 'CA', 'CC', 'CD', 'CF', 'CG', 'CH', 'CI', 'CK', 
+    'CL', 'CM', 'CN', 'CO', 'CR', 'CU', 'CV', 'CW', 'CX', 'CY', 'CZ', 'DE', 'DJ', 'DK', 'DM', 
+    'DO', 'DZ', 'EC', 'EE', 'EG', 'EH', 'ER', 'ES', 'ET', 'FI', 'FJ', 'FK', 'FM', 'FO', 'FR', 
+    'GA', 'GB', 'GD', 'GE', 'GF', 'GG', 'GH', 'GI', 'GL', 'GM', 'GN', 'GP', 'GQ', 'GR', 'GS', 
+    'GT', 'GU', 'GW', 'GY', 'HK', 'HM', 'HN', 'HR', 'HT', 'HU', 'ID', 'IE', 'IL', 'IM', 'IN', 
+    'IO', 'IQ', 'IR', 'IS', 'IT', 'JE', 'JM', 'JO', 'JP', 'KE', 'KG', 'KH', 'KI', 'KM', 'KN', 
+    'KP', 'KR', 'KW', 'KY', 'KZ', 'LA', 'LB', 'LC', 'LI', 'LK', 'LR', 'LS', 'LT', 'LU', 'LV', 
+    'LY', 'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH', 'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 
+    'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ', 'NA', 'NC', 'NE', 'NF', 'NG', 'NI', 
+    'NL', 'NO', 'NP', 'NR', 'NU', 'NZ', 'OM', 'PA', 'PE', 'PF', 'PG', 'PH', 'PK', 'PL', 'PM', 
+    'PN', 'PR', 'PS', 'PT', 'PW', 'PY', 'QA', 'RE', 'RO', 'RS', 'RU', 'RW', 'SA', 'SB', 'SC', 
+    'SD', 'SE', 'SG', 'SH', 'SI', 'SJ', 'SK', 'SL', 'SM', 'SN', 'SO', 'SR', 'SS', 'ST', 'SV', 
+    'SX', 'SY', 'SZ', 'TC', 'TD', 'TF', 'TG', 'TH', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO', 'TR', 
+    'TT', 'TV', 'TW', 'TZ', 'UA', 'UG', 'UM', 'US', 'UY', 'UZ', 'VA', 'VC', 'VE', 'VG', 'VI', 
+    'VN', 'VU', 'WF', 'WS', 'XI', 'YE', 'YT', 'ZA', 'ZM', 'ZW'
+]);
+
+const ROMANIAN_COUNTY_CODES = new Set([
+    'RO-AB', 'RO-AG', 'RO-AR', 'RO-B', 'RO-BC', 'RO-BH', 'RO-BN', 'RO-BR', 'RO-BT', 'RO-BV', 
+    'RO-BZ', 'RO-CJ', 'RO-CL', 'RO-CS', 'RO-CT', 'RO-CV', 'RO-DB', 'RO-DJ', 'RO-GJ', 'RO-GL', 
+    'RO-GR', 'RO-HD', 'RO-HR', 'RO-IF', 'RO-IL', 'RO-IS', 'RO-MH', 'RO-MM', 'RO-MS', 'RO-NT', 
+    'RO-OT', 'RO-PH', 'RO-SB', 'RO-SJ', 'RO-SM', 'RO-SV', 'RO-TL', 'RO-TM', 'RO-TR', 'RO-VL', 
+    'RO-VN', 'RO-VS'
+]);
+
 // Global variables
 let currentInvoice = null;
 let originalTotals = null;
@@ -70,6 +98,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }    
 
     addExchangeRateField();
+
+    initializeLocationSelectors();    
 });
 
 // Inline editing setup function
@@ -140,6 +170,9 @@ function parseXML(xmlContent) {
 
         populateBasicDetails(xmlDoc);
         populatePartyDetails(xmlDoc);
+
+        initializeLocationSelectors();
+
         populateAllowanceCharges(xmlDoc);
         populateLineItems(xmlDoc);
         storeOriginalTotals(xmlDoc);
@@ -512,6 +545,128 @@ function restrictDateInput(input) {
     });
 }
 
+function createCountryOptions() {
+    return Array.from(ISO_3166_1_CODES).map(code => 
+        `<option value="${code}" ${code === 'RO' ? 'selected' : ''}>${code}</option>`
+    ).join('');
+}
+
+function createCountyOptions() {
+    return Array.from(ROMANIAN_COUNTY_CODES).map(code => {
+        const label = code.replace('RO-', '');
+        const counties = {
+            'AB': 'Alba', 'AR': 'Arad', 'AG': 'Argeș', 'BC': 'Bacău', 'BH': 'Bihor', 
+            'BN': 'Bistrița-Năsăud', 'BT': 'Botoșani', 'BV': 'Brașov', 'BR': 'Brăila', 
+            'B': 'București', 'BZ': 'Buzău', 'CS': 'Caraș-Severin', 'CL': 'Călărași', 
+            'CJ': 'Cluj', 'CT': 'Constanța', 'CV': 'Covasna', 'DB': 'Dâmbovița', 
+            'DJ': 'Dolj', 'GL': 'Galați', 'GR': 'Giurgiu', 'GJ': 'Gorj', 'HR': 'Harghita', 
+            'HD': 'Hunedoara', 'IL': 'Ialomița', 'IS': 'Iași', 'IF': 'Ilfov', 
+            'MM': 'Maramureș', 'MH': 'Mehedinți', 'MS': 'Mureș', 'NT': 'Neamț', 
+            'OT': 'Olt', 'PH': 'Prahova', 'SM': 'Satu Mare', 'SJ': 'Sălaj', 
+            'SB': 'Sibiu', 'SV': 'Suceava', 'TR': 'Teleorman', 'TM': 'Timiș', 
+            'TL': 'Tulcea', 'VS': 'Vaslui', 'VL': 'Vâlcea', 'VN': 'Vrancea'
+        };
+        return `<option value="${code}">${counties[label] || label} (${label})</option>`;
+    }).join('');
+}
+
+function initializeLocationSelectors() {
+    // Replace country inputs with selects
+    document.querySelectorAll('[name$="Country"]').forEach(input => {
+        const select = document.createElement('select');
+        select.className = input.className;
+        select.name = input.name;
+        select.innerHTML = createCountryOptions();
+        
+        // Set value from existing input or XML data
+        const xmlValue = input.dataset.xmlValue || input.value || 'RO';
+        select.value = xmlValue;
+        
+        input.parentNode.replaceChild(select, input);
+    });
+
+    // Replace county inputs with selects
+    document.querySelectorAll('[name$="CountrySubentity"]').forEach(input => {
+        const select = document.createElement('select');
+        select.className = input.className;
+        select.name = input.name;
+        select.innerHTML = createCountyOptions();
+        
+        // Set value from existing input or XML data
+        const xmlValue = input.dataset.xmlValue || input.value || '';
+        select.value = xmlValue;
+        
+        input.parentNode.replaceChild(select, input);
+    });
+
+    // Handle Bucharest sector visibility
+    document.querySelectorAll('[name$="Country"]').forEach(countrySelect => {
+        const partyDetails = countrySelect.closest('.party-details');
+        const countySelect = partyDetails.querySelector('[name$="CountrySubentity"]');
+        const cityInput = partyDetails.querySelector('[name$="City"]');
+
+        if (countySelect && cityInput) {
+            countrySelect.addEventListener('change', () => {
+                updateCountyVisibility(countrySelect, countySelect);
+                updateBucharestSectorVisibility(countrySelect, countySelect, cityInput);
+            });
+
+            countySelect.addEventListener('change', () => {
+                updateBucharestSectorVisibility(countrySelect, countySelect, cityInput);
+            });
+
+            // Initial update
+            updateCountyVisibility(countrySelect, countySelect);
+            updateBucharestSectorVisibility(countrySelect, countySelect, cityInput);
+        }
+    });
+}
+
+function updateCountyVisibility(countrySelect, countySelect) {
+    const showCounty = countrySelect.value === 'RO';
+    countySelect.style.display = showCounty ? 'block' : 'none';
+    countySelect.required = showCounty;
+}
+
+function updateBucharestSectorVisibility(countrySelect, countySelect, citySelect) {
+    const isBucharest = countrySelect.value === 'RO' && countySelect.value === 'RO-B';
+    
+    if (isBucharest) {
+        // Replace city input with sector dropdown
+        const sectorSelect = document.createElement('select');
+        sectorSelect.className = 'form-input';
+        sectorSelect.name = citySelect.name;
+        sectorSelect.innerHTML = `
+            <option value="SECTOR1">Sectorul 1</option>
+            <option value="SECTOR2">Sectorul 2</option>
+            <option value="SECTOR3">Sectorul 3</option>
+            <option value="SECTOR4">Sectorul 4</option>
+            <option value="SECTOR5">Sectorul 5</option>
+            <option value="SECTOR6">Sectorul 6</option>
+        `;
+        
+        // Preserve any existing value
+        if (citySelect.value) {
+            sectorSelect.value = citySelect.value;
+        }
+        
+        citySelect.parentNode.replaceChild(sectorSelect, citySelect);
+    } else {
+        // Revert back to text input for city
+        const cityInput = document.createElement('input');
+        cityInput.type = 'text';
+        cityInput.className = 'form-input';
+        cityInput.name = citySelect.name;
+        
+        // Preserve any existing value
+        if (citySelect.value) {
+            cityInput.value = citySelect.value;
+        }
+        
+        citySelect.parentNode.replaceChild(cityInput, citySelect);
+    }
+}
+
 function initializeUI() {
     document.querySelectorAll('.form-input').forEach(input => {
         input.addEventListener('input', function() {
@@ -562,6 +717,9 @@ function initializeUI() {
         noteInput.addEventListener('input', updateNoteCounter);
         updateNoteCounter(); // Initial count
     }
+
+    // Initialize location selectors
+    initializeLocationSelectors();
 
     window.addLineItem = addLineItem;
     window.removeLineItem = removeLineItem;
@@ -756,54 +914,63 @@ function populateBasicDetails(xmlDoc) {
 }
 
 function populatePartyDetails(xmlDoc) {
+    function extractPartyDetails(party, prefix) {
+        // Country Code Extraction
+        const countryCodeElement = party.querySelector('cac\\:Country cbc\\:IdentificationCode, Country IdentificationCode');
+        const countryCode = countryCodeElement ? countryCodeElement.textContent.trim() : 'RO';
+ 
+        // Postal Address Details
+        const postalAddress = party.querySelector('cac\\:PostalAddress, PostalAddress');
+        const streetName = postalAddress ? 
+            getXMLValue(postalAddress, 'cbc\\:StreetName, StreetName') : '';
+        const cityName = postalAddress ? 
+            getXMLValue(postalAddress, 'cbc\\:CityName, CityName') : '';
+        const countyCode = postalAddress ? 
+            getXMLValue(postalAddress, 'cbc\\:CountrySubentity, CountrySubentity') : '';
+ 
+        // Set inputs
+        document.querySelector(`[name="${prefix}Name"]`).value = 
+            getXMLValue(party, 'cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName');
+        document.querySelector(`[name="${prefix}VAT"]`).value = 
+            getXMLValue(party, 'cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID');
+        document.querySelector(`[name="${prefix}CompanyId"]`).value = 
+            getXMLValue(party, 'cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID');
+        document.querySelector(`[name="${prefix}Address"]`).value = streetName;
+        document.querySelector(`[name="${prefix}City"]`).value = cityName;
+ 
+        // Country Select
+        const countrySelect = document.querySelector(`[name="${prefix}Country"]`);
+        if (countrySelect) {
+            countrySelect.value = countryCode;
+            countrySelect.dataset.xmlValue = countryCode;
+        }
+ 
+        // County Select
+        const countySelect = document.querySelector(`[name="${prefix}CountrySubentity"]`);
+        if (countySelect) {
+            countySelect.value = countyCode;
+            countySelect.dataset.xmlValue = countyCode;
+        }
+    }
+ 
     const supplierParty = xmlDoc.querySelector('cac\\:AccountingSupplierParty, AccountingSupplierParty');
     if (supplierParty) {
-        document.querySelector('[name="supplierName"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName');
-        
-        document.querySelector('[name="supplierVAT"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID');
-        
-        document.querySelector('[name="supplierCompanyId"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID');
-
-        document.querySelector('[name="supplierAddress"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, PostalAddress StreetName');
-        document.querySelector('[name="supplierCity"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CityName, PostalAddress CityName');
-        document.querySelector('[name="supplierCountrySubentity"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CountrySubentity, PostalAddress CountrySubentity');
-        document.querySelector('[name="supplierCountry"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cac\\:Country cbc\\:IdentificationCode, Country IdentificationCode');
-            
-        document.querySelector('[name="supplierPhone"]').value = 
-            getXMLValue(supplierParty, 'cac\\:Party cac\\:Contact cbc\\:Telephone, Contact Telephone');
+        const supplierPartyDetails = supplierParty.querySelector('cac\\:Party, Party');
+        if (supplierPartyDetails) {
+            extractPartyDetails(supplierPartyDetails, 'supplier');
+        }
     }
-
+ 
     const customerParty = xmlDoc.querySelector('cac\\:AccountingCustomerParty, AccountingCustomerParty');
     if (customerParty) {
-        document.querySelector('[name="customerName"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName');
-        
-        document.querySelector('[name="customerVAT"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID');
-        
-        document.querySelector('[name="customerCompanyId"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID');
-
-        document.querySelector('[name="customerAddress"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, PostalAddress StreetName');
-        document.querySelector('[name="customerCity"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CityName, PostalAddress CityName');
-        document.querySelector('[name="customerCountrySubentity"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CountrySubentity, PostalAddress CountrySubentity');
-        document.querySelector('[name="customerCountry"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cac\\:Country cbc\\:IdentificationCode, Country IdentificationCode');
-        
-        document.querySelector('[name="customerPhone"]').value = 
-            getXMLValue(customerParty, 'cac\\:Party cac\\:Contact cbc\\:Telephone, Contact Telephone');
+        const customerPartyDetails = customerParty.querySelector('cac\\:Party, Party');
+        if (customerPartyDetails) {
+            extractPartyDetails(customerPartyDetails, 'customer');
+        }
     }
-}
+ 
+    initializeLocationSelectors();
+ }
 
 function populateAllowanceCharges(xmlDoc) {
     const charges = parseAllowanceCharges(xmlDoc);
@@ -1496,7 +1663,17 @@ function createPartyElement(xmlDoc, isSupplier, partyData) {
         party.appendChild(partyIdentification);
     }
 
-    // Add PostalAddress
+function validateCountryCode(countryCode) {
+    const code = countryCode?.trim().toUpperCase() || 'RO';
+    return ISO_3166_1_CODES.has(code) ? code : 'RO';
+}
+
+function validateCountyCode(countryCode, countyCode) {
+    if (countryCode === 'RO') {
+        return ROMANIAN_COUNTY_CODES.has(countyCode) ? countyCode : 'RO-B';
+    }
+    return countyCode;
+}
     const postalAddress = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:PostalAddress");
     postalAddress.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:StreetName", partyData.address));
     postalAddress.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CityName", partyData.city));
