@@ -1280,8 +1280,8 @@ function calculateTotals() {
     const chargeTotals = calculateChargeTotals();
 
     const subtotal = lineItemTotals.subtotal;
-    const allowances = parseFloat(document.getElementById('totalAllowances').textContent);
-    const charges = parseFloat(document.getElementById('totalCharges').textContent);
+    const allowances = chargeTotals.allowances;
+    const charges = chargeTotals.charges;
     const netAmount = subtotal - allowances + charges;
     const total = netAmount + totalVat;
 
@@ -1325,7 +1325,7 @@ function calculateVATBreakdown() {
         }
     });
 
-    // Then process allowances and charges
+    // Process allowances and charges
     document.querySelectorAll('.allowance-charge').forEach((charge, index) => {
         const amount = parseFloat(document.querySelector(`[name="chargeAmount${index}"]`).value) || 0;
         const vatType = document.querySelector(`[name="chargeVatType${index}"]`).value;
@@ -1347,9 +1347,11 @@ function calculateVATBreakdown() {
         }
         
         const entry = vatBreakdown.get(key);
-        entry.baseAmount += amount;
+        // For allowances (discounts), subtract from base amount
+        const adjustedAmount = isCharge ? amount : -amount;
+        entry.baseAmount += adjustedAmount;
         if (vatType === 'S') {
-            entry.vatAmount += amount * vatRate / 100;
+            entry.vatAmount += adjustedAmount * vatRate / 100;
         }
     });
 
