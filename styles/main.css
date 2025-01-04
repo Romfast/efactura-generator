@@ -261,11 +261,21 @@ body {
 }
 
 /* VAT Breakdown */
-#vatBreakdown {
+#vatBreakdown, .vat-breakdown {
     margin: 16px 0;
-    padding: 12px;
-    border-top: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
+    padding: 16px;
+    background-color: var(--background-light);
+    border: 2px solid var(--primary-color);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+}
+
+#vatBreakdown h3.section-title, 
+.vat-breakdown h3.section-title {
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--primary-color);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 .vat-row {
