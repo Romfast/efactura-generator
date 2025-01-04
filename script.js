@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('fileInput').addEventListener('change', handleFileSelect);
     initializeUI();
     
+    if (!currentInvoice) {
+        currentInvoice = createEmptyInvoice();
+    }
+
     const totalElements = [
         'subtotal', 'totalAllowances', 'totalCharges', 
         'netAmount', 'vat', 'total'
@@ -552,6 +556,13 @@ function initializeUI() {
         document.querySelector('[name="dueDate"]').value = formatDateToRomanian(dueDate);
     }
 
+    // Add note counter event listener
+    const noteInput = document.querySelector('[name="invoiceNote"]');
+    if (noteInput) {
+        noteInput.addEventListener('input', updateNoteCounter);
+        updateNoteCounter(); // Initial count
+    }
+
     window.addLineItem = addLineItem;
     window.removeLineItem = removeLineItem;
     window.addAllowanceCharge = addAllowanceCharge;
@@ -681,9 +692,48 @@ function restoreOriginalTotals() {
     }
 }
 
+function updateNoteCounter() {
+    const noteInput = document.querySelector('[name="invoiceNote"]');
+    const counter = document.querySelector('.note-counter');
+    if (noteInput && counter) {
+        const length = noteInput.value.length;
+        counter.textContent = `${length}/900 caractere`;
+    }
+}
+
+function splitNoteIntoChunks(text, maxLength) {
+    if (!text) return [];
+    const chunks = [];
+    let remainingText = text;
+
+    while (remainingText.length > 0) {
+        if (remainingText.length <= maxLength) {
+            chunks.push(remainingText);
+            break;
+        }
+
+        let splitPoint = remainingText.substr(0, maxLength).lastIndexOf('\n');
+        if (splitPoint === -1) {
+            splitPoint = remainingText.substr(0, maxLength).lastIndexOf(' ');
+        }
+        if (splitPoint === -1) splitPoint = maxLength;
+
+        chunks.push(remainingText.substr(0, splitPoint));
+        remainingText = remainingText.substr(splitPoint + 1);
+    }
+
+    return chunks.filter(chunk => chunk.trim().length > 0);
+}
+
 function populateBasicDetails(xmlDoc) {
     document.querySelector('[name="invoiceNumber"]').value = getXMLValue(xmlDoc, 'cbc\\:ID, ID');
-    
+
+    // Get and combine all Note elements
+    const notes = xmlDoc.querySelectorAll('cbc\\:Note, Note');
+    const combinedNotes = Array.from(notes).map(note => note.textContent).join('\n');
+    document.querySelector('[name="invoiceNote"]').value = combinedNotes;
+    updateNoteCounter();
+
     const issueDate = getXMLValue(xmlDoc, 'cbc\\:IssueDate, IssueDate');
     const dueDate = getXMLValue(xmlDoc, 'cbc\\:DueDate, DueDate');
     
@@ -943,11 +993,6 @@ function removeLineItem(index) {
 }
 
 function handleStorno() {
-    if (!currentInvoice) {
-        alert('Vă rugăm să încărcați mai întâi o factură');
-        return;
-    }
-
     document.querySelectorAll('.line-item').forEach((item, index) => {
         const quantityInput = document.querySelector(`[name="quantity${index}"]`);
         const currentValue = parseFloat(quantityInput.value);
@@ -1279,13 +1324,89 @@ function displayVATBreakdown() {
     updateTotalVAT();
 }
 
+function createEmptyInvoice() {
+    const parser = new DOMParser();
+    const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+    <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:efactura.mfinante.ro:CIUS-RO:1.0.1</cbc:CustomizationID>
+    <cbc:ID></cbc:ID>
+    <cbc:IssueDate></cbc:IssueDate>
+    <cbc:DueDate></cbc:DueDate>
+    <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+    <cbc:DocumentCurrencyCode>RON</cbc:DocumentCurrencyCode>
+    <cac:AccountingSupplierParty>
+        <cac:Party>
+            <cac:PartyName>
+                <cbc:Name></cbc:Name>
+            </cac:PartyName>
+            <cac:PostalAddress>
+                <cbc:StreetName></cbc:StreetName>
+                <cbc:CityName></cbc:CityName>
+                <cbc:CountrySubentity></cbc:CountrySubentity>
+                <cac:Country>
+                    <cbc:IdentificationCode>RO</cbc:IdentificationCode>
+                </cac:Country>
+            </cac:PostalAddress>
+            <cac:PartyTaxScheme>
+                <cbc:CompanyID>RO</cbc:CompanyID>
+                <cac:TaxScheme>
+                    <cbc:ID>VAT</cbc:ID>
+                </cac:TaxScheme>
+            </cac:PartyTaxScheme>
+            <cac:PartyLegalEntity>
+                <cbc:RegistrationName></cbc:RegistrationName>
+                <cbc:CompanyID></cbc:CompanyID>
+            </cac:PartyLegalEntity>
+            <cac:Contact>
+                <cbc:Telephone></cbc:Telephone>
+            </cac:Contact>
+        </cac:Party>
+    </cac:AccountingSupplierParty>
+    <cac:AccountingCustomerParty>
+        <cac:Party>
+            <cac:PartyName>
+                <cbc:Name></cbc:Name>
+            </cac:PartyName>
+            <cac:PostalAddress>
+                <cbc:StreetName></cbc:StreetName>
+                <cbc:CityName></cbc:CityName>
+                <cbc:CountrySubentity></cbc:CountrySubentity>
+                <cac:Country>
+                    <cbc:IdentificationCode>RO</cbc:IdentificationCode>
+                </cac:Country>
+            </cac:PostalAddress>
+            <cac:PartyTaxScheme>
+                <cbc:CompanyID></cbc:CompanyID>
+                <cac:TaxScheme>
+                    <cbc:ID>VAT</cbc:ID>
+                </cac:TaxScheme>
+            </cac:PartyTaxScheme>
+            <cac:PartyLegalEntity>
+                <cbc:RegistrationName></cbc:RegistrationName>
+                <cbc:CompanyID></cbc:CompanyID>
+            </cac:PartyLegalEntity>
+            <cac:Contact>
+                <cbc:Telephone></cbc:Telephone>
+            </cac:Contact>
+        </cac:Party>
+    </cac:AccountingCustomerParty>
+</Invoice>`;
+    return parser.parseFromString(xmlString, "text/xml");
+}
+
 function saveXML() {
-    if (!currentInvoice || !validateForm()) return;
+    if (!validateForm()) return;
 
     try {
+        if (!currentInvoice) {
+            currentInvoice = createEmptyInvoice();
+        }
+
         const xmlDoc = currentInvoice;
         
-        // First update all the data
+        // Update all the data
         updateBasicDetails(xmlDoc);
         updatePartyDetails(xmlDoc);
         updateAllowanceCharges(xmlDoc);
@@ -1303,14 +1424,9 @@ function saveXML() {
         const existingLines = xmlDoc.querySelectorAll('cac\\:InvoiceLine, InvoiceLine');
         existingLines.forEach(el => el.remove());
         
-        // Now add elements in the correct order:
-        // 1. TaxTotal elements
+        // Add elements in the correct order
         updateTaxTotals(xmlDoc);
-        
-        // 2. LegalMonetaryTotal
         updateMonetaryTotals(xmlDoc);
-        
-        // 3. InvoiceLine elements
         updateLineItems(xmlDoc);
         
         downloadXML(xmlDoc);
@@ -1322,6 +1438,23 @@ function saveXML() {
 function updateBasicDetails(xmlDoc) {
     setXMLValue(xmlDoc, 'cbc\\:ID, ID', document.querySelector('[name="invoiceNumber"]').value);
     
+    // Remove existing Note elements
+    const existingNotes = xmlDoc.querySelectorAll('cbc\\:Note, Note');
+    existingNotes.forEach(note => note.remove());
+
+    // Split note text and create new Note elements
+    const noteText = document.querySelector('[name="invoiceNote"]').value;
+    if (noteText) {
+        const insertAfter = xmlDoc.querySelector('cbc\\:InvoiceTypeCode, InvoiceTypeCode');
+        const chunks = splitNoteIntoChunks(noteText, 300);
+        chunks.forEach(chunk => {
+            const noteElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Note", chunk);
+            if (insertAfter && insertAfter.parentNode) {
+                insertAfter.parentNode.insertBefore(noteElement, insertAfter.nextSibling);
+            }
+        });
+    }
+
     const issueDateValue = document.querySelector('[name="issueDate"]').value;
     const dueDateValue = document.querySelector('[name="dueDate"]').value;
     
@@ -2141,6 +2274,33 @@ class InvoicePrintHandler {
                         text-align: center;
                     }
 
+                    .note-section {
+                        margin: 24px 0;
+                        padding: 16px;
+                        background-color: #f8fafc;
+                        border-radius: 4px;
+                        border: 1px solid #e2e8f0;
+                        max-width: 100%;
+                        overflow-wrap: break-word;
+                        word-wrap: break-word;
+                        word-break: break-word;
+                    }
+
+                    .note-section h3 {
+                        font-size: 14px;
+                        color: #64748b;
+                        margin-bottom: 8px;
+                    }
+
+                    .note-section div {
+                        white-space: pre-wrap;
+                        font-size: 13px;
+                        width: 100%;
+                        overflow-wrap: break-word;
+                        word-wrap: break-word;
+                        word-break: break-word;
+                    }                    
+
                     .print-button {
                         position: fixed;
                         top: 20px;
@@ -2207,6 +2367,10 @@ class InvoicePrintHandler {
                         </thead>
                         <tbody id="print-items"></tbody>
                     </table>
+
+                    <div class="note-section" id="print-note" style="display: none;">
+                        <div></div>
+                    </div>                 
 
                     <div class="totals-container">
                         <div class="currency-info">
@@ -2406,6 +2570,13 @@ class InvoicePrintHandler {
         // Party details
         doc.getElementById('print-supplier-details').innerHTML = this.createPartyHTML(data.supplier);
         doc.getElementById('print-customer-details').innerHTML = this.createPartyHTML(data.customer);
+
+        const noteText = document.querySelector('[name="invoiceNote"]').value;
+        if (noteText) {
+            const noteSection = doc.getElementById('print-note');
+            noteSection.style.display = 'block';
+            noteSection.querySelector('div').textContent = noteText;
+        }
 
         // Line items
         doc.getElementById('print-items').innerHTML = data.items.map(item => `
