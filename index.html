@@ -206,12 +206,14 @@
                     <button type="button" class="button button-small" onclick="window.addVATRate()">
                         Adaugă Cotă TVA
                     </button>
+                    <div class="vat-total-group">
+                        <div class="total-row">
+                            <span>Total TVA:</span>
+                            <span id="vat" class="editable-total">0.00</span>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="total-row">
-                    <span>Total TVA:</span>
-                    <span id="vat" class="editable-total">0.00</span>
-                </div>
                 <div class="total-row total-row-final">
                     <span>Total:</span>
                     <span id="total" class="editable-total">0.00</span>
