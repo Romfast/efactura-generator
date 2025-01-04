@@ -103,7 +103,7 @@ export class InvoicePrintHandler {
             const invoiceData = this.collectInvoiceData();
 
             // Open new window and load the print template
-            this.printWindow = window.open('/templates/print.html', '_blank', 'width=800,height=600');
+            this.printWindow = window.open('./templates/print.html', '_blank', 'width=800,height=600');
             
             // Wait for the window to load
             await new Promise(resolve => {
