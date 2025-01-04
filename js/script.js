@@ -2227,13 +2227,38 @@ const printHandler = new InvoicePrintHandler();
 
 // Initialize when the document is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Add print button to the UI
+    // Add print controls to the UI
     const headerButtonGroup = document.querySelector('.button-group');
     if (headerButtonGroup) {
+        const printControls = document.createElement('div');
+        printControls.className = 'print-controls';
+        printControls.style.display = 'flex';
+        printControls.style.gap = '8px';
+        printControls.style.alignItems = 'center';
+        
+        // Create template selector
+        const templateSelect = document.createElement('select');
+        templateSelect.className = 'form-input';
+        templateSelect.style.width = 'auto';
+        templateSelect.innerHTML = `
+            <option value="standard">Standard</option>
+            <option value="compact">Compact</option>
+        `;
+        templateSelect.addEventListener('change', (e) => {
+            printHandler.setTemplate(e.target.value);
+        });
+
+        // Create print button
         const printButton = document.createElement('button');
         printButton.className = 'button';
         printButton.onclick = () => printHandler.print();
         printButton.innerHTML = 'Printează';
-        headerButtonGroup.appendChild(printButton);
+
+        // Add elements to controls
+        printControls.appendChild(templateSelect);
+        printControls.appendChild(printButton);
+        
+        // Add controls to header
+        headerButtonGroup.appendChild(printControls);
     }
 });

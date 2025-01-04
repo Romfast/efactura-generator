@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Factură</title>
     <style>
-        /* Variables */
         :root {
             --primary-color: #2563eb;
             --text-color: #1e293b;
@@ -13,7 +12,6 @@
             --background-light: #f8fafc;
         }
 
-        /* Base Styles */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -22,118 +20,89 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.5;
+            line-height: 1.4;
             color: var(--text-color);
-            background: white;
-            font-size: 12px;
+            font-size: 10px;
+            padding: 1cm;
         }
 
-        /* Layout */
         .invoice-container {
             max-width: 210mm;
             margin: 0 auto;
-            padding: 2cm;
-            background: white;
         }
 
-        /* Header */
         .invoice-header {
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
             border-bottom: 2px solid var(--primary-color);
-        }
-
-        .invoice-header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-
-        .invoice-title-section {
-            flex: 1;
         }
 
         .invoice-title {
             color: var(--primary-color);
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
-            margin-bottom: 0.5rem;
         }
 
-        .invoice-number {
-            font-size: 16px;
+        .invoice-number, .invoice-dates {
+            font-size: 11px;
             color: var(--text-light);
-            margin-bottom: 0.5rem;
         }
 
-        .invoice-dates {
-            color: var(--text-light);
-            font-size: 14px;
-        }
-
-        /* QR Code */
         .qr-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-left: 2rem;
+            text-align: right;
+            margin-bottom: 0.5rem;
         }
 
         #qrcode {
-            width: 100px;
-            height: 100px;
-            margin-bottom: 0.5rem;
+            width: 80px;
+            height: 80px;
         }
 
         .e-invoice-info {
-            font-size: 10px;
+            font-size: 9px;
             color: var(--text-light);
-            text-align: center;
-            max-width: 120px;
         }
 
-        /* Party Details */
         .party-details {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 10px;
         }
 
         .party-box {
-            padding: 1rem;
+            padding: 0.5rem;
             background: var(--background-light);
-            border-radius: 4px;
             border: 1px solid var(--border-color);
         }
 
         .party-title {
             font-weight: bold;
             color: var(--primary-color);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
-        .party-info p {
-            margin: 0.25rem 0;
-        }
-
-        /* Items Table */
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
+            font-size: 9px;
         }
 
         .items-table th {
             background: var(--background-light);
-            padding: 0.5rem;
+            padding: 4px;
             text-align: left;
             font-weight: 600;
-            border-bottom: 2px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
         }
 
         .items-table td {
-            padding: 0.5rem;
+            padding: 4px;
             border-bottom: 1px solid var(--border-color);
         }
 
@@ -141,45 +110,27 @@
             text-align: right;
         }
 
-        /* Note Section */
         .note-section {
-            margin: 24px 0;
-            padding: 16px;
-            background-color: var(--background-light);
-            border-radius: 4px;
+            font-size: 9px;
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background: var(--background-light);
             border: 1px solid var(--border-color);
         }
 
-        .note-section h3 {
-            font-size: 14px;
-            color: var(--text-light);
-            margin-bottom: 8px;
-        }
-
-        .note-section div {
-            white-space: pre-wrap;
-            font-size: 13px;
-        }
-
-        /* Totals Section */
         .totals-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 2rem;
+            display: grid;
+            grid-template-columns: auto 250px;
+            gap: 1rem;
+            margin-top: 1rem;
         }
 
         .currency-info {
-            flex: 1;
+            font-size: 9px;
             padding: 0.5rem;
             background: var(--background-light);
-            border-radius: 4px;
             border: 1px solid var(--border-color);
-            font-size: 12px;
-        }
-
-        .currency-info p {
-            margin: 0.25rem 0;
+            width: fit-content;
         }
 
         .currency-code {
@@ -188,83 +139,42 @@
         }
 
         .totals-section {
-            width: 300px;
+            font-size: 10px;
         }
 
         .total-row {
             display: flex;
             justify-content: space-between;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid var(--border-color);
+            padding: 2px 0;
         }
 
         .total-row.final {
-            border-bottom: 2px solid var(--primary-color);
+            border-top: 1px solid var(--primary-color);
+            padding-top: 4px;
+            margin-top: 4px;
             font-weight: bold;
-            font-size: 14px;
             color: var(--primary-color);
         }
 
-        /* VAT Breakdown */
         .vat-breakdown {
-            margin: 1rem 0;
-            padding: 1rem;
-            background: var(--background-light);
-            border-radius: 4px;
-        }
-
-        .vat-title {
-            font-weight: bold;
-            color: var(--text-light);
-            margin-bottom: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 9px;
         }
 
         .vat-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 0.5rem;
-            font-size: 11px;
-            margin-bottom: 1rem;
+            gap: 4px;
+            margin: 4px 0;
         }
 
-        .vat-grid-header {
-            font-weight: bold;
-            color: var(--text-light);
-        }
-
-        .vat-amount-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.5rem 0;
-            border-top: 1px solid var(--border-color);
-        }
-
-        /* Footer */
         .footer {
-            margin-top: 2rem;
-            padding-top: 1rem;
+            margin-top: 1rem;
+            padding-top: 0.5rem;
             border-top: 1px solid var(--border-color);
-            font-size: 10px;
+            font-size: 8px;
             color: var(--text-light);
             text-align: center;
-        }
-
-        /* Print Button */
-        .print-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 8px 16px;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .print-button:hover {
-            background: #1e40af;
         }
 
         @media print {
@@ -277,14 +187,6 @@
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
-
-            .no-print {
-                display: none;
-            }
-
-            .show-in-print {
-                display: flex !important;
-            }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -292,32 +194,28 @@
 <body>
     <div class="invoice-container">
         <div class="invoice-header">
-            <div class="invoice-header-content">
-                <div class="invoice-title-section">
-                    <h1 class="invoice-title">FACTURĂ ELECTRONICĂ</h1>
-                    <div class="invoice-number">Seria & Nr: <span id="print-invoice-number"></span></div>
-                    <div class="invoice-dates">
-                        <div>Data emiterii: <span id="print-issue-date"></span></div>
-                        <div>Data scadentă: <span id="print-due-date"></span></div>
-                    </div>
+            <div>
+                <h1 class="invoice-title">FACTURĂ ELECTRONICĂ</h1>
+                <div class="invoice-number">Seria & Nr: <span id="print-invoice-number"></span></div>
+                <div class="invoice-dates">
+                    Data emiterii: <span id="print-issue-date"></span> |
+                    Data scadentă: <span id="print-due-date"></span>
                 </div>
-                <div class="qr-section">
-                    <div id="qrcode"></div>
-                    <div class="e-invoice-info">
-                        eFactura - www.romfast.ro
-                    </div>
-                </div>
+            </div>
+            <div class="qr-section">
+                <div id="qrcode"></div>
+                <div class="e-invoice-info">eFactura - www.romfast.ro</div>
             </div>
         </div>
 
         <div class="party-details">
             <div class="party-box">
                 <div class="party-title">Furnizor</div>
-                <div class="party-info" id="print-supplier-details"></div>
+                <div id="print-supplier-details"></div>
             </div>
             <div class="party-box">
                 <div class="party-title">Client</div>
-                <div class="party-info" id="print-customer-details"></div>
+                <div id="print-customer-details"></div>
             </div>
         </div>
 
@@ -356,13 +254,17 @@
                     <span>Subtotal:</span>
                     <span id="print-subtotal"></span>
                 </div>
-                <div class="total-row">
-                    <span>Total Reduceri:</span>
-                    <span id="print-allowances"></span>
+                <div id="print-allowances-row" style="display: none;">
+                    <div class="total-row">
+                        <span>Reduceri:</span>
+                        <span id="print-allowances"></span>
+                    </div>
                 </div>
-                <div class="total-row">
-                    <span>Total Taxe:</span>
-                    <span id="print-charges"></span>
+                <div id="print-charges-row" style="display: none;">
+                    <div class="total-row">
+                        <span>Taxe:</span>
+                        <span id="print-charges"></span>
+                    </div>
                 </div>
                 <div class="total-row">
                     <span>Valoare Netă:</span>
@@ -370,21 +272,20 @@
                 </div>
                 
                 <div class="vat-breakdown">
-                    <div class="vat-title">Defalcare TVA</div>
                     <div class="vat-grid">
-                        <div class="vat-grid-header">Tip TVA</div>
-                        <div class="vat-grid-header">Cotă</div>
-                        <div class="vat-grid-header">Bază</div>
-                        <div class="vat-grid-header">TVA</div>
+                        <div>Tip TVA</div>
+                        <div>Cotă</div>
+                        <div>Bază</div>
+                        <div>TVA</div>
                     </div>
                     <div class="vat-grid" id="print-vat-breakdown"></div>
                     
-                    <div id="print-vat-currencies" class="vat-amount-row">
+                    <div class="total-row">
                         <span>Total TVA (<span id="print-vat-currency-main"></span>):</span>
                         <span id="print-vat-main"></span>
                     </div>
-                    <div id="print-vat-secondary" class="vat-amount-row" style="display: none;">
-                        <span>Total TVA (<span id="print-vat-currency-secondary"></span>):</span>
+                    <div id="print-vat-secondary" class="total-row" style="display: none;">
+                        <span>TVA (<span id="print-vat-currency-secondary"></span>):</span>
                         <span id="print-vat-secondary-amount"></span>
                     </div>
                 </div>
@@ -400,5 +301,21 @@
             Document generat electronic - www.romfast.ro
         </div>
     </div>
+
+    <script>
+        // Show allowances/charges rows only if values are non-zero
+        function updateAllowancesChargesVisibility() {
+            const allowancesRow = document.getElementById('print-allowances-row');
+            const chargesRow = document.getElementById('print-charges-row');
+            const allowancesAmount = parseFloat(document.getElementById('print-allowances').textContent) || 0;
+            const chargesAmount = parseFloat(document.getElementById('print-charges').textContent) || 0;
+            
+            allowancesRow.style.display = allowancesAmount > 0 ? 'block' : 'none';
+            chargesRow.style.display = chargesAmount > 0 ? 'block' : 'none';
+        }
+
+        // Call this after values are populated
+        window.addEventListener('load', updateAllowancesChargesVisibility);
+    </script>
 </body>
 </html>
