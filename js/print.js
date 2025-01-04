@@ -4,7 +4,18 @@ export class InvoicePrintHandler {
     constructor() {
         this.printWindow = null;
         this.formatter = new InvoiceFormatter();
+        this.templates = {
+            standard: './templates/print.html',
+            compact: './templates/print-compact.html'
+        };
+        this.currentTemplate = 'standard';
     }
+
+    setTemplate(templateName) {
+        if (this.templates[templateName]) {
+            this.currentTemplate = templateName;
+        }
+    }    
 
     collectInvoiceData() {
         return {
@@ -102,8 +113,12 @@ export class InvoicePrintHandler {
             // Collect all the data
             const invoiceData = this.collectInvoiceData();
 
-            // Open new window and load the print template
-            this.printWindow = window.open('./templates/print.html', '_blank', 'width=800,height=600');
+            // Open new window and load the selected print template
+            this.printWindow = window.open(
+                this.templates[this.currentTemplate], 
+                '_blank', 
+                'width=800,height=600'
+            );
             
             // Wait for the window to load
             await new Promise(resolve => {
