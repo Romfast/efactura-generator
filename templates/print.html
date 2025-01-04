@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Factură</title>
+    <link rel="stylesheet" href="/styles/print.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <button onclick="window.print()" class="print-button no-print">Printează Factura</button>
+    <div class="invoice-container">
+        <div class="invoice-header">
+            <div class="invoice-header-content">
+                <div class="invoice-title-section">
+                    <h1 class="invoice-title">FACTURĂ ELECTRONICĂ</h1>
+                    <div class="invoice-number">Seria & Nr: <span id="print-invoice-number"></span></div>
+                    <div class="invoice-dates">
+                        <div>Data emiterii: <span id="print-issue-date"></span></div>
+                        <div>Data scadentă: <span id="print-due-date"></span></div>
+                    </div>
+                </div>
+                <div class="qr-section">
+                    <div id="qrcode"></div>
+                    <div class="e-invoice-info">
+                        eFactura - www.romfast.ro
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="party-details">
+            <div class="party-box">
+                <div class="party-title">Furnizor</div>
+                <div class="party-info" id="print-supplier-details"></div>
+            </div>
+            <div class="party-box">
+                <div class="party-title">Client</div>
+                <div class="party-info" id="print-customer-details"></div>
+            </div>
+        </div>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Nr.</th>
+                    <th>Denumire</th>
+                    <th>UM</th>
+                    <th>Cant.</th>
+                    <th>Preț</th>
+                    <th>TVA</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="print-items"></tbody>
+        </table>
+
+        <div class="note-section" id="print-note" style="display: none;">
+            <h3>Text Adițional:</h3>
+            <div></div>
+        </div>
+
+        <div class="totals-container">
+            <div class="currency-info">
+                <p>Monedă Factură: <span class="currency-code" id="print-document-currency"></span></p>
+                <p id="print-tax-currency-container" style="display: none;">
+                    Monedă TVA: <span class="currency-code" id="print-tax-currency"></span>
+                    <br>
+                    Curs valutar: <span id="print-exchange-rate"></span>
+                </p>
+            </div>
+
+            <div class="totals-section">
+                <div class="total-row">
+                    <span>Subtotal:</span>
+                    <span id="print-subtotal"></span>
+                </div>
+                <div class="total-row">
+                    <span>Total Reduceri:</span>
+                    <span id="print-allowances"></span>
+                </div>
+                <div class="total-row">
+                    <span>Total Taxe:</span>
+                    <span id="print-charges"></span>
+                </div>
+                <div class="total-row">
+                    <span>Valoare Netă:</span>
+                    <span id="print-net-amount"></span>
+                </div>
+                
+                <div class="vat-breakdown">
+                    <div class="vat-title">Defalcare TVA</div>
+                    <div class="vat-grid">
+                        <div class="vat-grid-header">Tip TVA</div>
+                        <div class="vat-grid-header">Cotă</div>
+                        <div class="vat-grid-header">Bază</div>
+                        <div class="vat-grid-header">TVA</div>
+                    </div>
+                    <div class="vat-grid" id="print-vat-breakdown"></div>
+                    
+                    <div id="print-vat-currencies" class="vat-amount-row">
+                        <span>Total TVA (<span id="print-vat-currency-main"></span>):</span>
+                        <span id="print-vat-main"></span>
+                    </div>
+                    <div id="print-vat-secondary" class="vat-amount-row" style="display: none;">
+                        <span>Total TVA (<span id="print-vat-currency-secondary"></span>):</span>
+                        <span id="print-vat-secondary-amount"></span>
+                    </div>
+                </div>
+                
+                <div class="total-row total-row-final">
+                    <span>Total de Plată:</span>
+                    <span id="print-total"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Document generat electronic - www.romfast.ro
+        </div>
+    </div>
+</body>
+</html>                
