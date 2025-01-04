@@ -1,12 +1,7 @@
-## License
-Licensed under AGPL-3.0 by Romfast SRL Constanța, România, www.romfast.ro.
-
-Commercial use allowed if derivative work remains open source.
-
-This project uses qrcode.js (MIT License).
-
                     GNU AFFERO GENERAL PUBLIC LICENSE
                        Version 3, 19 November 2007
+
+Copyright (C) 2025 Romfast SRL <https://www.romfast.ro>
 
  Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
  Everyone is permitted to copy and distribute verbatim copies
