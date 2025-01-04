@@ -1485,76 +1485,134 @@ function updateBasicDetails(xmlDoc) {
    }    
 }
 
+function createPartyElement(xmlDoc, isSupplier, partyData) {
+    const party = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Party");
+    const hasVatPrefix = /^[A-Z]{2}/.test(partyData.vat?.trim() || '');
+    
+    // Add PartyIdentification for customers without VAT prefix
+    if (!isSupplier && !hasVatPrefix && partyData.companyId) {
+        const partyIdentification = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:PartyIdentification");
+        partyIdentification.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", partyData.companyId));
+        party.appendChild(partyIdentification);
+    }
+
+    // Add PostalAddress
+    const postalAddress = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:PostalAddress");
+    postalAddress.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:StreetName", partyData.address));
+    postalAddress.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CityName", partyData.city));
+    postalAddress.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CountrySubentity", partyData.county));
+    
+    const country = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Country");
+    // Ensure country code is valid ISO 3166-1 format (2 uppercase letters)
+    const countryCode = partyData.country?.trim().toUpperCase() || 'RO';
+    country.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:IdentificationCode", countryCode));
+    postalAddress.appendChild(country);
+    party.appendChild(postalAddress);
+
+    // Add PartyTaxScheme
+    const partyTaxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:PartyTaxScheme");
+    
+    if (hasVatPrefix) {
+        // For VAT registered parties (with prefix)
+        partyTaxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", partyData.vat));
+        const taxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme");
+        taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
+        partyTaxScheme.appendChild(taxScheme);
+    } else if (isSupplier) {
+        // For non-VAT registered supplier
+        partyTaxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", partyData.vat || ''));
+        partyTaxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme"));
+    } else {
+        // For non-VAT registered customer
+        partyTaxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", ''));
+        const taxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme");
+        taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
+        partyTaxScheme.appendChild(taxScheme);
+    }
+    
+    party.appendChild(partyTaxScheme);
+
+    // Add PartyLegalEntity
+    const partyLegalEntity = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:PartyLegalEntity");
+    partyLegalEntity.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:RegistrationName", partyData.name));
+    
+    // Add CompanyID for both supplier and customer
+    if (isSupplier) {
+        // For supplier always add CompanyID from companyId field
+        partyLegalEntity.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", partyData.companyId));
+    } else {
+        // For customer, add VAT number if no prefix, otherwise add companyId
+        partyLegalEntity.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", 
+            hasVatPrefix ? partyData.companyId : partyData.vat));
+    }
+    
+    party.appendChild(partyLegalEntity);
+
+    // Add Contact if phone exists
+    if (partyData.phone) {
+        const contact = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Contact");
+        contact.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Telephone", partyData.phone));
+        party.appendChild(contact);
+    }
+
+    return party;
+}
+
 function updatePartyDetails(xmlDoc) {
-    const supplierParty = xmlDoc.querySelector('cac\\:AccountingSupplierParty, AccountingSupplierParty');
-    if (supplierParty) {
-        setXMLValue(supplierParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName',
-            document.querySelector('[name="supplierName"]').value);
-        setXMLValue(supplierParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID',
-            document.querySelector('[name="supplierVAT"]').value);
-        setXMLValue(supplierParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID',
-            document.querySelector('[name="supplierCompanyId"]').value);
-        setXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, PostalAddress StreetName',
-            document.querySelector('[name="supplierAddress"]').value);
-        setXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CityName, PostalAddress CityName',
-            document.querySelector('[name="supplierCity"]').value);
-        setXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CountrySubentity, PostalAddress CountrySubentity',
-            document.querySelector('[name="supplierCountrySubentity"]').value);
-        setXMLValue(supplierParty, 'cac\\:Party cac\\:PostalAddress cac\\:Country cbc\\:IdentificationCode, Country IdentificationCode',
-            document.querySelector('[name="supplierCountry"]').value);
+    // Update supplier details
+    const supplierData = {
+        name: document.querySelector('[name="supplierName"]').value,
+        vat: document.querySelector('[name="supplierVAT"]').value,
+        companyId: document.querySelector('[name="supplierCompanyId"]').value,
+        address: document.querySelector('[name="supplierAddress"]').value,
+        city: document.querySelector('[name="supplierCity"]').value,
+        county: document.querySelector('[name="supplierCountrySubentity"]').value,
+        country: document.querySelector('[name="supplierCountry"]').value,
+        phone: document.querySelector('[name="supplierPhone"]').value
+    };
+    
+    updatePartyXML(xmlDoc, true, supplierData);
+
+    // Update customer details
+    const customerData = {
+        name: document.querySelector('[name="customerName"]').value,
+        vat: document.querySelector('[name="customerVAT"]').value,
+        companyId: document.querySelector('[name="customerCompanyId"]').value,
+        address: document.querySelector('[name="customerAddress"]').value,
+        city: document.querySelector('[name="customerCity"]').value,
+        county: document.querySelector('[name="customerCountrySubentity"]').value,
+        country: document.querySelector('[name="customerCountry"]').value,
+        phone: document.querySelector('[name="customerPhone"]').value
+    };
+    
+    updatePartyXML(xmlDoc, false, customerData);
+}
+
+function updatePartyXML(xmlDoc, isSupplier, partyData) {
+    const partyElement = createPartyElement(xmlDoc, isSupplier, partyData);
+    const parentTag = isSupplier ? 'AccountingSupplierParty' : 'AccountingCustomerParty';
+    let parentElement = xmlDoc.querySelector(`cac\\:${parentTag}, ${parentTag}`);
+    
+    if (!parentElement) {
+        parentElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, `cac:${parentTag}`);
+        const insertPoint = isSupplier ? 
+            xmlDoc.querySelector('cbc\\:DocumentCurrencyCode, DocumentCurrencyCode') : 
+            xmlDoc.querySelector('cac\\:AccountingSupplierParty, AccountingSupplierParty');
             
-        const phone = document.querySelector('[name="supplierPhone"]').value;
-        if (phone) {
-            let contactElement = supplierParty.querySelector('cac\\:Party cac\\:Contact, Contact');
-            if (!contactElement) {
-                const partyElement = supplierParty.querySelector('cac\\:Party, Party');
-                contactElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Contact");
-                partyElement.appendChild(contactElement);
-            }
-            
-            let telephoneElement = contactElement.querySelector('cbc\\:Telephone, Telephone');
-            if (!telephoneElement) {
-                telephoneElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Telephone");
-                contactElement.appendChild(telephoneElement);
-            }
-            telephoneElement.textContent = phone;
+        if (insertPoint && insertPoint.parentNode) {
+            insertPoint.parentNode.insertBefore(parentElement, insertPoint.nextSibling);
+        } else {
+            xmlDoc.documentElement.appendChild(parentElement);
         }
     }
 
-    const customerParty = xmlDoc.querySelector('cac\\:AccountingCustomerParty, AccountingCustomerParty');
-    if (customerParty) {
-        setXMLValue(customerParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName',
-            document.querySelector('[name="customerName"]').value);
-        setXMLValue(customerParty, 'cac\\:Party cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID',
-            document.querySelector('[name="customerVAT"]').value);
-        setXMLValue(customerParty, 'cac\\:Party cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID',
-            document.querySelector('[name="customerCompanyId"]').value);
-        setXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:StreetName, PostalAddress StreetName',
-            document.querySelector('[name="customerAddress"]').value);
-        setXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CityName, PostalAddress CityName',
-            document.querySelector('[name="customerCity"]').value);
-        setXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cbc\\:CountrySubentity, PostalAddress CountrySubentity',
-            document.querySelector('[name="customerCountrySubentity"]').value);
-        setXMLValue(customerParty, 'cac\\:Party cac\\:PostalAddress cac\\:Country cbc\\:IdentificationCode, Country IdentificationCode',
-            document.querySelector('[name="customerCountry"]').value);
-
-        const phone = document.querySelector('[name="customerPhone"]').value;
-        if (phone) {
-            let contactElement = customerParty.querySelector('cac\\:Party cac\\:Contact, Contact');
-            if (!contactElement) {
-                const partyElement = customerParty.querySelector('cac\\:Party, Party');
-                contactElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Contact");
-                partyElement.appendChild(contactElement);
-            }
-            
-            let telephoneElement = contactElement.querySelector('cbc\\:Telephone, Telephone');
-            if (!telephoneElement) {
-                telephoneElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Telephone");
-                contactElement.appendChild(telephoneElement);
-            }
-            telephoneElement.textContent = phone;
-        }
+    // Remove existing Party element if it exists
+    const existingParty = parentElement.querySelector('cac\\:Party, Party');
+    if (existingParty) {
+        existingParty.remove();
     }
+
+    parentElement.appendChild(partyElement);
 }
 
 function getAllowanceCharges() {
