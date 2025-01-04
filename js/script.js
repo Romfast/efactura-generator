@@ -51,6 +51,34 @@ const ROMANIAN_COUNTY_CODES = new Set([
     'RO-VN', 'RO-VS'
 ]);
 
+const CHARGE_REASON_CODES = {
+    'TV': 'Cheltuieli de transport',
+    'FC': 'Taxe transport',
+    'ZZZ': 'Definite reciproc'
+};
+
+const ALLOWANCE_REASON_CODES = {
+    '95': 'Reducere',
+    '41': 'Bonus lucrări în avans',
+    '42': 'Alt bonus',
+    '60': 'Reducere volum',
+    '62': 'Alte reduceri',
+    '63': 'Reducere producător',
+    '64': 'Din cauza războiului',
+    '65': 'Reducere outlet nou',
+    '66': 'Reducere mostre',
+    '67': 'Reducere end-of-range',
+    '68': 'Cost ambalaj returnabil',
+    '70': 'Reducere Incoterm',
+    '71': 'Prag vânzări',
+    '88': 'Suprataxă/deducere materiale',
+    '100': 'Reducere specială',
+    '102': 'Termen lung fix',
+    '103': 'Temporar',
+    '104': 'Standard',
+    '105': 'Cifră de afaceri anuală'
+};
+
 // Global variables
 let currentInvoice = null;
 let originalTotals = null;
@@ -190,15 +218,16 @@ function createAllowanceChargeHTML(index, charge) {
             <div class="grid">
                 <div class="form-group">
                     <label class="form-label">Tip</label>
-                    <select class="form-input" name="chargeType${index}">
+                    <select class="form-input" name="chargeType${index}" onchange="updateReasonCodeOptions(${index})">
                         <option value="true" ${charge.isCharge ? 'selected' : ''}>Taxă</option>
                         <option value="false" ${!charge.isCharge ? 'selected' : ''}>Reducere</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cod Motiv</label>
-                    <input type="text" class="form-input" name="chargeReasonCode${index}" 
-                           value="${charge.reasonCode}">
+                    <select class="form-input" name="chargeReasonCode${index}">
+                        ${createReasonCodeOptions(charge.isCharge, charge.reasonCode)}
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Motiv</label>
@@ -229,6 +258,28 @@ function createAllowanceChargeHTML(index, charge) {
             </button>
         </div>
     `;
+}
+
+function createReasonCodeOptions(isCharge, selectedCode = '') {
+    const codes = isCharge ? CHARGE_REASON_CODES : ALLOWANCE_REASON_CODES;
+    return Object.entries(codes)
+        .map(([code, description]) => 
+            `<option value="${code}" ${code === selectedCode ? 'selected' : ''}>${description} (${code})</option>`
+        ).join('');
+}
+
+window.updateReasonCodeOptions = function(index) {
+    const chargeTypeSelect = document.querySelector(`[name="chargeType${index}"]`);
+    const reasonCodeSelect = document.querySelector(`[name="chargeReasonCode${index}"]`);
+    const reasonInput = document.querySelector(`[name="chargeReason${index}"]`);
+    
+    const isCharge = chargeTypeSelect.value === 'true';
+    reasonCodeSelect.innerHTML = createReasonCodeOptions(isCharge);
+    
+    // Update reason text based on selected code
+    const selectedCode = reasonCodeSelect.value;
+    const codes = isCharge ? CHARGE_REASON_CODES : ALLOWANCE_REASON_CODES;
+    reasonInput.value = codes[selectedCode] || '';
 }
 
 // Create line item HTML
@@ -1020,6 +1071,8 @@ function setupAllowanceChargeListeners(index) {
     const chargeTypeInput = document.querySelector(`[name="chargeType${index}"]`);
     const chargeVatTypeInput = document.querySelector(`[name="chargeVatType${index}"]`);
     const chargeVatRateInput = document.querySelector(`[name="chargeVatRate${index}"]`);
+    const reasonCodeSelect = document.querySelector(`[name="chargeReasonCode${index}"]`);
+    const reasonInput = document.querySelector(`[name="chargeReason${index}"]`);
     
     // Add change listeners to all inputs
     [chargeAmountInput, chargeTypeInput, chargeVatTypeInput, chargeVatRateInput].forEach(input => {
@@ -1030,6 +1083,15 @@ function setupAllowanceChargeListeners(index) {
             });
         }
     });
+    
+    // Add reason code change listener
+    if (reasonCodeSelect) {
+        reasonCodeSelect.addEventListener('change', () => {
+            const isCharge = chargeTypeInput.value === 'true';
+            const codes = isCharge ? CHARGE_REASON_CODES : ALLOWANCE_REASON_CODES;
+            reasonInput.value = codes[reasonCodeSelect.value] || '';
+        });
+    }
     
     // Special handling for VAT type changes
     if (chargeVatTypeInput) {
@@ -1086,7 +1148,7 @@ function addAllowanceCharge() {
     const newCharge = {
         isCharge: true,
         reasonCode: 'TV',
-        reason: 'Transport',
+        reason: 'Cheltuieli transport',
         amount: 0,
         vatRate: 19.0,
         vatTypeId: 'S'
