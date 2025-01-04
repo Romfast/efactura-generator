@@ -1,5 +1,5 @@
 ## License
-Licensed under AGPL-3.0 by Romfast SRL.
+Licensed under AGPL-3.0 by Romfast SRL Constanța, România, www.romfast.ro.
 
 Commercial use allowed if derivative work remains open source.
 
