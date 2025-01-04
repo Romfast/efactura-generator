@@ -36,7 +36,9 @@ export class InvoicePrintHandler {
                 city: document.querySelector('[name="supplierCity"]').value,
                 county: document.querySelector('[name="supplierCountrySubentity"]').value,
                 country: document.querySelector('[name="supplierCountry"]').value,
-                phone: document.querySelector('[name="supplierPhone"]').value
+                phone: document.querySelector('[name="supplierPhone"]').value,
+                contactName: document.querySelector('[name="supplierContactName"]').value,
+                email: document.querySelector('[name="supplierEmail"]').value                
             },
 
             // Customer details
@@ -48,7 +50,9 @@ export class InvoicePrintHandler {
                 city: document.querySelector('[name="customerCity"]').value,
                 county: document.querySelector('[name="customerCountrySubentity"]').value,
                 country: document.querySelector('[name="customerCountry"]').value,
-                phone: document.querySelector('[name="customerPhone"]').value
+                phone: document.querySelector('[name="customerPhone"]').value,
+                contactName: document.querySelector('[name="customerContactName"]').value,
+                email: document.querySelector('[name="customerEmail"]').value
             },
 
             // Line items
@@ -105,6 +109,8 @@ export class InvoicePrintHandler {
             <p>${party.city}${party.county ? ', ' + party.county : ''}</p>
             <p>${party.country}</p>
             ${party.phone ? `<p>Tel: ${party.phone}</p>` : ''}
+            ${party.contactName ? `<p>Contact: ${party.contactName}</p>` : ''}
+            ${party.email ? `<p>Email: ${party.email}</p>` : ''}
         `;
     }
 

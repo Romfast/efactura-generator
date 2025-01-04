@@ -966,10 +966,16 @@ function populateBasicDetails(xmlDoc) {
 
 function populatePartyDetails(xmlDoc) {
     function extractPartyDetails(party, prefix) {
+        // Extract contact information
+        const contact = party.querySelector('cac\\:Contact, Contact');
+        const phone = contact?.querySelector('cbc\\:Telephone, Telephone')?.textContent || '';
+        const contactName = contact?.querySelector('cbc\\:Name, Name')?.textContent || '';
+        const email = contact?.querySelector('cbc\\:ElectronicMail, ElectronicMail')?.textContent || '';
+    
         // Country Code Extraction
         const countryCodeElement = party.querySelector('cac\\:Country cbc\\:IdentificationCode, Country IdentificationCode');
         const countryCode = countryCodeElement ? countryCodeElement.textContent.trim() : 'RO';
- 
+     
         // Postal Address Details
         const postalAddress = party.querySelector('cac\\:PostalAddress, PostalAddress');
         const streetName = postalAddress ? 
@@ -978,7 +984,7 @@ function populatePartyDetails(xmlDoc) {
             getXMLValue(postalAddress, 'cbc\\:CityName, CityName') : '';
         const countyCode = postalAddress ? 
             getXMLValue(postalAddress, 'cbc\\:CountrySubentity, CountrySubentity') : '';
- 
+     
         // Set inputs
         document.querySelector(`[name="${prefix}Name"]`).value = 
             getXMLValue(party, 'cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName');
@@ -988,14 +994,17 @@ function populatePartyDetails(xmlDoc) {
             getXMLValue(party, 'cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID');
         document.querySelector(`[name="${prefix}Address"]`).value = streetName;
         document.querySelector(`[name="${prefix}City"]`).value = cityName;
- 
+        document.querySelector(`[name="${prefix}Phone"]`).value = phone;
+        document.querySelector(`[name="${prefix}ContactName"]`).value = contactName;
+        document.querySelector(`[name="${prefix}Email"]`).value = email;
+     
         // Country Select
         const countrySelect = document.querySelector(`[name="${prefix}Country"]`);
         if (countrySelect) {
             countrySelect.value = countryCode;
             countrySelect.dataset.xmlValue = countryCode;
         }
- 
+     
         // County Select
         const countySelect = document.querySelector(`[name="${prefix}CountrySubentity"]`);
         if (countySelect) {
@@ -1727,17 +1736,18 @@ function createPartyElement(xmlDoc, isSupplier, partyData) {
         party.appendChild(partyIdentification);
     }
 
-function validateCountryCode(countryCode) {
-    const code = countryCode?.trim().toUpperCase() || 'RO';
-    return ISO_3166_1_CODES.has(code) ? code : 'RO';
-}
-
-function validateCountyCode(countryCode, countyCode) {
-    if (countryCode === 'RO') {
-        return ROMANIAN_COUNTY_CODES.has(countyCode) ? countyCode : 'RO-B';
+    function validateCountryCode(countryCode) {
+        const code = countryCode?.trim().toUpperCase() || 'RO';
+        return ISO_3166_1_CODES.has(code) ? code : 'RO';
     }
-    return countyCode;
-}
+
+    function validateCountyCode(countryCode, countyCode) {
+        if (countryCode === 'RO') {
+            return ROMANIAN_COUNTY_CODES.has(countyCode) ? countyCode : 'RO-B';
+        }
+        return countyCode;
+    }
+
     const postalAddress = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:PostalAddress");
     postalAddress.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:StreetName", partyData.address));
     postalAddress.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CityName", partyData.city));
@@ -1789,13 +1799,21 @@ function validateCountyCode(countryCode, countyCode) {
     
     party.appendChild(partyLegalEntity);
 
-    // Add Contact if phone exists
-    if (partyData.phone) {
+    // Add Contact if phone, email or contactName exists
+    if (partyData.phone || partyData.email || partyData.contactName) {
         const contact = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Contact");
-        contact.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Telephone", partyData.phone));
+        
+        if (partyData.contactName) {
+            contact.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Name", partyData.contactName));
+        }
+        if (partyData.phone) {
+            contact.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Telephone", partyData.phone));
+        }
+        if (partyData.email) {
+            contact.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ElectronicMail", partyData.email));
+        }
         party.appendChild(contact);
     }
-
     return party;
 }
 
@@ -1809,7 +1827,9 @@ function updatePartyDetails(xmlDoc) {
         city: document.querySelector('[name="supplierCity"]').value,
         county: document.querySelector('[name="supplierCountrySubentity"]').value,
         country: document.querySelector('[name="supplierCountry"]').value,
-        phone: document.querySelector('[name="supplierPhone"]').value
+        phone: document.querySelector('[name="supplierPhone"]').value,
+        contactName: document.querySelector('[name="supplierContactName"]').value,
+        email: document.querySelector('[name="supplierEmail"]').value
     };
     
     updatePartyXML(xmlDoc, true, supplierData);
@@ -1823,7 +1843,9 @@ function updatePartyDetails(xmlDoc) {
         city: document.querySelector('[name="customerCity"]').value,
         county: document.querySelector('[name="customerCountrySubentity"]').value,
         country: document.querySelector('[name="customerCountry"]').value,
-        phone: document.querySelector('[name="customerPhone"]').value
+        phone: document.querySelector('[name="customerPhone"]').value,
+        contactName: document.querySelector('[name="customerContactName"]').value,
+        email: document.querySelector('[name="customerEmail"]').value
     };
     
     updatePartyXML(xmlDoc, false, customerData);
