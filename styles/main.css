@@ -387,6 +387,18 @@ body {
     margin-top: 4px;
 }
 
+.app-footer {
+    text-align: center;
+    padding: 10px;
+    background-color: #ffffff;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    font-size: 0.8em;
+    color: #000000;
+    z-index: 1000;
+}
+
 /* Style the Pikaday calendar */
 .pika-single {
     z-index: 9999;
