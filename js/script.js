@@ -2123,7 +2123,8 @@ function updateTaxTotals(xmlDoc) {
     // Create main TaxTotal for document currency
     const taxTotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxTotal");
     
-    const uiTotalVat = parseFloat(document.getElementById('vat').textContent);
+    // Use precise currency parsing for total VAT
+    const uiTotalVat = formatter.parseCurrency(document.getElementById('vat').textContent);
     const taxAmountElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:TaxAmount", 
         uiTotalVat.toFixed(2), { currencyID });
     taxTotal.appendChild(taxAmountElement);
@@ -2133,8 +2134,8 @@ function updateTaxTotals(xmlDoc) {
     vatRows.forEach(row => {
         const taxSubtotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxSubtotal");
         
-        const baseAmount = parseFloat(row.querySelector('.vat-base').value) || 0;
-        const vatAmount = parseFloat(row.querySelector('.vat-amount').value) || 0;
+        const baseAmount = formatter.parseCurrency(row.querySelector('.vat-base').value) || 0;
+        const vatAmount = formatter.parseCurrency(row.querySelector('.vat-amount').value) || 0;
         const vatType = row.querySelector('.vat-type').value;
         const vatRate = parseFloat(row.querySelector('.vat-rate').value) || 0;
 
@@ -2163,10 +2164,9 @@ function updateTaxTotals(xmlDoc) {
         taxTotal.appendChild(taxSubtotal);
     });
 
-    // Find the correct insertion point - after AllowanceCharge elements
+    // Insertion point logic remains the same as in previous implementation
     let insertionPoint = xmlDoc.querySelector('cac\\:AllowanceCharge, AllowanceCharge');
     if (insertionPoint) {
-        // Find the last AllowanceCharge
         while (insertionPoint.nextElementSibling && 
                (insertionPoint.nextElementSibling.localName === 'AllowanceCharge' ||
                 insertionPoint.nextElementSibling.localName === 'TaxTotal')) {
@@ -2174,7 +2174,6 @@ function updateTaxTotals(xmlDoc) {
         }
         insertionPoint.parentNode.insertBefore(taxTotal, insertionPoint.nextSibling);
     } else {
-        // If no AllowanceCharge, insert before LegalMonetaryTotal
         const monetaryTotal = xmlDoc.querySelector('cac\\:LegalMonetaryTotal, LegalMonetaryTotal');
         if (monetaryTotal) {
             monetaryTotal.parentNode.insertBefore(taxTotal, monetaryTotal);
@@ -2200,28 +2199,25 @@ function updateTaxTotals(xmlDoc) {
     }
 }
 
-
-
 function updateMonetaryTotals(xmlDoc) {
     const currencyID = document.querySelector('[name="documentCurrencyCode"]').value.toUpperCase() || 'RON';
 
-    const subtotal = parseFloat(document.getElementById('subtotal').textContent) || 0;
-    const allowances = parseFloat(document.getElementById('totalAllowances').textContent) || 0;
-    const charges = parseFloat(document.getElementById('totalCharges').textContent) || 0;
-    const netAmount = parseFloat(document.getElementById('netAmount').textContent) || 0;
-    const totalVat = parseFloat(document.getElementById('vat').textContent) || 0;
-    const total = parseFloat(document.getElementById('total').textContent) || 0;
+    // Use direct parsing to preserve full precision and manual edits
+    const subtotal = formatter.parseCurrency(document.getElementById('subtotal').textContent);
+    const allowances = formatter.parseCurrency(document.getElementById('totalAllowances').textContent);
+    const charges = formatter.parseCurrency(document.getElementById('totalCharges').textContent);
+    const netAmount = formatter.parseCurrency(document.getElementById('netAmount').textContent);
+    const totalVat = formatter.parseCurrency(document.getElementById('vat').textContent);
+    const total = formatter.parseCurrency(document.getElementById('total').textContent);
 
-    // Remove existing LegalMonetaryTotal if present
+    // Rest of the function remains the same...
     const existingMonetaryTotal = xmlDoc.querySelector('cac\\:LegalMonetaryTotal, LegalMonetaryTotal');
     if (existingMonetaryTotal) {
         existingMonetaryTotal.parentNode.removeChild(existingMonetaryTotal);
     }
 
-    // Create new LegalMonetaryTotal
     const monetaryTotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:LegalMonetaryTotal");
 
-    // Add all required monetary amounts
     const amounts = {
         "LineExtensionAmount": subtotal,
         "TaxExclusiveAmount": netAmount,
@@ -2236,17 +2232,15 @@ function updateMonetaryTotals(xmlDoc) {
             `cbc:${elementName}`, value.toFixed(2), { currencyID }));
     });
 
-    // Find the correct insertion point - after last TaxTotal
+    // Insertion logic remains the same
     let insertionPoint = xmlDoc.querySelector('cac\\:TaxTotal, TaxTotal');
     if (insertionPoint) {
-        // Find the last TaxTotal
         while (insertionPoint.nextElementSibling && 
                insertionPoint.nextElementSibling.localName === 'TaxTotal') {
             insertionPoint = insertionPoint.nextElementSibling;
         }
         insertionPoint.parentNode.insertBefore(monetaryTotal, insertionPoint.nextSibling);
     } else {
-        // If no TaxTotal, insert before first InvoiceLine
         const firstInvoiceLine = xmlDoc.querySelector('cac\\:InvoiceLine, InvoiceLine');
         if (firstInvoiceLine) {
             firstInvoiceLine.parentNode.insertBefore(monetaryTotal, firstInvoiceLine);
