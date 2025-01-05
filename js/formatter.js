@@ -1,6 +1,6 @@
 export class InvoiceFormatter {
     constructor() {
-        this.locale = navigator.language || 'en-US';
+        this.locale = navigator.language;
         
         this.currencyFormatter = new Intl.NumberFormat(this.locale, {
             minimumFractionDigits: 2,
@@ -23,19 +23,49 @@ export class InvoiceFormatter {
 
     formatCurrency(value) {
         const numValue = parseFloat(value);
-        if (isNaN(numValue)) return '0.00';
-        return this.currencyFormatter.format(numValue);
+        return isNaN(numValue) ? '0,00' : this.currencyFormatter.format(numValue);
     }
 
     formatQuantity(value) {
         const numValue = parseFloat(value);
-        if (isNaN(numValue)) return '0.000';
-        return this.quantityFormatter.format(numValue);
+        return isNaN(numValue) ? '0,000' : this.quantityFormatter.format(numValue);
     }
 
     formatNumber(value) {
         const numValue = parseFloat(value);
-        if (isNaN(numValue)) return '0.0000';
-        return this.numberFormatter.format(numValue);
+        return isNaN(numValue) ? '0,0000' : this.numberFormatter.format(numValue);
+    }
+
+    parseCurrency(value) {
+        if (typeof value !== 'string') {
+            value = value.toString();
+        }
+        // Remove all non-digit characters except decimal and minus
+        const normalized = value.replace(/[^\d\-.,]/g, '')
+                              // Replace thousands separator
+                              .replace(/[.,](?=.*[.,])/g, '')
+                              // Last dot/comma is decimal separator
+                              .replace(/[.,]/, '.');
+        return parseFloat(normalized) || 0;
+    }
+
+    parseQuantity(value) {
+        if (typeof value !== 'string') {
+            value = value.toString();
+        }
+        const normalized = value.replace(/[^\d\-.,]/g, '')
+                              .replace(/[.,](?=.*[.,])/g, '')
+                              .replace(/[.,]/, '.');
+        return parseFloat(normalized) || 0;
+    }
+
+    parseNumber(value) {
+        if (typeof value !== 'string') {
+            value = value.toString();
+        }
+        const normalized = value.replace(/[^\d\-.,]/g, '')
+                              .replace(/[.,](?=.*[.,])/g, '')
+                              .replace(/[.,]/, '.');
+        return parseFloat(normalized) || 0;
     }
 }

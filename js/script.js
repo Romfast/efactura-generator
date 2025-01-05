@@ -1,3 +1,5 @@
+import { InvoiceFormatter } from './formatter.js';
+
 // Constants
 const XML_NAMESPACES = {
     ubl: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
@@ -79,6 +81,8 @@ const ALLOWANCE_REASON_CODES = {
     '105': 'Cifră de afaceri anuală'
 };
 
+const formatter = new InvoiceFormatter()
+
 // Global variables
 let currentInvoice = null;
 let originalTotals = null;
@@ -130,17 +134,29 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeLocationSelectors();    
 });
 
+// Initialize event listeners for existing line items
+document.querySelectorAll('.line-item').forEach((item, index) => {
+    handleLineItemChange(index);
+});
+
 // Inline editing setup function
 function setupInlineEditing(element) {
+    let originalValue;
+
     element.addEventListener('click', function() {
         this.setAttribute('contenteditable', 'true');
+        originalValue = formatter.parseCurrency(this.textContent);
+        this.textContent = originalValue.toFixed(2);
         this.focus();
     });
 
     element.addEventListener('blur', function() {
         this.setAttribute('contenteditable', 'false');
-        const value = parseFloat(this.textContent.replace(/[^0-9.-]/g, ''));
-        this.textContent = isNaN(value) ? '0.00' : value.toFixed(2);
+        const value = formatter.parseCurrency(this.textContent);
+        this.textContent = formatter.formatCurrency(value);
+        if (value !== originalValue) {
+            updateTotals();
+        }
     });
 
     element.addEventListener('keydown', function(event) {
@@ -149,6 +165,34 @@ function setupInlineEditing(element) {
             this.blur();
         }
     });
+}
+
+function updateTotalDisplay(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = formatter.formatCurrency(roundNumber(value, 2));
+    }
+}
+
+function displayTotals(totals) {
+    updateTotalDisplay('subtotal', totals.subtotal);
+    updateTotalDisplay('totalAllowances', totals.allowances);
+    updateTotalDisplay('totalCharges', totals.charges);
+    updateTotalDisplay('netAmount', totals.netAmount);
+    updateTotalDisplay('vat', totals.totalVat);
+    updateTotalDisplay('total', totals.total);
+}
+
+function updateVATDisplay(row, amount, type = 'amount') {
+    const input = row.querySelector(`.vat-${type}`);
+    if (input) {
+        input.value = formatter.formatCurrency(amount);
+    }
+}
+
+function getDisplayValue(elementId) {
+    const element = document.getElementById(elementId);
+    return element ? formatter.parseCurrency(element.textContent) : 0;
 }
 
 // Event delegation for dynamic elements
@@ -386,14 +430,14 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
                         ).join('')}
                     </select>
                     <label>Cotă:</label>
-                    <input type="number" class="form-input vat-rate" value="${rate}" 
-                           onchange="window.updateVATRow('${rowId}', 'manual')" step="0.1" min="0" max="100">%
+                    <input type="text" class="form-input vat-rate" value="${formatter.formatNumber(rate)}" 
+                           onchange="window.updateVATRow('${rowId}', 'manual')">%
                     <label>Bază Impozabilă:</label>
-                    <input type="number" class="form-input vat-base" value="${baseAmount.toFixed(2)}" 
-                           onchange="window.updateVATRow('${rowId}', 'manual')" step="0.01">
+                    <input type="text" class="form-input vat-base" value="${formatter.formatCurrency(baseAmount)}" 
+                           onchange="window.updateVATRow('${rowId}', 'manual')">
                     <label>Valoare TVA:</label>
-                    <input type="number" class="form-input vat-amount" value="${vatAmount.toFixed(2)}" 
-                           onchange="window.updateVATRowFromAmount('${rowId}')" step="0.01">
+                    <input type="text" class="form-input vat-amount" value="${formatter.formatCurrency(vatAmount)}" 
+                           onchange="window.updateVATRowFromAmount('${rowId}')">
                     <button type="button" class="button button-small button-danger" 
                             onclick="window.removeVATRow('${rowId}')">Șterge</button>
                 </div>
@@ -874,12 +918,14 @@ function storeOriginalTotals(xmlDoc) {
 function restoreOriginalTotals() {
     if (!originalTotals) return;
     
-    document.getElementById('subtotal').textContent = parseFloat(originalTotals.subtotal).toFixed(2);
-    document.getElementById('totalAllowances').textContent = parseFloat(originalTotals.allowances || 0).toFixed(2);
-    document.getElementById('totalCharges').textContent = parseFloat(originalTotals.charges || 0).toFixed(2);
-    document.getElementById('netAmount').textContent = parseFloat(originalTotals.netAmount).toFixed(2);
-    document.getElementById('vat').textContent = parseFloat(originalTotals.totalVat).toFixed(2);
-    document.getElementById('total').textContent = parseFloat(originalTotals.total).toFixed(2);
+    displayTotals({
+        subtotal: parseFloat(originalTotals.subtotal),
+        allowances: parseFloat(originalTotals.allowances || 0),
+        charges: parseFloat(originalTotals.charges || 0),
+        netAmount: parseFloat(originalTotals.netAmount),
+        totalVat: parseFloat(originalTotals.totalVat),
+        total: parseFloat(originalTotals.total)
+    });
 
     const container = document.getElementById('vatBreakdownRows');
     if (container) {
@@ -1219,6 +1265,10 @@ function addLineItem() {
     quantityInput.addEventListener('change', refreshTotals);
     priceInput.addEventListener('change', refreshTotals);
     vatTypeSelect.addEventListener('change', () => handleVatTypeChange(index));
+
+    manuallyEditedVatRows.clear(); // Clear manual edits
+    
+    handleLineItemChange(index);
 }
 
 function removeLineItem(index) {
@@ -1226,8 +1276,20 @@ function removeLineItem(index) {
     if (lineItem) {
         lineItem.remove();
         renumberLineItems();
-        updateTotals();
+        manuallyEditedVatRows.clear(); // Clear manual edits
+        refreshTotals(); // Recalculate all totals
     }
+}
+
+function handleLineItemChange(index) {
+    const quantityInput = document.querySelector(`[name="quantity${index}"]`);
+    const priceInput = document.querySelector(`[name="price${index}"]`);
+    
+    quantityInput.addEventListener('change', refreshTotals);
+    priceInput.addEventListener('change', refreshTotals);
+    
+    // Force refresh when input changes
+    refreshTotals();
 }
 
 function handleStorno() {
@@ -1270,14 +1332,26 @@ function updateTotals() {
     const totals = calculateTotals();
     const { vatBreakdown, totalVat } = calculateVATBreakdown();
 
-    document.getElementById('subtotal').textContent = totals.subtotal.toFixed(2);
-    document.getElementById('totalAllowances').textContent = totals.allowances.toFixed(2);
-    document.getElementById('totalCharges').textContent = totals.charges.toFixed(2);
-    document.getElementById('netAmount').textContent = totals.netAmount.toFixed(2);
-    document.getElementById('vat').textContent = totalVat.toFixed(2);
-    document.getElementById('total').textContent = (totals.netAmount + totalVat).toFixed(2);
+    // Calculate total VAT from VAT breakdown
+    let calculatedVAT = 0;
+    vatBreakdown.forEach(entry => {
+        calculatedVAT += entry.vatAmount;
+    });
+
+    displayTotals({
+        subtotal: totals.subtotal,
+        allowances: totals.allowances,
+        charges: totals.charges,
+        netAmount: totals.netAmount,
+        totalVat: calculatedVAT,
+        total: totals.netAmount + calculatedVAT
+    });
 
     displayVATBreakdown();
+    
+    // Update VAT and total displays with proper formatting
+    document.getElementById('vat').textContent = formatter.formatCurrency(calculatedVAT);
+    document.getElementById('total').textContent = formatter.formatCurrency(totals.netAmount + calculatedVAT);
 }
 
 function refreshTotals() {
@@ -1291,24 +1365,27 @@ function refreshTotals() {
     const netAmount = subtotal - allowances + charges;
 
     // Update display
-    document.getElementById('subtotal').textContent = subtotal.toFixed(2);
-    document.getElementById('totalAllowances').textContent = allowances.toFixed(2);
-    document.getElementById('totalCharges').textContent = charges.toFixed(2);
-    document.getElementById('netAmount').textContent = netAmount.toFixed(2);
+    displayTotals({
+        subtotal: subtotal,
+        allowances: allowances,
+        charges: charges,
+        netAmount: netAmount,
+        totalVat: calculateTotalVAT(),
+        total: netAmount + calculateTotalVAT()
+    });
 
-    // Do not clear manual edits, preserve them
     displayVATBreakdown();
     
     // Calculate total VAT from the actual displayed rows, including manual edits
     let totalVat = 0;
     document.querySelectorAll('.vat-row').forEach(row => {
-        const vatAmount = parseFloat(row.querySelector('.vat-amount').value) || 0;
+        const vatAmount = formatter.parseCurrency(row.querySelector('.vat-amount').value) || 0;
         totalVat += vatAmount;
     });
     
-    // Update final totals
-    document.getElementById('vat').textContent = roundNumber(totalVat).toFixed(2);
-    document.getElementById('total').textContent = roundNumber(netAmount + totalVat).toFixed(2);
+    // Update final totals with proper formatting
+    document.getElementById('vat').textContent = formatter.formatCurrency(totalVat);
+    document.getElementById('total').textContent = formatter.formatCurrency(netAmount + totalVat);
 }
 
 function calculateLineItemTotals() {
@@ -1366,11 +1443,17 @@ function calculateTotals() {
     };
 }
 
+function calculateTotalVAT() {
+    let totalVat = Array.from(document.querySelectorAll('.vat-amount'))
+        .reduce((sum, input) => sum + formatter.parseCurrency(input.value), 0);
+    return roundNumber(totalVat, 2);
+}
+
 function calculateVATBreakdown() {
     let vatBreakdown = new Map();
     let totalVat = 0;
 
-    // Process line items first
+    // Process line items 
     document.querySelectorAll('.line-item').forEach((item, index) => {
         const quantity = parseFloat(document.querySelector(`[name="quantity${index}"]`).value) || 0;
         const price = parseFloat(document.querySelector(`[name="price${index}"]`).value) || 0;
@@ -1392,7 +1475,7 @@ function calculateVATBreakdown() {
         const entry = vatBreakdown.get(key);
         entry.baseAmount += lineAmount;
         if (vatType === 'S') {
-            entry.vatAmount += lineAmount * vatRate / 100;
+            entry.vatAmount += roundNumber(lineAmount * vatRate / 100, 2);
         }
     });
 
@@ -1403,7 +1486,6 @@ function calculateVATBreakdown() {
         const vatRate = parseFloat(document.querySelector(`[name="chargeVatRate${index}"]`).value) || 0;
         const isCharge = document.querySelector(`[name="chargeType${index}"]`).value === 'true';
         
-        // Skip if amount is 0
         if (amount === 0) return;
 
         const key = `${vatRate}-${vatType}`;
@@ -1418,11 +1500,10 @@ function calculateVATBreakdown() {
         }
         
         const entry = vatBreakdown.get(key);
-        // For allowances (discounts), subtract from base amount
         const adjustedAmount = isCharge ? amount : -amount;
         entry.baseAmount += adjustedAmount;
         if (vatType === 'S') {
-            entry.vatAmount += adjustedAmount * vatRate / 100;
+            entry.vatAmount += roundNumber(adjustedAmount * vatRate / 100, 2);
         }
     });
 
@@ -1431,7 +1512,7 @@ function calculateVATBreakdown() {
         totalVat += entry.vatAmount;
     });
 
-    return { vatBreakdown, totalVat: roundNumber(totalVat) };
+    return { vatBreakdown, totalVat: roundNumber(totalVat, 2) };
 }
 
 window.updateVATRow = function(rowId, source) {
@@ -1445,41 +1526,50 @@ window.updateVATRow = function(rowId, source) {
     
     if (source === 'manual') {
         manuallyEditedVatRows.add(rowId);
+        // Keep existing values, just update totals
+        updateTotalVAT();
+        refreshTotals();
+        return;
     }
     
-    if (!manuallyEditedVatRows.has(rowId) || source === 'manual') {
+    // Only calculate VAT amount for non-manual updates
+    if (!manuallyEditedVatRows.has(rowId)) {
         const type = typeSelect.value;
         const rate = parseFloat(rateInput.value) || 0;
-        const base = parseFloat(baseInput.value) || 0;
+        const base = formatter.parseCurrency(baseInput.value) || 0;
         
-        const calculatedAmount = type === 'S' ? roundNumber(base * rate / 100) : 0;
-        amountInput.value = calculatedAmount.toFixed(2);
+        const calculatedAmount = type === 'S' ? roundNumber(base * rate / 100, 2) : 0;
+        amountInput.value = formatter.formatCurrency(calculatedAmount);
+        
+        updateTotalVAT();
+        refreshTotals();
     }
-    
-    updateTotalVAT();
-    refreshTotals();
 };
 
 window.updateVATRowFromAmount = function(rowId) {
     const row = document.getElementById(rowId);
     if (!row) return;
 
+    // Just mark as manually edited and update the totals
+    // Do not recalculate base amount
     manuallyEditedVatRows.add(rowId);
     
-    const rateInput = row.querySelector('.vat-rate');
-    const baseInput = row.querySelector('.vat-base');
     const amountInput = row.querySelector('.vat-amount');
-    
-    const rate = parseFloat(rateInput.value) || 0;
-    const amount = parseFloat(amountInput.value) || 0;
-    
-    if (rate !== 0) {
-        const calculatedBase = roundNumber((amount * 100) / rate);
-        baseInput.value = calculatedBase.toFixed(2);
+    if (amountInput) {
+        const value = formatter.parseCurrency(amountInput.value);
+        amountInput.value = formatter.formatCurrency(value);
     }
-    
-    updateTotalVAT();
-    refreshTotals();
+
+    let totalVat = 0;
+    document.querySelectorAll('.vat-row').forEach(vatRow => {
+        const vatAmount = formatter.parseCurrency(vatRow.querySelector('.vat-amount').value) || 0;
+        totalVat += vatAmount;
+    });
+
+    // Update just total VAT and final total
+    const netAmount = formatter.parseCurrency(document.getElementById('netAmount').textContent);
+    document.getElementById('vat').textContent = formatter.formatCurrency(totalVat);
+    document.getElementById('total').textContent = formatter.formatCurrency(netAmount + totalVat);
 };
 
 window.removeVATRow = function(rowId) {
@@ -1516,15 +1606,15 @@ function displayVATBreakdown() {
     // Calculate current VAT breakdown
     const { vatBreakdown } = calculateVATBreakdown();
     
-    // Store existing manually edited values before clearing the container
+    // Store existing manually edited values
     const existingValues = new Map();
     manuallyEditedVatRows.forEach(rowId => {
         const row = document.getElementById(rowId);
         if (row) {
             existingValues.set(rowId, {
-                rate: parseFloat(row.querySelector('.vat-rate').value),
-                base: parseFloat(row.querySelector('.vat-base').value),
-                amount: parseFloat(row.querySelector('.vat-amount').value),
+                rate: formatter.parseCurrency(row.querySelector('.vat-rate').value),
+                base: formatter.parseCurrency(row.querySelector('.vat-base').value),
+                amount: formatter.parseCurrency(row.querySelector('.vat-amount').value),
                 type: row.querySelector('.vat-type').value
             });
         }
@@ -1533,7 +1623,7 @@ function displayVATBreakdown() {
     // Clear container
     container.innerHTML = '';
     
-    // First restore manually edited rows with their original values
+    // Restore manually edited rows
     existingValues.forEach((values, rowId) => {
         addVATBreakdownRow(
             values.rate,
@@ -1544,9 +1634,8 @@ function displayVATBreakdown() {
         );
     });
     
-    // Then add any new VAT breakdown rows that don't correspond to manual edits
+    // Add new VAT breakdown rows
     vatBreakdown.forEach((data, key) => {
-        // Check if this rate/type combination already exists in manual edits
         const exists = Array.from(existingValues.values()).some(values => 
             values.rate === data.rate && values.type === data.type
         );
@@ -1554,8 +1643,8 @@ function displayVATBreakdown() {
         if (!exists) {
             addVATBreakdownRow(
                 data.rate,
-                roundNumber(data.baseAmount),
-                roundNumber(data.vatAmount),
+                data.baseAmount,
+                data.vatAmount,
                 data.type
             );
         }
@@ -2293,6 +2382,21 @@ function roundNumber(number, decimals = 2) {
     return Math.round(number * Math.pow(10, decimals)) / Math.pow(10, decimals);
 }
 
+function renumberLineItems() {
+    document.querySelectorAll('.line-item').forEach((item, newIndex) => {
+        item.dataset.index = newIndex;
+        
+        item.querySelectorAll('input, select').forEach(input => {
+            const name = input.getAttribute('name');
+            if (name) {
+                const baseName = name.replace(/\d+$/, '');
+                input.setAttribute('name', baseName + newIndex);
+            }
+        });
+    });
+}
+
+
 // Export for testing if needed
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -2302,7 +2406,13 @@ if (typeof module !== 'undefined' && module.exports) {
         formatXML,
         createXMLElement,
         getXMLValue,
-        setXMLValue
+        setXMLValue,
+        formatter,
+        setupInlineEditing,
+        updateTotalDisplay,
+        displayTotals,
+        updateVATDisplay,
+        getDisplayValue
     };
 }                
 
