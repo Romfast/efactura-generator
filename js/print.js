@@ -140,7 +140,7 @@ export class InvoicePrintHandler {
                 issueDate: invoiceData.issueDate,
                 supplier: invoiceData.supplier.name,
                 customer: invoiceData.customer.name,
-                total: invoiceData.totals.total
+                total: this.formatter.parseCurrency(invoiceData.totals.total)
             };
 
             const qrElement = this.printWindow.document.getElementById('qrcode');

@@ -51,12 +51,12 @@
             color: var(--text-light);
         }
 
-        /* QR Code */
         .qr-section {
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-left: 2rem;
+            margin-left: -3rem;
+            margin-top: -0.5rem;
         }
 
         #qrcode {
@@ -99,20 +99,25 @@
             font-size: 9px;
         }
 
-        .items-table th {
-            background: var(--background-light);
-            padding: 4px;
-            text-align: left;
-            font-weight: 600;
-            border-bottom: 1px solid var(--border-color);
-        }
-
+        .items-table th,
         .items-table td {
             padding: 4px;
             border-bottom: 1px solid var(--border-color);
         }
 
-        .items-table .number-cell {
+        .items-table th:nth-child(1),
+        .items-table td:nth-child(1) {
+            text-align: center;
+        }
+
+        .items-table th:nth-child(4),
+        .items-table td:nth-child(4),
+        .items-table th:nth-child(5),
+        .items-table td:nth-child(5),
+        .items-table th:nth-child(6),
+        .items-table td:nth-child(6),
+        .items-table th:nth-child(7),
+        .items-table td:nth-child(7) {
             text-align: right;
         }
 
@@ -125,9 +130,10 @@
         }
 
         .totals-container {
-            display: grid;
-            grid-template-columns: auto 250px;
-            gap: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 2rem;
             margin-top: 1rem;
         }
 
@@ -201,7 +207,7 @@
     <div class="invoice-container">
         <div class="invoice-header">
             <div>
-                <h1 class="invoice-title">FACTURĂ ELECTRONICĂ</h1>
+                <h1 class="invoice-title">FACTURĂ</h1>
                 <div class="invoice-number">Seria & Nr: <span id="print-invoice-number"></span></div>
                 <div class="invoice-dates">
                     Data emiterii: <span id="print-issue-date"></span> |
@@ -297,7 +303,7 @@
                 </div>
                 
                 <div class="total-row final">
-                    <span>Total de Plată:</span>
+                    <span>Total cu TVA:</span>
                     <span id="print-total"></span>
                 </div>
             </div>
@@ -309,7 +315,6 @@
     </div>
 
     <script>
-        // Show allowances/charges rows only if values are non-zero
         function updateAllowancesChargesVisibility() {
             const allowancesRow = document.getElementById('print-allowances-row');
             const chargesRow = document.getElementById('print-charges-row');
@@ -320,7 +325,6 @@
             chargesRow.style.display = chargesAmount > 0 ? 'block' : 'none';
         }
 
-        // Call this after values are populated
         window.addEventListener('load', updateAllowancesChargesVisibility);
     </script>
 </body>
