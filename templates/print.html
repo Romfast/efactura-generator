@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Factură</title>
     <style>
-        /* Variables */
+        /* Variables - Keep original colors */
         :root {
             --primary-color: #2563eb;
             --text-color: #1e293b;
@@ -22,53 +22,50 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.5;
+            line-height: 1.4;
             color: var(--text-color);
             background: white;
-            font-size: 12px;
+            font-size: 11px;
+            padding: 1cm;
         }
 
         /* Layout */
         .invoice-container {
             max-width: 210mm;
             margin: 0 auto;
-            padding: 2cm;
-            background: white;
         }
 
         /* Header */
         .invoice-header {
-            margin-bottom: 2rem;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            margin-bottom: 1rem;
             padding-bottom: 1rem;
             border-bottom: 2px solid var(--primary-color);
         }
 
-        .invoice-header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-
         .invoice-title-section {
-            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .invoice-title {
             color: var(--primary-color);
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .invoice-number {
-            font-size: 16px;
+            font-size: 11px;
             color: var(--text-light);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .invoice-dates {
+            font-size: 10px;
             color: var(--text-light);
-            font-size: 14px;
         }
 
         /* QR Code */
@@ -86,100 +83,98 @@
         }
 
         .e-invoice-info {
-            font-size: 10px;
+            font-size: 8px;
             color: var(--text-light);
             text-align: center;
-            max-width: 120px;
+            max-width: 100px;
         }
 
         /* Party Details */
         .party-details {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
+            gap: 1rem;
+            margin-bottom: 1rem;
         }
 
         .party-box {
-            padding: 1rem;
+            padding: 0.5rem;
             background: var(--background-light);
-            border-radius: 4px;
             border: 1px solid var(--border-color);
         }
 
         .party-title {
             font-weight: bold;
             color: var(--primary-color);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
+            font-size: 11px;
         }
 
         .party-info p {
-            margin: 0.25rem 0;
+            margin: 0.15rem 0;
+            font-size: 10px;
         }
 
         /* Items Table */
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
+            font-size: 9px;
         }
 
-        .items-table th {
-            background: var(--background-light);
-            padding: 0.5rem;
-            text-align: left;
-            font-weight: 600;
-            border-bottom: 2px solid var(--border-color);
-        }
-
+        .items-table th,
         .items-table td {
-            padding: 0.5rem;
+            padding: 4px;
             border-bottom: 1px solid var(--border-color);
         }
 
-        .items-table .number-cell {
+        .items-table th:nth-child(1),
+        .items-table td:nth-child(1) {
+            text-align: center;
+        }
+
+        .items-table th:nth-child(4),
+        .items-table td:nth-child(4),
+        .items-table th:nth-child(5),
+        .items-table td:nth-child(5),
+        .items-table th:nth-child(6),
+        .items-table td:nth-child(6),
+        .items-table th:nth-child(7),
+        .items-table td:nth-child(7) {
             text-align: right;
         }
 
         /* Note Section */
         .note-section {
-            margin: 24px 0;
-            padding: 16px;
-            background-color: var(--background-light);
-            border-radius: 4px;
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background: var(--background-light);
             border: 1px solid var(--border-color);
+            font-size: 9px;
         }
 
         .note-section h3 {
-            font-size: 14px;
+            font-size: 10px;
             color: var(--text-light);
-            margin-bottom: 8px;
+            margin-bottom: 0.25rem;
         }
 
-        .note-section div {
-            white-space: pre-wrap;
-            font-size: 13px;
-        }
-
-        /* Totals Section */
+        /* Totals Container */
         .totals-container {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             gap: 2rem;
+            margin-top: 1rem;
         }
 
         .currency-info {
-            flex: 1;
             padding: 0.5rem;
             background: var(--background-light);
-            border-radius: 4px;
             border: 1px solid var(--border-color);
-            font-size: 12px;
-        }
-
-        .currency-info p {
-            margin: 0.25rem 0;
+            font-size: 9px;
+            width: fit-content;
         }
 
         .currency-code {
@@ -188,43 +183,43 @@
         }
 
         .totals-section {
-            width: 300px;
+            font-size: 10px;
         }
 
         .total-row {
             display: flex;
             justify-content: space-between;
-            padding: 0.5rem 0;
+            padding: 2px 0;
             border-bottom: 1px solid var(--border-color);
         }
 
         .total-row.final {
             border-bottom: 2px solid var(--primary-color);
             font-weight: bold;
-            font-size: 14px;
+            font-size: 11px;
             color: var(--primary-color);
         }
 
         /* VAT Breakdown */
         .vat-breakdown {
-            margin: 1rem 0;
-            padding: 1rem;
+            margin: 0.5rem 0;
+            padding: 0.5rem;
             background: var(--background-light);
             border-radius: 4px;
+            font-size: 9px;
         }
 
         .vat-title {
             font-weight: bold;
             color: var(--text-light);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .vat-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 0.5rem;
-            font-size: 11px;
-            margin-bottom: 1rem;
+            gap: 4px;
+            margin-bottom: 0.5rem;
         }
 
         .vat-grid-header {
@@ -235,38 +230,21 @@
         .vat-amount-row {
             display: flex;
             justify-content: space-between;
-            padding: 0.5rem 0;
+            padding: 4px 0;
             border-top: 1px solid var(--border-color);
         }
 
         /* Footer */
         .footer {
-            margin-top: 2rem;
-            padding-top: 1rem;
+            margin-top: 1rem;
+            padding-top: 0.5rem;
             border-top: 1px solid var(--border-color);
-            font-size: 10px;
+            font-size: 8px;
             color: var(--text-light);
             text-align: center;
         }
 
-        /* Print Button */
-        .print-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 8px 16px;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .print-button:hover {
-            background: #1e40af;
-        }
-
+        /* Print Styles */
         @media print {
             @page {
                 size: A4;
@@ -292,19 +270,17 @@
 <body>
     <div class="invoice-container">
         <div class="invoice-header">
-            <div class="invoice-header-content">
-                <div class="invoice-title-section">
-                    <h1 class="invoice-title">FACTURĂ ELECTRONICĂ</h1>
-                    <div class="invoice-number">Seria & Nr: <span id="print-invoice-number"></span></div>
-                    <div class="invoice-dates">
-                        <div>Data emiterii: <span id="print-issue-date"></span></div>
-                        <div>Data scadentă: <span id="print-due-date"></span></div>
-                    </div>
+            <div class="invoice-title-section">
+                <h1 class="invoice-title">FACTURĂ</h1>
+                <div class="invoice-number">Seria & Nr: <span id="print-invoice-number"></span></div>
+                <div class="invoice-dates">
+                    Data emiterii: <span id="print-issue-date"></span> | 
+                    Data scadentă: <span id="print-due-date"></span>
                 </div>
-                <div class="qr-section">
-                    <div id="qrcode"></div>
-                    <div class="e-invoice-info"></div>
-                </div>
+            </div>
+            <div class="qr-section">
+                <div id="qrcode"></div>
+                <div class="e-invoice-info"></div>
             </div>
         </div>
 
@@ -388,7 +364,7 @@
                 </div>
                 
                 <div class="total-row final">
-                    <span>Total de Plată:</span>
+                    <span>Total cu TVA:</span>
                     <span id="print-total"></span>
                 </div>
             </div>
