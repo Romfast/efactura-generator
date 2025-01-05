@@ -131,7 +131,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     addExchangeRateField();
 
-    initializeLocationSelectors();    
+    initializeLocationSelectors();   
+    
+    addANAFLookupButtons();
 });
 
 // Initialize event listeners for existing line items
@@ -2409,6 +2411,76 @@ if (typeof module !== 'undefined' && module.exports) {
         getDisplayValue
     };
 }                
+
+
+async function fetchANAFData(cui) {
+    try {
+        // Step 1: Submit initial request
+        const initialResponse = await fetch('https://webservicesp.anaf.ro/AsynchWebService/api/v8/ws/tva', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify([{ 
+                "cui": cui, 
+                "data": new Date().toISOString().split('T')[0] 
+            }])
+        });
+
+        const initialData = await initialResponse.json();
+        
+        // Step 2: Retrieve results
+        const correlationId = initialData.correlationId;
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+
+        const resultResponse = await fetch(`https://webservicesp.anaf.ro/AsynchWebService/api/v7/ws/tva?id=${correlationId}`);
+        const resultData = await resultResponse.json();
+
+        return resultData.found[0]?.date_generale || null;
+    } catch (error) {
+        console.error('ANAF Lookup Error:', error);
+        return null;
+    }
+}
+
+function addANAFLookupButtons() {
+    // Supplier ANAF Lookup
+    const supplierVATField = document.querySelector('[name="supplierVAT"]');
+    const supplierButton = document.createElement('button');
+    supplierButton.textContent = '🔍';
+    supplierButton.type = 'button';
+    supplierButton.className = 'button button-small';
+    supplierButton.addEventListener('click', async () => {
+        const cui = supplierVATField.value.replace(/^RO/, '');
+        const data = await fetchANAFData(cui);
+        if (data) {
+            document.querySelector('[name="supplierName"]').value = data.denumire;
+            document.querySelector('[name="supplierAddress"]').value = data.adresa;
+            document.querySelector('[name="supplierCompanyId"]').value = data.nrRegCom;
+            document.querySelector('[name="supplierCountry"]').value = 'RO';
+        }
+    });
+    supplierVATField.parentNode.appendChild(supplierButton);
+
+    // Customer ANAF Lookup
+    const customerVATField = document.querySelector('[name="customerVAT"]');
+    const customerButton = document.createElement('button');
+    customerButton.textContent = '🔍';
+    customerButton.type = 'button';
+    customerButton.className = 'button button-small';
+    customerButton.addEventListener('click', async () => {
+        const cui = customerVATField.value.replace(/^RO/, '');
+        const data = await fetchANAFData(cui);
+        if (data) {
+            document.querySelector('[name="customerName"]').value = data.denumire;
+            document.querySelector('[name="customerAddress"]').value = data.adresa;
+            document.querySelector('[name="customerCompanyId"]').value = data.nrRegCom;
+            document.querySelector('[name="customerCountry"]').value = 'RO';
+        }
+    });
+    customerVATField.parentNode.appendChild(customerButton);
+}
+
 
 import { InvoicePrintHandler } from './print.js';
 
