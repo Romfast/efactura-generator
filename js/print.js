@@ -55,49 +55,41 @@ export class InvoicePrintHandler {
                 email: document.querySelector('[name="customerEmail"]').value
             },
 
-            // Line items
+            // Line items with formatted values
             items: Array.from(document.querySelectorAll('.line-item')).map((item, index) => ({
                 number: index + 1,
                 description: item.querySelector('[name^="description"]').value,
-                quantity: parseFloat(item.querySelector('[name^="quantity"]').value),
+                quantity: this.formatter.formatQuantity(item.querySelector('[name^="quantity"]').value),
                 unit: item.querySelector('[name^="unit"]').value,
-                price: parseFloat(item.querySelector('[name^="price"]').value),
-                vatType: item.querySelector('[name^="vatType"]').value,
-                vatRate: parseFloat(item.querySelector('[name^="vatRate"]').value)
+                price: this.formatter.formatCurrency(item.querySelector('[name^="price"]').value),
+                vatRate: this.formatter.formatCurrency(item.querySelector('[name^="vatRate"]').value),
+                totalAmount: this.formatter.formatCurrency(
+                    this.formatter.parseQuantity(item.querySelector('[name^="quantity"]').value) * 
+                    this.formatter.parseCurrency(item.querySelector('[name^="price"]').value)
+                )
             })),
 
             // Note
             note: document.querySelector('[name="invoiceNote"]')?.value,
 
-            // Totals
+            // Get totals directly from the display elements
             totals: {
-                subtotal: parseFloat(document.getElementById('subtotal').textContent),
-                allowances: parseFloat(document.getElementById('totalAllowances').textContent),
-                charges: parseFloat(document.getElementById('totalCharges').textContent),
-                netAmount: parseFloat(document.getElementById('netAmount').textContent),
-                vat: parseFloat(document.getElementById('vat').textContent),
-                total: parseFloat(document.getElementById('total').textContent)
+                subtotal: document.getElementById('subtotal').textContent,
+                allowances: document.getElementById('totalAllowances').textContent,
+                charges: document.getElementById('totalCharges').textContent,
+                netAmount: document.getElementById('netAmount').textContent,
+                vat: document.getElementById('vat').textContent,
+                total: document.getElementById('total').textContent
             },
 
             // VAT Breakdown
             vatBreakdown: Array.from(document.querySelectorAll('.vat-row')).map(row => ({
                 type: row.querySelector('.vat-type').value,
-                rate: parseFloat(row.querySelector('.vat-rate').value),
-                base: parseFloat(row.querySelector('.vat-base').value),
-                amount: parseFloat(row.querySelector('.vat-amount').value)
+                rate: row.querySelector('.vat-rate').value,
+                base: row.querySelector('.vat-base').value,
+                amount: row.querySelector('.vat-amount').value
             }))
         };
-    }
-
-    getVATTypeLabel(type) {
-        const labels = {
-            'S': 'Standard',
-            'AE': 'Taxare Inversă',
-            'O': 'Neplătitor TVA',
-            'Z': 'Cotă 0%',
-            'E': 'Scutit'
-        };
-        return labels[type] || type;
     }
 
     createPartyHTML(party) {
@@ -112,6 +104,17 @@ export class InvoicePrintHandler {
             ${party.contactName ? `<p>Contact: ${party.contactName}</p>` : ''}
             ${party.email ? `<p>Email: ${party.email}</p>` : ''}
         `;
+    }
+
+    getVATTypeLabel(type) {
+        const labels = {
+            'S': 'Standard',
+            'AE': 'Taxare Inversă',
+            'O': 'Neplătitor TVA',
+            'Z': 'Cotă 0%',
+            'E': 'Scutit'
+        };
+        return labels[type] || type;
     }
 
     async print() {
@@ -130,6 +133,27 @@ export class InvoicePrintHandler {
             await new Promise(resolve => {
                 this.printWindow.onload = resolve;
             });
+
+            // Generate QR code
+            const qrData = {
+                invoiceNumber: invoiceData.invoiceNumber,
+                issueDate: invoiceData.issueDate,
+                supplier: invoiceData.supplier.name,
+                customer: invoiceData.customer.name,
+                total: invoiceData.totals.total
+            };
+
+            const qrElement = this.printWindow.document.getElementById('qrcode');
+            if (qrElement) {
+                new this.printWindow.QRCode(qrElement, {
+                    text: JSON.stringify(qrData),
+                    width: 100,
+                    height: 100,
+                    colorDark: "#2563eb",
+                    colorLight: "#ffffff",
+                    correctLevel: this.printWindow.QRCode.CorrectLevel.L
+                });
+            }
 
             // Populate the template with data
             this.populatePrintWindow(invoiceData);
@@ -162,37 +186,14 @@ export class InvoicePrintHandler {
         doc.getElementById('print-invoice-number').textContent = data.invoiceNumber;
         doc.getElementById('print-issue-date').textContent = data.issueDate;
         doc.getElementById('print-due-date').textContent = data.dueDate;
-
-        // Currency information
         doc.getElementById('print-document-currency').textContent = data.documentCurrencyCode;
         
+        // Currency information
         const taxCurrencyContainer = doc.getElementById('print-tax-currency-container');
         if (data.taxCurrencyCode && data.taxCurrencyCode !== data.documentCurrencyCode) {
             taxCurrencyContainer.style.display = 'block';
             doc.getElementById('print-tax-currency').textContent = data.taxCurrencyCode;
-            doc.getElementById('print-exchange-rate').textContent = 
-                this.formatter.formatNumber(data.exchangeRate);
-        }
-
-        // Generate QR code
-        const qrData = {
-            invoiceNumber: data.invoiceNumber,
-            issueDate: data.issueDate,
-            supplier: data.supplier.name,
-            customer: data.customer.name,
-            total: this.formatter.formatCurrency(data.totals.total)
-        };
-
-        const qrElement = doc.getElementById('qrcode');
-        if (qrElement) {
-            new this.printWindow.QRCode(qrElement, {
-                text: JSON.stringify(qrData),
-                width: 100,
-                height: 100,
-                colorDark: "#2563eb",
-                colorLight: "#ffffff",
-                correctLevel: this.printWindow.QRCode.CorrectLevel.L
-            });
+            doc.getElementById('print-exchange-rate').textContent = this.formatter.formatNumber(data.exchangeRate);
         }
 
         // Party details
@@ -206,49 +207,43 @@ export class InvoicePrintHandler {
             noteSection.querySelector('div').textContent = data.note;
         }
 
-        // Line items
+        // Line items - use formatted values from data
         doc.getElementById('print-items').innerHTML = data.items.map(item => `
             <tr>
                 <td>${item.number}</td>
                 <td>${item.description}</td>
                 <td>${item.unit}</td>
-                <td class="number-cell">${this.formatter.formatQuantity(item.quantity)}</td>
-                <td class="number-cell">${this.formatter.formatCurrency(item.price)}</td>
-                <td class="number-cell">${this.formatter.formatCurrency(item.vatRate)}%</td>
-                <td class="number-cell">${this.formatter.formatCurrency(item.quantity * item.price)}</td>
+                <td class="number-cell">${item.quantity}</td>
+                <td class="number-cell">${item.price}</td>
+                <td class="number-cell">${item.vatRate}%</td>
+                <td class="number-cell">${item.totalAmount}</td>
             </tr>
         `).join('');
 
-        // Totals
-        doc.getElementById('print-subtotal').textContent = 
-            this.formatter.formatCurrency(data.totals.subtotal);
-        doc.getElementById('print-allowances').textContent = 
-            this.formatter.formatCurrency(data.totals.allowances);
-        doc.getElementById('print-charges').textContent = 
-            this.formatter.formatCurrency(data.totals.charges);
-        doc.getElementById('print-net-amount').textContent = 
-            this.formatter.formatCurrency(data.totals.netAmount);
-        doc.getElementById('print-total').textContent = 
-            this.formatter.formatCurrency(data.totals.total);
+        // Totals - use values directly from display
+        doc.getElementById('print-subtotal').textContent = data.totals.subtotal;
+        doc.getElementById('print-allowances').textContent = data.totals.allowances;
+        doc.getElementById('print-charges').textContent = data.totals.charges;
+        doc.getElementById('print-net-amount').textContent = data.totals.netAmount;
+        doc.getElementById('print-total').textContent = data.totals.total;
 
-        // VAT Breakdown
+        // VAT Breakdown - use values directly from display
         doc.getElementById('print-vat-breakdown').innerHTML = data.vatBreakdown.map(vat => `
             <div>${this.getVATTypeLabel(vat.type)}</div>
-            <div>${this.formatter.formatCurrency(vat.rate)}%</div>
-            <div>${this.formatter.formatCurrency(vat.base)}</div>
-            <div>${this.formatter.formatCurrency(vat.amount)}</div>
+            <div>${vat.rate}%</div>
+            <div>${vat.base}</div>
+            <div>${vat.amount}</div>
         `).join('');
 
         // VAT totals
         doc.getElementById('print-vat-currency-main').textContent = data.documentCurrencyCode;
-        doc.getElementById('print-vat-main').textContent = 
-            this.formatter.formatCurrency(data.totals.vat);
+        doc.getElementById('print-vat-main').textContent = data.totals.vat;
 
         const secondaryVatRow = doc.getElementById('print-vat-secondary');
         if (data.taxCurrencyCode && data.taxCurrencyCode !== data.documentCurrencyCode) {
             secondaryVatRow.style.display = 'flex';
             doc.getElementById('print-vat-currency-secondary').textContent = data.taxCurrencyCode;
-            const vatInTaxCurrency = data.totals.vat * data.exchangeRate;
+            const vatInTaxCurrency = this.formatter.parseCurrency(data.totals.vat) * data.exchangeRate;
             doc.getElementById('print-vat-secondary-amount').textContent = 
                 this.formatter.formatCurrency(vatInTaxCurrency);
         }

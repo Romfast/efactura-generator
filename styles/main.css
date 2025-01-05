@@ -278,6 +278,14 @@ body {
     margin-bottom: 12px;
 }
 
+.vat-total-group {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
 .vat-row {
     margin-bottom: 8px;
     padding: 8px;

@@ -51,19 +51,25 @@
             color: var(--text-light);
         }
 
+        /* QR Code */
         .qr-section {
-            text-align: right;
-            margin-bottom: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-left: 2rem;
         }
 
         #qrcode {
-            width: 80px;
-            height: 80px;
+            width: 100px;
+            height: 100px;
+            margin-bottom: 0.5rem;
         }
 
         .e-invoice-info {
-            font-size: 9px;
+            font-size: 10px;
             color: var(--text-light);
+            text-align: center;
+            max-width: 120px;
         }
 
         .party-details {
@@ -204,7 +210,7 @@
             </div>
             <div class="qr-section">
                 <div id="qrcode"></div>
-                <div class="e-invoice-info">eFactura - www.romfast.ro</div>
+                <div class="e-invoice-info"></div>
             </div>
         </div>
 
