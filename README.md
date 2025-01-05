@@ -8,16 +8,20 @@ Romanian electronic invoice (eFactura) editor - loads XML, allows editing, print
 
 Editor pentru facturi electronice (eFactura) - încarcă fișiere XML, permite editarea, printarea facturilor și generează fișiere XML noi.
 
+![Factura 1](screenshot1.jpg)
+![Factura 2](screenshot2.jpg)
+![Factura 3](screenshot3.jpg)
+
 ## Installation & Usage / Instalare & Utilizare
 
 ### Option 1: Web Server / Opțiunea 1: Server Web
-Copy all project files to your web server maintaining the directory structure.
-Access through your web server URL.
-Use "Printează" button to print the invoice.
+- Copy all project files to your web server maintaining the directory structure.
+- Access through your web server URL.
+- Use "Printează" button to print the invoice.
 
-Copiați toate fișierele pe server păstrând structura directoarelor.
-Accesați prin URL-ul serverului.
-Folosiți butonul "Printează" pentru a printa factura.
+- Copiați toate fișierele pe server păstrând structura directoarelor.
+- Accesați prin URL-ul serverului.
+- Folosiți butonul "Printează" pentru a printa factura.
 
 ### Option 2: Local Development / Opțiunea 2: Dezvoltare Locală
 1. Install Node.js / Instalați Node.js
@@ -31,7 +35,6 @@ project/
 ├── index.html
 ├── styles/
 │   ├── main.css
-│   └── print.css
 ├── js/
 │   ├── script.js
 │   ├── formatter.js
