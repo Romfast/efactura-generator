@@ -666,134 +666,95 @@ function createCountyOptions() {
 }
 
 function initializeLocationSelectors() {
-    // Replace country inputs with selects
-    document.querySelectorAll('[name$="Country"]').forEach(input => {
-        const select = document.createElement('select');
-        select.className = 'form-input';
-        select.name = input.name;
-        select.innerHTML = createCountryOptions();
-        
-        const xmlValue = input.dataset.xmlValue || input.value || 'RO';
-        select.value = xmlValue;
-        
-        if (input.parentNode) {
-            input.parentNode.replaceChild(select, input);
+    // Replace country inputs with selects for both supplier and customer
+    ['supplier', 'customer'].forEach(party => {
+        const countryInput = document.querySelector(`[name="${party}Country"]`);
+        if (countryInput) {
+            const select = document.createElement('select');
+            select.className = 'form-input';
+            select.name = countryInput.name;
+            select.innerHTML = createCountryOptions();
+            select.value = countryInput.dataset.xmlValue || countryInput.value || 'RO';
+            countryInput.parentNode?.replaceChild(select, countryInput);
+        }
+
+        const countyInput = document.querySelector(`[name="${party}CountrySubentity"]`);
+        if (countyInput) {
+            const select = document.createElement('select');
+            select.className = 'form-input';
+            select.name = countyInput.name;
+            select.innerHTML = createCountyOptions();
+            select.value = countyInput.dataset.xmlValue || countyInput.value || '';
+            countyInput.parentNode?.replaceChild(select, countyInput);
         }
     });
 
-    // Replace county inputs with selects
-    document.querySelectorAll('[name$="CountrySubentity"]').forEach(input => {
-        const select = document.createElement('select');
-        select.className = 'form-input';
-        select.name = input.name;
-        select.innerHTML = createCountyOptions();
-        
-        const xmlValue = input.dataset.xmlValue || input.value || '';
-        select.value = xmlValue;
-        
-        if (input.parentNode) {
-            input.parentNode.replaceChild(select, input);
-        }
-    });
-
-    // Set up event listeners for each party details section
-    document.querySelectorAll('.party-details').forEach(partyDetails => {
-        const countrySelect = partyDetails.querySelector('[name$="Country"]');
-        const countySelect = partyDetails.querySelector('[name$="CountrySubentity"]');
-        const cityElement = partyDetails.querySelector('[name$="City"]');
-
-        if (countrySelect && countySelect && cityElement) {
-            // Add event listeners
-            countrySelect.addEventListener('change', () => {
-                updateCountyVisibility(countrySelect, countySelect);
-                updateBucharestSectorVisibility(countrySelect, countySelect, cityElement);
-            });
-
-            countySelect.addEventListener('change', () => {
-                console.log("County changed:", countySelect.value);
-                updateBucharestSectorVisibility(countrySelect, countySelect, cityElement);
-            });
-
-            // Initial update
-            updateCountyVisibility(countrySelect, countySelect);
-            updateBucharestSectorVisibility(countrySelect, countySelect, cityElement);
-        } else {
-            console.log("Missing elements in party details", {
-                countrySelect: !!countrySelect,
-                countySelect: !!countySelect,
-                cityElement: !!cityElement
-            });
-        }
-    });
+    // Initialize location handlers for both parties
+    setupPartyLocationHandlers('supplier');
+    setupPartyLocationHandlers('customer');
 }
 
 function updateCountyVisibility(countrySelect, countySelect) {
     if (!countrySelect || !countySelect) return;
-    
     const showCounty = countrySelect.value === 'RO';
     countySelect.style.display = showCounty ? 'block' : 'none';
     countySelect.required = showCounty;
 }
 
-function updateBucharestSectorVisibility(countrySelect, countySelect, cityElement) {
-    if (!countrySelect || !countySelect || !cityElement) {
-        console.log("Missing required elements");
-        return;
-    }
+function setupPartyLocationHandlers(party) {
+    const countrySelect = document.querySelector(`[name="${party}Country"]`);
+    const countySelect = document.querySelector(`[name="${party}CountrySubentity"]`);
+    const cityContainer = document.querySelector(`[name="${party}City"]`)?.parentNode;
 
-    const isBucharest = countrySelect.value === 'RO' && countySelect.value === 'RO-B';
-    const currentValue = cityElement.value || '';
-    const isCurrentlySector = cityElement.tagName.toLowerCase() === 'select';
-    
-    console.log("Checking Bucharest condition:", { 
-        isBucharest, 
-        country: countrySelect.value, 
-        county: countySelect.value 
+    if (!countrySelect || !countySelect || !cityContainer) return;
+
+    const handleLocationChange = () => {
+        const isBucharest = countrySelect.value === 'RO' && countySelect.value === 'RO-B';
+        const currentElement = cityContainer.querySelector('input, select');
+        const isCurrentlySector = currentElement.tagName.toLowerCase() === 'select';
+
+        if (isBucharest && !isCurrentlySector) {
+            const sectorSelect = document.createElement('select');
+            sectorSelect.className = 'form-input';
+            sectorSelect.name = `${party}City`;
+            sectorSelect.innerHTML = `
+                <option value="">Selectați sectorul</option>
+                <option value="SECTOR1">Sectorul 1</option>
+                <option value="SECTOR2">Sectorul 2</option>
+                <option value="SECTOR3">Sectorul 3</option>
+                <option value="SECTOR4">Sectorul 4</option>
+                <option value="SECTOR5">Sectorul 5</option>
+                <option value="SECTOR6">Sectorul 6</option>
+            `;
+
+            // Try to preserve any existing sector value
+            const currentValue = currentElement.value || '';
+            if (currentValue.toUpperCase().includes('SECTOR')) {
+                sectorSelect.value = currentValue.toUpperCase().replace(/\s+/g, '');
+            }
+
+            cityContainer.replaceChild(sectorSelect, currentElement);
+        } else if (!isBucharest && isCurrentlySector) {
+            const cityInput = document.createElement('input');
+            cityInput.type = 'text';
+            cityInput.className = 'form-input';
+            cityInput.name = `${party}City`;
+            cityInput.value = '';
+            cityContainer.replaceChild(cityInput, currentElement);
+        }
+    };
+
+    // Set up event listeners
+    countrySelect.addEventListener('change', () => {
+        updateCountyVisibility(countrySelect, countySelect);
+        handleLocationChange();
     });
 
-    if (isBucharest && !isCurrentlySector) {
-        // Create sector dropdown
-        const sectorSelect = document.createElement('select');
-        sectorSelect.className = 'form-input';
-        sectorSelect.name = cityElement.name;
-        sectorSelect.innerHTML = `
-            <option value="">Selectați sectorul</option>
-            <option value="SECTOR1">Sectorul 1</option>
-            <option value="SECTOR2">Sectorul 2</option>
-            <option value="SECTOR3">Sectorul 3</option>
-            <option value="SECTOR4">Sectorul 4</option>
-            <option value="SECTOR5">Sectorul 5</option>
-            <option value="SECTOR6">Sectorul 6</option>
-        `;
-        
-        // Try to preserve the sector value if it exists
-        if (currentValue.toUpperCase().includes('SECTOR')) {
-            sectorSelect.value = currentValue.toUpperCase().replace(/\s+/g, '');
-        }
-        
-        if (cityElement.parentNode) {
-            cityElement.parentNode.replaceChild(sectorSelect, cityElement);
-        }
-        
-        console.log("Replaced input with sector select");
-    } else if (!isBucharest && isCurrentlySector) {
-        // Switch back to text input
-        const cityInput = document.createElement('input');
-        cityInput.type = 'text';
-        cityInput.className = 'form-input';
-        cityInput.name = cityElement.name;
-        
-        // Preserve the value only if it's not a sector
-        if (!currentValue.toUpperCase().includes('SECTOR')) {
-            cityInput.value = currentValue;
-        }
-        
-        if (cityElement.parentNode) {
-            cityElement.parentNode.replaceChild(cityInput, cityElement);
-        }
-        
-        console.log("Replaced sector select with input");
-    }
+    countySelect.addEventListener('change', handleLocationChange);
+
+    // Initial setup
+    updateCountyVisibility(countrySelect, countySelect);
+    handleLocationChange();
 }
 
 function initializeUI() {
