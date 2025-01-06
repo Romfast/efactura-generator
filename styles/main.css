@@ -43,9 +43,29 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border-color);
-}
+    padding: 20px 0;
+    border-bottom: 2px solid var(--primary-color);
+ }
+ 
+ .header h1 {
+    font-size: 24px;
+    color: var(--primary-color);
+    font-weight: 600;
+ }
+ 
+ .app-author {
+    font-size: 12px;
+    color: var(--text-light);
+    text-align: right;
+    margin-top: 4px;
+ }
+
+.invoice-details.form-section, .party-details.form-section, .form-section {
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 12px;
+ }
 
 /* Details Grid Layout */
 .details-grid {
@@ -65,6 +85,13 @@ body {
     gap: 12px;
 }
 
+.party-details {
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 12px;
+ }
+
 .party-details .compact-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -74,7 +101,6 @@ body {
 /* Form Elements */
 .form-section {
     padding: 12px;
-    background-color: var(--surface-color);
     border-radius: 6px;
     box-shadow: var(--shadow-sm);
 }
@@ -418,6 +444,21 @@ body {
     color: white !important;
     box-shadow: none !important;
 }
+.vat-exemption {
+    margin-top: 8px;
+    display: flex; 
+    gap: 12px;
+    align-items: center;
+}
+
+.vat-exemption.hidden {
+    display: none;
+}
+
+.vat-exemption .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
 
 /* Responsive Design */
 @media (max-width: 1024px) {
@@ -441,10 +482,15 @@ body {
         text-align: center;
     }
 
-    .button-group {
-        flex-direction: column;
-        width: 100%;
-    }
+   .button-group {
+       flex-direction: column;
+       width: auto;
+       min-width: 200px;
+   }
+
+   .button {
+       width: auto;
+   }
 
     .invoice-details .compact-grid {
         grid-template-columns: 1fr;
