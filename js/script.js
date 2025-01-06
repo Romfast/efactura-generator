@@ -630,7 +630,7 @@ window.updateExemptionReason = function(rowId) {
 };
 
 // Toggle optional details
-function toggleOptionalDetails(index) {
+window.toggleOptionalDetails = function(index) {
     const optionalDetails = document.getElementById(`optionalDetails${index}`);
     const button = optionalDetails.previousElementSibling.querySelector('button');
     
