@@ -12,11 +12,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Editor eFactura</h1>
+            <div>
+                <h1>Editor eFactura</h1>
+                <div class="app-author">Romfast SRL</div>
+            </div>
             <div class="button-group">
                 <input type="file" id="fileInput" class="file-input" accept=".xml">
                 <button onclick="document.getElementById('fileInput').click()" class="button">Alege Fișier XML</button>
-                <button onclick="handleStorno()" class="button button-danger">Storno/Retur</button>
+                <button onclick="handleStorno()" class="button button-danger">Stornează</button>
                 <button onclick="saveXML()" class="button button-secondary">Salvează XML</button>
             </div>
         </div>
