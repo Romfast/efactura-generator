@@ -16,7 +16,25 @@ export function getProjectPath(filename) {
 
 export async function loadTestFile(filename) {
     try {
-        return await fs.promises.readFile(getProjectPath(filename), 'utf8');
+        const content = await fs.promises.readFile(getProjectPath(filename), 'utf8');
+        
+        if (filename.includes('index.html')) {
+            const scriptPath = getProjectPath('js/script.js');
+            const formatterPath = getProjectPath('js/formatter.js');
+            
+            const scriptContent = await fs.promises.readFile(scriptPath, 'utf8');
+            const formatterContent = await fs.promises.readFile(formatterPath, 'utf8');
+            
+            return content.replace('</body>', 
+                `<script type="module">
+                    ${formatterContent}
+                    ${scriptContent}
+                </script>
+                </body>`
+            );
+        }
+        
+        return content;
     } catch (error) {
         console.error(`Error loading test file ${filename}:`, error);
         throw error;

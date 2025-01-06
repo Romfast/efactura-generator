@@ -1,87 +1,32 @@
 import { InvoiceFormatter } from './formatter.js';
+import * as constants from './constants.js';
+import {
+    addLineItem,
+    removeLineItem,
+    refreshTotals,
+    handleFileSelect,
+    handleStorno,
+    setContext
+} from './invoice-functions.js';
 
-// Constants
-const XML_NAMESPACES = {
-    ubl: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
-    cbc: "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
-    cac: "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
-};
+// Initialize formatter
+export const formatter = new InvoiceFormatter();
 
-const VAT_TYPES = {
-    "S": "Cotă Standard",
-    "AE": "Taxare Inversă",
-    "O": "Neplătitor TVA",
-    "Z": "Cotă 0% TVA",
-    "E": "Neimpozabil"
-};
+// Add constants to window
+Object.assign(window, constants);
 
-const UNIT_CODES = new Map([
-    ['EA', 'Bucată (EA)'],
-    ['XPP', 'Bucată (XPP)'],
-    ['KGM', 'Kilogram (KGM)'],
-    ['MTR', 'Metri (MTR)'],
-    ['LTR', 'Litru (LTR)'],
-    ['H87', 'Bucată (H87)'],
-    ['MTQ', 'Metri cubi (MTQ)']
-]);
+// Add to window for browser compatibility
+Object.assign(window, {
+    addLineItem,
+    removeLineItem,
+    refreshTotals,
+    handleFileSelect,
+    handleStorno,
+    formatter
+});
 
-const ISO_3166_1_CODES = new Set([
-    'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AW', 'AX', 
-    'AZ', 'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BL', 'BM', 'BN', 'BO', 'BQ', 
-    'BR', 'BS', 'BT', 'BV', 'BW', 'BY', 'BZ', 'CA', 'CC', 'CD', 'CF', 'CG', 'CH', 'CI', 'CK', 
-    'CL', 'CM', 'CN', 'CO', 'CR', 'CU', 'CV', 'CW', 'CX', 'CY', 'CZ', 'DE', 'DJ', 'DK', 'DM', 
-    'DO', 'DZ', 'EC', 'EE', 'EG', 'EH', 'ER', 'ES', 'ET', 'FI', 'FJ', 'FK', 'FM', 'FO', 'FR', 
-    'GA', 'GB', 'GD', 'GE', 'GF', 'GG', 'GH', 'GI', 'GL', 'GM', 'GN', 'GP', 'GQ', 'GR', 'GS', 
-    'GT', 'GU', 'GW', 'GY', 'HK', 'HM', 'HN', 'HR', 'HT', 'HU', 'ID', 'IE', 'IL', 'IM', 'IN', 
-    'IO', 'IQ', 'IR', 'IS', 'IT', 'JE', 'JM', 'JO', 'JP', 'KE', 'KG', 'KH', 'KI', 'KM', 'KN', 
-    'KP', 'KR', 'KW', 'KY', 'KZ', 'LA', 'LB', 'LC', 'LI', 'LK', 'LR', 'LS', 'LT', 'LU', 'LV', 
-    'LY', 'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH', 'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 
-    'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ', 'NA', 'NC', 'NE', 'NF', 'NG', 'NI', 
-    'NL', 'NO', 'NP', 'NR', 'NU', 'NZ', 'OM', 'PA', 'PE', 'PF', 'PG', 'PH', 'PK', 'PL', 'PM', 
-    'PN', 'PR', 'PS', 'PT', 'PW', 'PY', 'QA', 'RE', 'RO', 'RS', 'RU', 'RW', 'SA', 'SB', 'SC', 
-    'SD', 'SE', 'SG', 'SH', 'SI', 'SJ', 'SK', 'SL', 'SM', 'SN', 'SO', 'SR', 'SS', 'ST', 'SV', 
-    'SX', 'SY', 'SZ', 'TC', 'TD', 'TF', 'TG', 'TH', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO', 'TR', 
-    'TT', 'TV', 'TW', 'TZ', 'UA', 'UG', 'UM', 'US', 'UY', 'UZ', 'VA', 'VC', 'VE', 'VG', 'VI', 
-    'VN', 'VU', 'WF', 'WS', 'XI', 'YE', 'YT', 'ZA', 'ZM', 'ZW'
-]);
-
-const ROMANIAN_COUNTY_CODES = new Set([
-    'RO-AB', 'RO-AG', 'RO-AR', 'RO-B', 'RO-BC', 'RO-BH', 'RO-BN', 'RO-BR', 'RO-BT', 'RO-BV', 
-    'RO-BZ', 'RO-CJ', 'RO-CL', 'RO-CS', 'RO-CT', 'RO-CV', 'RO-DB', 'RO-DJ', 'RO-GJ', 'RO-GL', 
-    'RO-GR', 'RO-HD', 'RO-HR', 'RO-IF', 'RO-IL', 'RO-IS', 'RO-MH', 'RO-MM', 'RO-MS', 'RO-NT', 
-    'RO-OT', 'RO-PH', 'RO-SB', 'RO-SJ', 'RO-SM', 'RO-SV', 'RO-TL', 'RO-TM', 'RO-TR', 'RO-VL', 
-    'RO-VN', 'RO-VS'
-]);
-
-const CHARGE_REASON_CODES = {
-    'TV': 'Cheltuieli de transport',
-    'FC': 'Taxe transport',
-    'ZZZ': 'Definite reciproc'
-};
-
-const ALLOWANCE_REASON_CODES = {
-    '95': 'Reducere',
-    '41': 'Bonus lucrări în avans',
-    '42': 'Alt bonus',
-    '60': 'Reducere volum',
-    '62': 'Alte reduceri',
-    '63': 'Reducere producător',
-    '64': 'Din cauza războiului',
-    '65': 'Reducere outlet nou',
-    '66': 'Reducere mostre',
-    '67': 'Reducere end-of-range',
-    '68': 'Cost ambalaj returnabil',
-    '70': 'Reducere Incoterm',
-    '71': 'Prag vânzări',
-    '88': 'Suprataxă/deducere materiale',
-    '100': 'Reducere specială',
-    '102': 'Termen lung fix',
-    '103': 'Temporar',
-    '104': 'Standard',
-    '105': 'Cifră de afaceri anuală'
-};
-
-const formatter = new InvoiceFormatter()
+// Set context for invoice functions
+setContext(window);
 
 // Global variables
 let currentInvoice = null;
@@ -213,19 +158,6 @@ document.addEventListener('click', function(event) {
         }
     }
 });
-
-// File handling functions
-function handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const xmlContent = e.target.result;
-            parseXML(xmlContent);
-        };
-        reader.readAsText(file);
-    }
-}
 
 function parseXML(xmlContent) {
     try {
@@ -796,6 +728,7 @@ function updateBucharestSectorVisibility(countrySelect, countySelect, cityElemen
     }
 }
 
+
 function initializeUI() {
     document.querySelectorAll('.form-input').forEach(input => {
         input.addEventListener('input', function() {
@@ -849,16 +782,6 @@ function initializeUI() {
 
     // Initialize location selectors
     initializeLocationSelectors();
-
-    window.addLineItem = addLineItem;
-    window.removeLineItem = removeLineItem;
-    window.addAllowanceCharge = addAllowanceCharge;
-    window.removeAllowanceCharge = removeAllowanceCharge;
-    window.handleStorno = handleStorno;
-    window.updateTotals = updateTotals;
-    window.saveXML = saveXML;
-    window.refreshTotals = refreshTotals;
-    window.displayVATBreakdown = displayVATBreakdown;    
 }
 
 // Handling VAT type changes
@@ -1286,35 +1209,6 @@ function renumberAllowanceCharges() {
 }
 
 
-function addLineItem() {
-    const container = document.getElementById('lineItems');
-    const index = document.querySelectorAll('.line-item').length;
-    const lineItemHtml = createLineItemHTML(index, '', '1', '0', '19', 'EA', 'S');
-    container.insertAdjacentHTML('beforeend', lineItemHtml);
-    
-    const quantityInput = document.querySelector(`[name="quantity${index}"]`);
-    const priceInput = document.querySelector(`[name="price${index}"]`);
-    const vatTypeSelect = document.querySelector(`[name="vatType${index}"]`);
-
-    quantityInput.addEventListener('change', refreshTotals);
-    priceInput.addEventListener('change', refreshTotals);
-    vatTypeSelect.addEventListener('change', () => handleVatTypeChange(index));
-
-    manuallyEditedVatRows.clear(); // Clear manual edits
-    
-    handleLineItemChange(index);
-}
-
-function removeLineItem(index) {
-    const lineItem = document.querySelector(`.line-item[data-index="${index}"]`);
-    if (lineItem) {
-        lineItem.remove();
-        renumberLineItems();
-        manuallyEditedVatRows.clear(); // Clear manual edits
-        refreshTotals(); // Recalculate all totals
-    }
-}
-
 function handleLineItemChange(index) {
     const quantityInput = document.querySelector(`[name="quantity${index}"]`);
     const priceInput = document.querySelector(`[name="price${index}"]`);
@@ -1324,42 +1218,6 @@ function handleLineItemChange(index) {
     
     // Force refresh when input changes
     refreshTotals();
-}
-
-function handleStorno() {
-    document.querySelectorAll('.line-item').forEach((item, index) => {
-        const quantityInput = document.querySelector(`[name="quantity${index}"]`);
-        const currentValue = parseFloat(quantityInput.value);
-        quantityInput.value = -currentValue;
-    });
-
-    document.querySelectorAll('.allowance-charge').forEach((item, index) => {
-        const amountInput = document.querySelector(`[name="chargeAmount${index}"]`);
-        const currentAmount = parseFloat(amountInput.value);
-        amountInput.value = -currentAmount;
-    });
-
-    document.querySelectorAll('.vat-row').forEach(row => {
-        const baseInput = row.querySelector('.vat-base');
-        const amountInput = row.querySelector('.vat-amount');
-        
-        if (baseInput) {
-            const currentBase = parseFloat(baseInput.value) || 0;
-            baseInput.value = (-currentBase).toFixed(2);
-        }
-        
-        if (amountInput) {
-            const currentAmount = parseFloat(amountInput.value) || 0;
-            amountInput.value = (-currentAmount).toFixed(2);
-        }
-    });
-
-    manuallyEditedVatRows.clear();
-    refreshTotals();
-    
-    if (currentInvoice) {
-        updateTaxTotals(currentInvoice);
-    }
 }
 
 function updateTotals() {
@@ -1386,40 +1244,6 @@ function updateTotals() {
     // Update VAT and total displays with proper formatting
     document.getElementById('vat').textContent = formatter.formatCurrency(calculatedVAT);
     document.getElementById('total').textContent = formatter.formatCurrency(totals.netAmount + calculatedVAT);
-}
-
-function refreshTotals() {
-    // Calculate base totals
-    const lineItemTotals = calculateLineItemTotals();
-    const chargeTotals = calculateChargeTotals();
-
-    const subtotal = lineItemTotals.subtotal;
-    const allowances = chargeTotals.allowances;
-    const charges = chargeTotals.charges;
-    const netAmount = subtotal - allowances + charges;
-
-    // Update display
-    displayTotals({
-        subtotal: subtotal,
-        allowances: allowances,
-        charges: charges,
-        netAmount: netAmount,
-        totalVat: calculateTotalVAT(),
-        total: netAmount + calculateTotalVAT()
-    });
-
-    displayVATBreakdown();
-    
-    // Calculate total VAT from the actual displayed rows, including manual edits
-    let totalVat = 0;
-    document.querySelectorAll('.vat-row').forEach(row => {
-        const vatAmount = formatter.parseCurrency(row.querySelector('.vat-amount').value) || 0;
-        totalVat += vatAmount;
-    });
-    
-    // Update final totals with proper formatting
-    document.getElementById('vat').textContent = formatter.formatCurrency(totalVat);
-    document.getElementById('total').textContent = formatter.formatCurrency(netAmount + totalVat);
 }
 
 function calculateLineItemTotals() {
