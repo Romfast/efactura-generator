@@ -15,6 +15,35 @@ const VAT_TYPES = {
     "E": "Neimpozabil"
 };
 
+const VAT_EXEMPTION_CODES = {
+    'AE': {
+        code: 'VATEX-EU-AE',
+        reason: 'Taxare inversa'
+    },
+    'K': {
+        code: 'VATEX-EU-IC',
+        reason: 'Livrare intracomunitara'
+    },
+    'O': {
+        code: 'VATEX-EU-O',
+        reason: 'Neplatitor TVA'
+    },
+    'E': [
+        {
+            code: '',
+            reason: 'Scutit'
+        },
+        {
+            code: 'VATEX-EU-F',
+            reason: 'Bunuri second hand'
+        },
+        {
+            code: 'VATEX-EU-D',
+            reason: 'Regim special agentii de turism'
+        }
+    ]
+};
+
 const UNIT_CODES = new Map([
     ['EA', 'Bucată (EA)'],
     ['XPP', 'Bucată (XPP)'],
@@ -129,6 +158,13 @@ document.addEventListener('DOMContentLoaded', function() {
         documentCurrencyInput.required = true;
     }    
 
+    const supplierVATInput = document.querySelector('[name="supplierVAT"]');
+    if (supplierVATInput) {
+        supplierVATInput.addEventListener('change', function() {
+            updateAllVATTypes();
+        });
+    }
+        
     addExchangeRateField();
 
     initializeLocationSelectors();    
@@ -190,6 +226,61 @@ function updateVATDisplay(row, amount, type = 'amount') {
     }
 }
 
+function validateVATExemption() {
+    const vatRows = document.querySelectorAll('.vat-row');
+    let isValid = true;
+    
+    vatRows.forEach(row => {
+        const vatType = row.querySelector('.vat-type').value;
+        if (['E', 'K', 'AE', 'O'].includes(vatType)) {
+            const exemptionCodeInput = row.querySelector('.vat-exemption-code');
+            const exemptionReasonInput = row.querySelector('.vat-exemption-reason');
+            const exemptionCode = exemptionCodeInput?.value;
+            const exemptionReason = exemptionReasonInput?.value;
+            
+            // Pentru neplătitori de TVA (tip O), verificăm să aibă valorile corecte
+            if (vatType === 'O') {
+                if (exemptionCode !== 'VATEX-EU-O') {
+                    isValid = false;
+                    exemptionCodeInput?.classList.add('invalid');
+                }
+            }
+            // Pentru celelalte tipuri de scutire, trebuie să aibă cel puțin unul dintre câmpuri completat
+            else if (!exemptionCode && !exemptionReason) {
+                isValid = false;
+                exemptionCodeInput?.classList.add('invalid');
+                exemptionReasonInput?.classList.add('invalid');
+            } else {
+                exemptionCodeInput?.classList.remove('invalid');
+                exemptionReasonInput?.classList.remove('invalid');
+            }
+        }
+    });
+
+    return isValid;
+}
+
+function addDynamicVatExemptionCode(vatType, exemptionCode, exemptionReason) {
+    if (!vatType || !exemptionCode) return;
+    
+    if (vatType === 'E') {
+        // Verifică dacă codul există deja
+        const exists = VAT_EXEMPTION_CODES.E.some(e => e.code === exemptionCode);
+        if (!exists) {
+            VAT_EXEMPTION_CODES.E.push({
+                code: exemptionCode,
+                reason: exemptionReason || exemptionCode
+            });
+        }
+    } else if (!VAT_EXEMPTION_CODES[vatType]) {
+        // Adaugă un nou tip de TVA dacă nu există
+        VAT_EXEMPTION_CODES[vatType] = {
+            code: exemptionCode,
+            reason: exemptionReason || exemptionCode
+        };
+    }
+}
+
 function getDisplayValue(elementId) {
     const element = document.getElementById(elementId);
     return element ? formatter.parseCurrency(element.textContent) : 0;
@@ -237,18 +328,31 @@ function parseXML(xmlContent) {
             throw new Error('Eroare la parsarea XML: ' + parserError.textContent);
         }
 
+        // Extrage și adaugă codurile de scutire din TaxTotal
+        const taxSubtotals = xmlDoc.querySelectorAll('cac\\:TaxSubtotal, TaxSubtotal');
+        taxSubtotals.forEach(subtotal => {
+            const taxCategory = subtotal.querySelector('cac\\:TaxCategory, TaxCategory');
+            if (taxCategory) {
+                const vatType = getXMLValue(taxCategory, 'cbc\\:ID, ID');
+                const exemptionCode = getXMLValue(taxCategory, 'cbc\\:TaxExemptionReasonCode, TaxExemptionReasonCode');
+                const exemptionReason = getXMLValue(taxCategory, 'cbc\\:TaxExemptionReason, TaxExemptionReason');
+                
+                if (vatType && exemptionCode) {
+                    addDynamicVatExemptionCode(vatType, exemptionCode, exemptionReason);
+                }
+            }
+        });
+
         currentInvoice = xmlDoc;
         manuallyEditedVatRows.clear();
 
         populateBasicDetails(xmlDoc);
         populatePartyDetails(xmlDoc);
-
-        initializeLocationSelectors();
-
         populateAllowanceCharges(xmlDoc);
         populateLineItems(xmlDoc);
         storeOriginalTotals(xmlDoc);
         restoreOriginalTotals();
+        displayVATBreakdown(xmlDoc);
         
     } catch (error) {
         handleError(error, 'Eroare la parsarea fișierului XML');
@@ -415,7 +519,7 @@ function createLineItemHTML(index, description, quantity, price, vatRate, unitCo
 }
 
 // Add VAT breakdown row
-function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existingRowId = null) {
+function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existingRowId = null, exemptionCode = '', exemptionReason = '') {
     const container = document.getElementById('vatBreakdownRows');
     const rowId = existingRowId || `vat-row-${Date.now()}`;
     
@@ -438,18 +542,95 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
                     <label>Valoare TVA:</label>
                     <input type="text" class="form-input vat-amount" value="${formatter.formatCurrency(vatAmount)}" 
                            onchange="window.updateVATRowFromAmount('${rowId}')">
-                    <button type="button" class="button button-small button-danger" 
-                            onclick="window.removeVATRow('${rowId}')">Șterge</button>
                 </div>
+                <div class="vat-exemption ${['E', 'K', 'O', 'AE'].includes(vatType) ? '' : 'hidden'}">
+                    <div class="form-group">
+                        <label>Cod Scutire:</label>
+                        <select class="form-input vat-exemption-code" onchange="window.updateExemptionReason('${rowId}')">
+                            ${generateExemptionCodeOptions(vatType, exemptionCode)}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Motiv Scutire:</label>
+                        <input type="text" class="form-input vat-exemption-reason" value="${exemptionReason}" 
+                               placeholder="Motiv scutire TVA">
+                    </div>
+                </div>
+                <button type="button" class="button button-small button-danger" 
+                        onclick="window.removeVATRow('${rowId}')">Șterge</button>
             </div>
         </div>
     `;
     
     container.insertAdjacentHTML('beforeend', rowHtml);
+    
+    // Add event listener for VAT type changes
+    const vatTypeSelect = document.querySelector(`#${rowId} .vat-type`);
+    vatTypeSelect.addEventListener('change', () => {
+        const exemptionContainer = document.querySelector(`#${rowId} .vat-exemption`);
+        const newVatType = vatTypeSelect.value;
+        
+        if (['E', 'K', 'O', 'AE'].includes(newVatType)) {
+            exemptionContainer.classList.remove('hidden');
+            
+            // Update exemption code options
+            const codeSelect = document.querySelector(`#${rowId} .vat-exemption-code`);
+            codeSelect.innerHTML = generateExemptionCodeOptions(newVatType);
+            
+            // Set default values
+            const defaultExemption = getDefaultExemption(newVatType);
+            if (defaultExemption) {
+                codeSelect.value = defaultExemption.code;
+                document.querySelector(`#${rowId} .vat-exemption-reason`).value = defaultExemption.reason;
+            }
+        } else {
+            exemptionContainer.classList.add('hidden');
+        }
+    });
 }
 
+function generateExemptionCodeOptions(vatType, selectedCode = '') {
+    if (vatType === 'E') {
+        return VAT_EXEMPTION_CODES.E.map(exemption => 
+            `<option value="${exemption.code}" ${exemption.code === selectedCode ? 'selected' : ''}>
+                ${exemption.code || 'Scutit'}
+            </option>`
+        ).join('');
+    } else if (vatType === 'K' || vatType === 'AE' || vatType === 'O') {
+        const exemption = VAT_EXEMPTION_CODES[vatType];
+        return `<option value="${exemption.code}" selected>${exemption.code}</option>`;
+    }
+    return '<option value="">-</option>';
+}
+
+function getDefaultExemption(vatType) {
+    if (vatType === 'E') {
+        return VAT_EXEMPTION_CODES.E[0];
+    }
+    return VAT_EXEMPTION_CODES[vatType];
+}
+
+// Add this to window object
+window.updateExemptionReason = function(rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    
+    const vatType = row.querySelector('.vat-type').value;
+    const codeSelect = row.querySelector('.vat-exemption-code');
+    const reasonInput = row.querySelector('.vat-exemption-reason');
+    
+    if (vatType === 'E') {
+        const selectedExemption = VAT_EXEMPTION_CODES.E.find(e => e.code === codeSelect.value);
+        if (selectedExemption) {
+            reasonInput.value = selectedExemption.reason;
+        }
+    } else if (vatType === 'K' || vatType === 'AE') {
+        reasonInput.value = VAT_EXEMPTION_CODES[vatType].reason;
+    }
+};
+
 // Toggle optional details
-function toggleOptionalDetails(index) {
+window.toggleOptionalDetails = function(index) {
     const optionalDetails = document.getElementById(`optionalDetails${index}`);
     const button = optionalDetails.previousElementSibling.querySelector('button');
     
@@ -464,6 +645,10 @@ function toggleOptionalDetails(index) {
 
 // Form validation
 function validateForm(silent = false) {
+    let isValid = true;
+    let firstInvalidField = null;
+
+    // Validare câmpuri existente...
     const requiredFields = [
         'invoiceNumber',
         'issueDate',
@@ -472,9 +657,6 @@ function validateForm(silent = false) {
         'supplierVAT',
         'customerName',
     ];
-
-    let isValid = true;
-    let firstInvalidField = null;
 
     requiredFields.forEach(fieldName => {
         const field = document.querySelector(`[name="${fieldName}"]`);
@@ -488,6 +670,16 @@ function validateForm(silent = false) {
         }
     });
 
+    // Adaugă validarea TVA
+    const vatExemptionValid = validateVATExemption();
+    if (!vatExemptionValid) {
+        isValid = false;
+        if (!silent) {
+            alert('Vă rugăm să completați codul și/sau motivul scutirii de TVA pentru toate categoriile care necesită această informație.');
+        }
+    }
+
+    // Restul validărilor existente...
     const lineItems = document.querySelectorAll('.line-item');
     if (lineItems.length === 0) {
         isValid = false;
@@ -524,8 +716,7 @@ function validateForm(silent = false) {
         }
     });
 
-
-    // Validate exchange rate if tax currency is present
+    // Validare curs valutar dacă este cazul
     const taxCurrencyCode = document.querySelector('[name="taxCurrencyCode"]').value.trim();
     const documentCurrencyCode = document.querySelector('[name="documentCurrencyCode"]').value.trim();
     
@@ -827,21 +1018,48 @@ window.handleVatTypeChange = function(index) {
     const vatTypeSelect = document.querySelector(`[name="vatType${index}"]`);
     const vatRateInput = document.querySelector(`[name="vatRate${index}"]`);
     
-    switch(vatTypeSelect.value) {
-        case 'AE':
-        case 'Z':
-        case 'O':
-        case 'E':
-            vatRateInput.value = '0';
-            vatRateInput.disabled = true;
-            break;
-        case 'S':
-            vatRateInput.value = '19';
-            vatRateInput.disabled = false;
-            break;
+    // Verifică dacă furnizorul este neplătitor TVA
+    if (!isVATRegistered()) {
+        vatTypeSelect.value = 'O';
+        vatTypeSelect.disabled = true;  // Dezactivează selectul pentru neplătitori
+        vatRateInput.value = '0';
+        vatRateInput.disabled = true;
+        
+        // Setează codul și motivul scutirii pentru neplătitori
+        const row = document.querySelector(`.vat-row`);
+        if (row) {
+            const exemptionCode = row.querySelector('.vat-exemption-code');
+            const exemptionReason = row.querySelector('.vat-exemption-reason');
+            if (exemptionCode) exemptionCode.value = 'VATEX-EU-O';
+            if (exemptionReason) exemptionReason.value = 'Operațiune efectuată de neplătitor de TVA';
+        }
+    } else {
+        vatTypeSelect.disabled = false;  // Activează selectul pentru plătitori
+        
+        switch(vatTypeSelect.value) {
+            case 'O':  // Pentru neplătitori
+                vatRateInput.value = '0';
+                vatRateInput.disabled = true;
+                break;
+            case 'AE':  // Taxare inversă
+            case 'Z':   // Cotă 0%
+            case 'E':   // Scutit
+                vatRateInput.value = '0';
+                vatRateInput.disabled = true;
+                break;
+            case 'S':   // Standard
+                vatRateInput.value = '19';
+                vatRateInput.disabled = false;
+                break;
+        }
     }
     
     updateTotals();
+}
+
+function isVATRegistered() {
+    const supplierVAT = document.querySelector('[name="supplierVAT"]').value.trim().toUpperCase();
+    return supplierVAT.startsWith('RO');
 }
 
 function handleChargeVatTypeChange(index) {
@@ -850,23 +1068,74 @@ function handleChargeVatTypeChange(index) {
     
     if (!vatTypeSelect || !vatRateInput) return;
     
-    const vatType = vatTypeSelect.value;
-    switch(vatType) {
-        case 'S': // Standard rate
-            vatRateInput.value = '19.00';
-            vatRateInput.disabled = false;
-            break;
-        case 'AE': // Reverse charge
-        case 'Z':  // Zero rate
-        case 'O':  // Out of scope
-        case 'E':  // Exempt
-            vatRateInput.value = '0.00';
-            vatRateInput.disabled = true;
-            break;
+    // Verifică dacă furnizorul este neplătitor TVA
+    if (!isVATRegistered()) {
+        vatTypeSelect.value = 'O';
+        vatTypeSelect.disabled = true;  // Dezactivează selectul pentru neplătitori
+        vatRateInput.value = '0';
+        vatRateInput.disabled = true;
+        
+        // Setează codul și motivul scutirii pentru neplătitori
+        const row = document.querySelector(`.vat-row`);
+        if (row) {
+            const exemptionCode = row.querySelector('.vat-exemption-code');
+            const exemptionReason = row.querySelector('.vat-exemption-reason');
+            if (exemptionCode) exemptionCode.value = 'VATEX-EU-O';
+            if (exemptionReason) exemptionReason.value = 'Operațiune efectuată de neplătitor de TVA';
+        }
+    } else {
+        vatTypeSelect.disabled = false;  // Activează selectul pentru plătitori
+        
+        switch(vatTypeSelect.value) {
+            case 'O':  // Pentru neplătitori
+                vatRateInput.value = '0';
+                vatRateInput.disabled = true;
+                break;
+            case 'AE':  // Taxare inversă
+            case 'Z':   // Cotă 0%
+            case 'E':   // Scutit
+                vatRateInput.value = '0';
+                vatRateInput.disabled = true;
+                break;
+            case 'S':   // Standard
+                vatRateInput.value = '19';
+                vatRateInput.disabled = false;
+                break;
+        }
     }
     
     // Clear manual edits and refresh
     manuallyEditedVatRows.clear();
+    refreshTotals();
+}
+
+// Funcție pentru actualizarea tuturor categoriilor TVA când se modifică codul fiscal
+function updateAllVATTypes() {
+    const isNotVATRegistered = !isVATRegistered();
+    
+    // Actualizează toate liniile de articole
+    document.querySelectorAll('.line-item').forEach((item, index) => {
+        const vatTypeSelect = item.querySelector(`[name="vatType${index}"]`);
+        const vatRateInput = item.querySelector(`[name="vatRate${index}"]`);
+        
+        if (isNotVATRegistered) {
+            vatTypeSelect.value = 'O';
+            vatTypeSelect.disabled = true;
+            vatRateInput.value = '0';
+            vatRateInput.disabled = true;
+        } else {
+            vatTypeSelect.disabled = false;
+            // Restabilește valorile implicite pentru plătitori
+            if (vatTypeSelect.value === 'O') {
+                vatTypeSelect.value = 'S';
+                vatRateInput.value = '19';
+                vatRateInput.disabled = false;
+            }
+        }
+    });
+
+    // Actualizează breakdown-ul TVA
+    updateVATBreakdown();
     refreshTotals();
 }
 
@@ -1094,10 +1363,14 @@ function populateLineItems(xmlDoc) {
         const price = getXMLValue(item, 'cac\\:Price cbc\\:PriceAmount, PriceAmount', '0');
         const description = getXMLValue(item, 'cac\\:Item cbc\\:Name, Name', '');
         const itemDescription = getXMLValue(item, 'cac\\:Item cbc\\:Description, Description', '');
-        const vatRate = getXMLValue(item, 'cac\\:Item cac\\:ClassifiedTaxCategory cbc\\:Percent, Percent', '19');
-        const vatTypeId = getXMLValue(item, 'cac\\:Item cac\\:ClassifiedTaxCategory cbc\\:ID, ID', 'S');
+
+        // Găsește corect categoria de TVA din Item/ClassifiedTaxCategory
+        const taxCategory = item.querySelector('cac\\:Item cac\\:ClassifiedTaxCategory, Item ClassifiedTaxCategory');
+        const vatType = getXMLValue(taxCategory, 'cbc\\:ID, ID') || 'S';
+        const vatRate = getXMLValue(taxCategory, 'cbc\\:Percent, Percent') || '19';
         
-        const sellersItemIdentification = getXMLValue(item.querySelector('cac\\:Item, Item'), 'cac\\:SellersItemIdentification cbc\\:ID, SellersItemIdentification ID', '');
+        const sellersItemIdentification = getXMLValue(item.querySelector('cac\\:Item, Item'), 
+            'cac\\:SellersItemIdentification cbc\\:ID, SellersItemIdentification ID', '');
         
         const standardItemElement = item.querySelector('cac\\:Item cac\\:StandardItemIdentification cbc\\:ID, StandardItemIdentification ID');
         const standardItemId = standardItemElement ? standardItemElement.textContent : '';
@@ -1109,11 +1382,23 @@ function populateLineItems(xmlDoc) {
 
         addUnitCode(unitCode);
         const lineItemHtml = createLineItemHTML(
-            index, description, quantity, price, vatRate, unitCode, vatTypeId,
+            index, description, quantity, price, vatRate, unitCode, vatType,
             commodityCode, commodityListId, itemDescription, 
             sellersItemIdentification, standardItemId, standardItemSchemeId
         );
         lineItemsContainer.insertAdjacentHTML('beforeend', lineItemHtml);
+        
+        // Verifică și aplică restricțiile pentru neplătitori de TVA
+        if (!isVATRegistered()) {
+            const vatTypeSelect = document.querySelector(`[name="vatType${index}"]`);
+            const vatRateInput = document.querySelector(`[name="vatRate${index}"]`);
+            if (vatTypeSelect && vatRateInput) {
+                vatTypeSelect.value = 'O';
+                vatTypeSelect.disabled = true;
+                vatRateInput.value = '0';
+                vatRateInput.disabled = true;
+            }
+        }
     });
 }
 
@@ -1251,20 +1536,25 @@ function renumberAllowanceCharges() {
 function addLineItem() {
     const container = document.getElementById('lineItems');
     const index = document.querySelectorAll('.line-item').length;
-    const lineItemHtml = createLineItemHTML(index, '', '1', '0', '19', 'EA', 'S');
+    
+    // Determină tipul implicit de TVA bazat pe statusul furnizorului
+    const defaultVatType = isVATRegistered() ? 'S' : 'O';
+    const defaultVatRate = isVATRegistered() ? '19' : '0';
+    
+    const lineItemHtml = createLineItemHTML(index, '', '1', '0', defaultVatRate, 'EA', defaultVatType);
     container.insertAdjacentHTML('beforeend', lineItemHtml);
     
-    const quantityInput = document.querySelector(`[name="quantity${index}"]`);
-    const priceInput = document.querySelector(`[name="price${index}"]`);
-    const vatTypeSelect = document.querySelector(`[name="vatType${index}"]`);
-
-    quantityInput.addEventListener('change', refreshTotals);
-    priceInput.addEventListener('change', refreshTotals);
-    vatTypeSelect.addEventListener('change', () => handleVatTypeChange(index));
-
-    manuallyEditedVatRows.clear(); // Clear manual edits
+    const newItem = container.lastElementChild;
+    const vatTypeSelect = newItem.querySelector(`[name="vatType${index}"]`);
     
+    if (!isVATRegistered()) {
+        vatTypeSelect.disabled = true;
+        newItem.querySelector(`[name="vatRate${index}"]`).disabled = true;
+    }
+
     handleLineItemChange(index);
+    manuallyEditedVatRows.clear();
+    refreshTotals();
 }
 
 function removeLineItem(index) {
@@ -1595,7 +1885,26 @@ function updateTotalVAT() {
     document.getElementById('total').textContent = total.toFixed(2);
 }
 
-function displayVATBreakdown() {
+function updateVATBreakdown() {
+    // Șterge și reconstruiește rândurile TVA
+    const container = document.getElementById('vatBreakdownRows');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const { vatBreakdown } = calculateVATBreakdown();
+    
+    vatBreakdown.forEach((data, key) => {
+        const [rate, type] = key.split('-');
+        addVATBreakdownRow(
+            parseFloat(rate),
+            data.baseAmount,
+            data.vatAmount,
+            type
+        );
+    });
+}
+
+function displayVATBreakdown(xmlDoc = null) {
     const container = document.getElementById('vatBreakdownRows');
     if (!container) return;
 
@@ -1611,7 +1920,9 @@ function displayVATBreakdown() {
                 rate: formatter.parseCurrency(row.querySelector('.vat-rate').value),
                 base: formatter.parseCurrency(row.querySelector('.vat-base').value),
                 amount: formatter.parseCurrency(row.querySelector('.vat-amount').value),
-                type: row.querySelector('.vat-type').value
+                type: row.querySelector('.vat-type').value,
+                exemptionCode: row.querySelector('.vat-exemption-code')?.value || '',
+                exemptionReason: row.querySelector('.vat-exemption-reason')?.value || ''
             });
         }
     });
@@ -1619,32 +1930,58 @@ function displayVATBreakdown() {
     // Clear container
     container.innerHTML = '';
     
-    // Restore manually edited rows
-    existingValues.forEach((values, rowId) => {
-        addVATBreakdownRow(
-            values.rate,
-            values.base,
-            values.amount,
-            values.type,
-            rowId
-        );
-    });
-    
-    // Add new VAT breakdown rows
-    vatBreakdown.forEach((data, key) => {
-        const exists = Array.from(existingValues.values()).some(values => 
-            values.rate === data.rate && values.type === data.type
-        );
-        
-        if (!exists) {
+    // If XML is provided, use its VAT breakdown
+    if (xmlDoc) {
+        const taxSubtotals = xmlDoc.querySelectorAll('cac\\:TaxSubtotal, TaxSubtotal');
+        taxSubtotals.forEach((subtotal, index) => {
+            const baseAmount = parseFloat(getXMLValue(subtotal, 'cbc\\:TaxableAmount, TaxableAmount')) || 0;
+            const vatAmount = parseFloat(getXMLValue(subtotal, 'cbc\\:TaxAmount, TaxAmount')) || 0;
+            const taxCategory = subtotal.querySelector('cac\\:TaxCategory, TaxCategory');
+            const vatType = getXMLValue(taxCategory, 'cbc\\:ID, ID') || 'S';
+            const vatRate = parseFloat(getXMLValue(taxCategory, 'cbc\\:Percent, Percent')) || 0;
+            const exemptionCode = getXMLValue(taxCategory, 'cbc\\:TaxExemptionReasonCode, TaxExemptionReasonCode');
+            const exemptionReason = getXMLValue(taxCategory, 'cbc\\:TaxExemptionReason, TaxExemptionReason');
+            
             addVATBreakdownRow(
-                data.rate,
-                data.baseAmount,
-                data.vatAmount,
-                data.type
+                vatRate,
+                baseAmount,
+                vatAmount,
+                vatType,
+                `vat-row-${index}`,
+                exemptionCode,
+                exemptionReason
             );
-        }
-    });
+        });
+    } else {
+        // Restore manually edited rows
+        existingValues.forEach((values, rowId) => {
+            addVATBreakdownRow(
+                values.rate,
+                values.base,
+                values.amount,
+                values.type,
+                rowId,
+                values.exemptionCode,
+                values.exemptionReason
+            );
+        });
+        
+        // Add new VAT breakdown rows
+        vatBreakdown.forEach((data, key) => {
+            const exists = Array.from(existingValues.values()).some(values => 
+                values.rate === data.rate && values.type === data.type
+            );
+            
+            if (!exists) {
+                addVATBreakdownRow(
+                    data.rate,
+                    data.baseAmount,
+                    data.vatAmount,
+                    data.type
+                );
+            }
+        });
+    }
     
     updateTotalVAT();
 }
@@ -1813,9 +2150,10 @@ function updateBasicDetails(xmlDoc) {
 function createPartyElement(xmlDoc, isSupplier, partyData) {
     const party = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Party");
     const hasVatPrefix = /^[A-Z]{2}/.test(partyData.vat?.trim() || '');
-    
-    // Add PartyIdentification for customers without VAT prefix
-    if (!isSupplier && !hasVatPrefix && partyData.companyId) {
+    const IsNeplatitor = vatHasO();    
+
+    // Add PartyIdentification
+    if (partyData.companyId) {
         const partyIdentification = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:PartyIdentification");
         partyIdentification.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", partyData.companyId));
         party.appendChild(partyIdentification);
@@ -1845,43 +2183,52 @@ function createPartyElement(xmlDoc, isSupplier, partyData) {
     postalAddress.appendChild(country);
     party.appendChild(postalAddress);
 
-    // Add PartyTaxScheme
-    const partyTaxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:PartyTaxScheme");
+    const vatTypesInUse = new Set();
+    document.querySelectorAll('.line-item').forEach((item, index) => {
+        const vatType = document.querySelector(`[name="vatType${index}"]`).value;
+        vatTypesInUse.add(vatType);
+    });
     
-    if (hasVatPrefix) {
-        // For VAT registered parties (with prefix)
-        partyTaxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", partyData.vat));
+    // Add PartyTaxScheme for all suppliers VAT types except 'O' or all customers with VAT prefix
+    if (hasVatPrefix ) {
+        const partyTaxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:PartyTaxScheme");
+        partyTaxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", partyData.vat.toUpperCase()));
         const taxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme");
-        taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
+        if (!IsNeplatitor) {
+            taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
+        }  
+        else     {
+            console.log('not adding VAT ID');
+        }    
         partyTaxScheme.appendChild(taxScheme);
-    } else if (isSupplier) {
-        // For non-VAT registered supplier
-        partyTaxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", partyData.vat || ''));
-        partyTaxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme"));
-    } else {
-        // For non-VAT registered customer
-        partyTaxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", ''));
-        const taxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme");
-        taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
-        partyTaxScheme.appendChild(taxScheme);
+        
+        party.appendChild(partyTaxScheme);
     }
-    
-    party.appendChild(partyTaxScheme);
+
+    // Funcție pentru detectarea dacă există un VAT cu tipul 'O' Neplatitor de TVA
+    // În cazul în care există, nu se va adăuga un element TaxScheme cu ID-ul 'VAT'
+    function vatHasO() {
+        const vatTypesInUse = new Set();
+        document.querySelectorAll('.line-item').forEach((item, index) => {
+            const vatType = document.querySelector(`[name="vatType${index}"]`).value;
+            vatTypesInUse.add(vatType);
+        });
+        return vatTypesInUse.size > 0 && vatTypesInUse.has('O');
+    }
 
     // Add PartyLegalEntity
     const partyLegalEntity = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:PartyLegalEntity");
     partyLegalEntity.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:RegistrationName", partyData.name));
-    
-    // Add CompanyID for both supplier and customer
-    if (isSupplier) {
-        // For supplier always add CompanyID from companyId field
-        partyLegalEntity.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", partyData.companyId));
+
+    // Add CompanyID 
+    if (!hasVatPrefix) {
+        // For non-VAT registered supplier, use VAT number in CompanyID
+        partyLegalEntity.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", partyData.vat));
     } else {
-        // For customer, add VAT number if no prefix, otherwise add companyId
-        partyLegalEntity.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", 
-            hasVatPrefix ? partyData.companyId : partyData.vat));
+        // For others, use companyId
+        partyLegalEntity.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:CompanyID", partyData.companyId));
     }
-    
+
     party.appendChild(partyLegalEntity);
 
     // Add Contact if phone, email or contactName exists
@@ -2042,25 +2389,28 @@ function updateLineItems(xmlDoc) {
         const itemDescription = document.querySelector(`[name="itemDescription${index}"]`).value;
         const vatType = document.querySelector(`[name="vatType${index}"]`).value;
         const vatRate = vatType === 'AE' ? '0.00' : document.querySelector(`[name="vatRate${index}"]`).value;
-        const lineAmount = roundNumber(parseFloat(quantity) * parseFloat(price));
-
+        
+        // Add basic line item details
         invoiceLine.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", (index + 1).toString()));
         
-        const quantityElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:InvoicedQuantity", quantity.toString());
+        const quantityElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:InvoicedQuantity", quantity);
         quantityElement.setAttribute('unitCode', unitCode);
         invoiceLine.appendChild(quantityElement);
         
+        const lineAmount = roundNumber(parseFloat(quantity) * parseFloat(price));
         invoiceLine.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:LineExtensionAmount", 
             lineAmount.toFixed(2), { currencyID }));
 
+        // Add item details
         const itemElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Item");
-
+        
         if (itemDescription) {
-            itemElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Description", itemDescription));
+            itemElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Description", 
+                itemDescription));
         }
-
+        
         itemElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Name", description));
-
+        
         const sellersItemIdentification = document.querySelector(`[name="sellersItemIdentification${index}"]`).value;
         if (sellersItemIdentification) {
             const sellersItemElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:SellersItemIdentification");
@@ -2088,22 +2438,25 @@ function updateLineItems(xmlDoc) {
             itemElement.appendChild(commodityElement);
         }
 
+        // Add tax category with exemption details if applicable
         const taxCategory = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:ClassifiedTaxCategory");
         taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", vatType));
-        taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Percent", vatRate));
-        
+        if (vatType !== 'O') {
+            taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Percent", vatRate));
+        }
+               
         const taxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme");
         taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
         taxCategory.appendChild(taxScheme);
         itemElement.appendChild(taxCategory);
 
         invoiceLine.appendChild(itemElement);
-
+        
         const priceElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Price");
         priceElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:PriceAmount", 
-            price.toString(), { currencyID }));
+            price, { currencyID }));
         invoiceLine.appendChild(priceElement);
-
+        
         xmlDoc.documentElement.appendChild(invoiceLine);
     });
 }
@@ -2143,13 +2496,22 @@ function updateTaxTotals(xmlDoc) {
         const taxCategory = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxCategory");
         taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", vatType));
         
-        const percent = vatType === 'AE' ? 0 : vatRate;
-        taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Percent", 
-            percent.toFixed(2)));
+        const percent = vatType === 'AE' ? '0.00' : vatRate.toFixed(2);
+        taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Percent", percent));
         
-        if (vatType === 'AE') {
-            taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
-                "cbc:TaxExemptionReasonCode", "VATEX-EU-AE"));
+        // Add exemption code and reason for special VAT types
+        if (['E', 'K', 'O', 'AE'].includes(vatType)) {
+            const exemptionCode = row.querySelector('.vat-exemption-code')?.value;
+            const exemptionReason = row.querySelector('.vat-exemption-reason')?.value;
+            
+            if (exemptionCode) {
+                taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
+                    "cbc:TaxExemptionReasonCode", exemptionCode));
+            }
+            if (exemptionReason) {
+                taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
+                    "cbc:TaxExemptionReason", exemptionReason));
+            }
         }
         
         const taxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme");
@@ -2160,7 +2522,7 @@ function updateTaxTotals(xmlDoc) {
         taxTotal.appendChild(taxSubtotal);
     });
 
-    // Insertion point logic remains the same as in previous implementation
+    // Insert TaxTotal in the correct position
     let insertionPoint = xmlDoc.querySelector('cac\\:AllowanceCharge, AllowanceCharge');
     if (insertionPoint) {
         while (insertionPoint.nextElementSibling && 
