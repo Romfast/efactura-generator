@@ -823,7 +823,7 @@ function initializeUI() {
 }
 
 // Handling VAT type changes
-function handleVatTypeChange(index) {
+window.handleVatTypeChange = function(index) {
     const vatTypeSelect = document.querySelector(`[name="vatType${index}"]`);
     const vatRateInput = document.querySelector(`[name="vatRate${index}"]`);
     
@@ -1078,6 +1078,7 @@ function populateAllowanceCharges(xmlDoc) {
     displayAllowanceCharges(charges);
     
     charges.forEach((_, index) => {
+        setupAllowanceChargeListeners(index);
         addChargeVatTypeChangeListener(index);
     });
 }
