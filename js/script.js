@@ -211,16 +211,14 @@ function setupInlineEditing(element) {
 
     element.addEventListener('click', function() {
         this.setAttribute('contenteditable', 'true');
-        originalValue = formatter.parseCurrency(this.textContent);
-        this.textContent = originalValue.toFixed(2);
+        // Store exact displayed value
+        originalValue = this.textContent;
         this.focus();
     });
 
     element.addEventListener('blur', function() {
         this.setAttribute('contenteditable', 'false');
-        const value = formatter.parseCurrency(this.textContent);
-        this.textContent = formatter.formatCurrency(value);
-        if (value !== originalValue) {
+        if (this.textContent !== originalValue) {
             updateTotals();
         }
     });
@@ -236,17 +234,20 @@ function setupInlineEditing(element) {
 function updateTotalDisplay(elementId, value) {
     const element = document.getElementById(elementId);
     if (element) {
-        element.textContent = formatter.formatCurrency(roundNumber(value, 2));
+        // Convertim la număr folosind parseFloat pentru a evita probleme de truncare
+        const numValue = parseFloat(value);
+        element.textContent = formatter.formatCurrency(numValue);
     }
 }
 
 function displayTotals(totals) {
-    updateTotalDisplay('subtotal', totals.subtotal);
-    updateTotalDisplay('totalAllowances', totals.allowances);
-    updateTotalDisplay('totalCharges', totals.charges);
-    updateTotalDisplay('netAmount', totals.netAmount);
-    updateTotalDisplay('vat', totals.totalVat);
-    updateTotalDisplay('total', totals.total);
+    // Pentru fiecare total, convertim explicit la număr
+    updateTotalDisplay('subtotal', parseFloat(totals.subtotal));
+    updateTotalDisplay('totalAllowances', parseFloat(totals.allowances));
+    updateTotalDisplay('totalCharges', parseFloat(totals.charges));
+    updateTotalDisplay('netAmount', parseFloat(totals.netAmount));
+    updateTotalDisplay('vat', parseFloat(totals.totalVat));
+    updateTotalDisplay('total', parseFloat(totals.total));
 }
 
 function updateVATDisplay(row, amount, type = 'amount') {
@@ -547,25 +548,25 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
 function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existingRowId = null, exemptionCode = '', exemptionReason = '') {
     const container = document.getElementById('vatBreakdownRows');
     const rowId = existingRowId || `vat-row-${Date.now()}`;
-    
+
     const rowHtml = `
         <div class="vat-row" id="${rowId}">
             <div class="total-row">
                 <div class="vat-inputs">
                     <label>Tip:</label>
                     <select class="form-input vat-type" onchange="window.updateVATRow('${rowId}', 'manual')">
-                        ${Object.entries(VAT_TYPES).map(([key, value]) => 
+                        ${Object.entries(VAT_TYPES).map(([key, value]) =>
                             `<option value="${key}" ${key === vatType ? 'selected' : ''}>${value}</option>`
                         ).join('')}
                     </select>
                     <label>Cotă:</label>
-                    <input type="text" class="form-input vat-rate" value="${formatter.formatNumber(rate)}" 
+                    <input type="text" class="form-input vat-rate" value="${rate}"
                            onchange="window.updateVATRow('${rowId}', 'manual')">%
                     <label>Bază Impozabilă:</label>
-                    <input type="text" class="form-input vat-base" value="${formatter.formatCurrency(baseAmount)}" 
+                    <input type="text" class="form-input vat-base" value="${baseAmount}"
                            onchange="window.updateVATRow('${rowId}', 'manual')">
                     <label>Valoare TVA:</label>
-                    <input type="text" class="form-input vat-amount" value="${formatter.formatCurrency(vatAmount)}" 
+                    <input type="text" class="form-input vat-amount" value="${vatAmount}"
                            onchange="window.updateVATRowFromAmount('${rowId}')">
                 </div>
                 <div class="vat-exemption ${['E', 'K', 'O', 'AE'].includes(vatType) ? '' : 'hidden'}">
@@ -577,16 +578,16 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
                     </div>
                     <div class="form-group">
                         <label>Motiv Scutire:</label>
-                        <input type="text" class="form-input vat-exemption-reason" value="${exemptionReason}" 
+                        <input type="text" class="form-input vat-exemption-reason" value="${exemptionReason}"
                                placeholder="Motiv scutire TVA">
                     </div>
                 </div>
-                <button type="button" class="button button-small button-danger delete-identification" 
+                <button type="button" class="button button-small button-danger delete-identification"
                         onclick="window.removeVATRow('${rowId}')">✕</button>
             </div>
         </div>
     `;
-    
+
     container.insertAdjacentHTML('beforeend', rowHtml);
 
     // Add event listener for VAT type changes
@@ -594,14 +595,14 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
     vatTypeSelect.addEventListener('change', () => {
         const exemptionContainer = document.querySelector(`#${rowId} .vat-exemption`);
         const newVatType = vatTypeSelect.value;
-        
+
         if (['E', 'K', 'O', 'AE'].includes(newVatType)) {
             exemptionContainer.classList.remove('hidden');
-            
+
             // Update exemption code options
             const codeSelect = document.querySelector(`#${rowId} .vat-exemption-code`);
             codeSelect.innerHTML = generateExemptionCodeOptions(newVatType);
-            
+
             // Set default values
             const defaultExemption = getDefaultExemption(newVatType);
             if (defaultExemption) {
@@ -1182,7 +1183,7 @@ function createUnitCodeOptionsHTML(selectedCode = 'EA') {
 function storeOriginalTotals(xmlDoc) {
     const taxTotal = xmlDoc.querySelector('cac\\:TaxTotal, TaxTotal');
     const monetaryTotal = xmlDoc.querySelector('cac\\:LegalMonetaryTotal, LegalMonetaryTotal');
-    
+
     originalTotals = {
         subtotal: getXMLValue(monetaryTotal, 'cbc\\:LineExtensionAmount, LineExtensionAmount'),
         allowances: getXMLValue(monetaryTotal, 'cbc\\:AllowanceTotalAmount, AllowanceTotalAmount', '0'),
@@ -1192,13 +1193,19 @@ function storeOriginalTotals(xmlDoc) {
         total: getXMLValue(monetaryTotal, 'cbc\\:TaxInclusiveAmount, TaxInclusiveAmount')
     };
 
+    console.log('Original totals from XML:', originalTotals);
+
     const vatBreakdown = [];
     const taxSubtotals = xmlDoc.querySelectorAll('cac\\:TaxSubtotal, TaxSubtotal');
     taxSubtotals.forEach(subtotal => {
+        const taxCategory = subtotal.querySelector('cac\\:TaxCategory, TaxCategory');
         vatBreakdown.push({
             taxableAmount: getXMLValue(subtotal, 'cbc\\:TaxableAmount, TaxableAmount'),
             taxAmount: getXMLValue(subtotal, 'cbc\\:TaxAmount, TaxAmount'),
-            percent: getXMLValue(subtotal, 'cac\\:TaxCategory cbc\\:Percent, Percent')
+            percent: getXMLValue(taxCategory, 'cbc\\:Percent, Percent'),
+            type: getXMLValue(taxCategory, 'cbc\\:ID, ID', 'S'),
+            exemptionCode: getXMLValue(taxCategory, 'cbc\\:TaxExemptionReasonCode, TaxExemptionReasonCode'),
+            exemptionReason: getXMLValue(taxCategory, 'cbc\\:TaxExemptionReason, TaxExemptionReason')
         });
     });
     originalTotals.vatBreakdown = vatBreakdown;
@@ -1206,26 +1213,32 @@ function storeOriginalTotals(xmlDoc) {
 
 function restoreOriginalTotals() {
     if (!originalTotals) return;
+
+    // Display exact values from XML with formatting
+    document.getElementById('subtotal').textContent = formatter.formatCurrency(originalTotals.subtotal);
+    document.getElementById('totalAllowances').textContent = formatter.formatCurrency(originalTotals.allowances);
+    document.getElementById('totalCharges').textContent = formatter.formatCurrency(originalTotals.charges);
+    document.getElementById('netAmount').textContent = formatter.formatCurrency(originalTotals.netAmount);
+    document.getElementById('vat').textContent = formatter.formatCurrency(originalTotals.totalVat);
     
-    displayTotals({
-        subtotal: formatter.parseCurrency(originalTotals.subtotal),
-        allowances: formatter.parseCurrency(originalTotals.allowances || 0),
-        charges: formatter.parseCurrency(originalTotals.charges || 0),
-        netAmount: formatter.parseCurrency(originalTotals.netAmount),
-        totalVat: formatter.parseCurrency(originalTotals.totalVat),
-        total: formatter.parseCurrency(originalTotals.total)
-    });
+    // Bypass formatting for total
+    document.getElementById('total').textContent = originalTotals.total;
 
     const container = document.getElementById('vatBreakdownRows');
     if (container) {
         container.innerHTML = '';
-        
+
         if (originalTotals.vatBreakdown && originalTotals.vatBreakdown.length > 0) {
             originalTotals.vatBreakdown.forEach(vat => {
-                const rate = formatter.parseCurrency(vat.percent);
-                const base = formatter.parseCurrency(vat.taxableAmount);
-                const amount = formatter.parseCurrency(vat.taxAmount);
-                addVATBreakdownRow(rate, base, amount);
+                addVATBreakdownRow(
+                    vat.percent,
+                    vat.taxableAmount,
+                    vat.taxAmount,
+                    vat.type,
+                    null,
+                    vat.exemptionCode,
+                    vat.exemptionReason
+                );
             });
         }
     }
@@ -1923,82 +1936,35 @@ function displayVATBreakdown(xmlDoc = null) {
     const container = document.getElementById('vatBreakdownRows');
     if (!container) return;
 
-    // Calculate current VAT breakdown
-    const { vatBreakdown } = calculateVATBreakdown();
-    
-    // Store existing manually edited values
-    const existingValues = new Map();
-    manuallyEditedVatRows.forEach(rowId => {
-        const row = document.getElementById(rowId);
-        if (row) {
-            existingValues.set(rowId, {
-                rate: formatter.parseCurrency(row.querySelector('.vat-rate').value),
-                base: formatter.parseCurrency(row.querySelector('.vat-base').value),
-                amount: formatter.parseCurrency(row.querySelector('.vat-amount').value),
-                type: row.querySelector('.vat-type').value,
-                exemptionCode: row.querySelector('.vat-exemption-code')?.value || '',
-                exemptionReason: row.querySelector('.vat-exemption-reason')?.value || ''
-            });
-        }
-    });
-    
     // Clear container
     container.innerHTML = '';
-    
+
     // If XML is provided, use its VAT breakdown
-    if (xmlDoc) {
-        const taxSubtotals = xmlDoc.querySelectorAll('cac\\:TaxSubtotal, TaxSubtotal');
-        taxSubtotals.forEach((subtotal, index) => {
-            const baseAmount = parseFloat(getXMLValue(subtotal, 'cbc\\:TaxableAmount, TaxableAmount')) || 0;
-            const vatAmount = parseFloat(getXMLValue(subtotal, 'cbc\\:TaxAmount, TaxAmount')) || 0;
-            const taxCategory = subtotal.querySelector('cac\\:TaxCategory, TaxCategory');
-            const vatType = getXMLValue(taxCategory, 'cbc\\:ID, ID') || 'S';
-            const vatRate = parseFloat(getXMLValue(taxCategory, 'cbc\\:Percent, Percent')) || 0;
-            const exemptionCode = getXMLValue(taxCategory, 'cbc\\:TaxExemptionReasonCode, TaxExemptionReasonCode');
-            const exemptionReason = getXMLValue(taxCategory, 'cbc\\:TaxExemptionReason, TaxExemptionReason');
-            
+    if (xmlDoc && originalTotals && originalTotals.vatBreakdown) {
+        originalTotals.vatBreakdown.forEach((vat, index) => {
             addVATBreakdownRow(
-                vatRate,
-                baseAmount,
-                vatAmount,
-                vatType,
+                vat.percent,
+                vat.taxableAmount,
+                vat.taxAmount,
+                vat.type,
                 `vat-row-${index}`,
-                exemptionCode,
-                exemptionReason
+                vat.exemptionCode,
+                vat.exemptionReason
             );
         });
     } else {
-        // Restore manually edited rows
-        existingValues.forEach((values, rowId) => {
-            addVATBreakdownRow(
-                values.rate,
-                values.base,
-                values.amount,
-                values.type,
-                rowId,
-                values.exemptionCode,
-                values.exemptionReason
-            );
-        });
-        
-        // Add new VAT breakdown rows
+        // Calculate current VAT breakdown
+        const { vatBreakdown } = calculateVATBreakdown();
         vatBreakdown.forEach((data, key) => {
-            const exists = Array.from(existingValues.values()).some(values => 
-                values.rate === data.rate && values.type === data.type
+            const [rate, type] = key.split('-');
+            addVATBreakdownRow(
+                parseFloat(rate),
+                data.baseAmount,
+                data.vatAmount,
+                type
             );
-            
-            if (!exists) {
-                addVATBreakdownRow(
-                    data.rate,
-                    data.baseAmount,
-                    data.vatAmount,
-                    data.type
-                );
-            }
         });
     }
-    
-    updateTotalVAT();
 }
 
 function createEmptyInvoice() {
@@ -2213,7 +2179,7 @@ function createPartyElement(xmlDoc, isSupplier, partyData) {
             taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
         }  
         else     {
-            console.log('not adding VAT ID');
+            // console.log('not adding VAT ID');
         }    
         partyTaxScheme.appendChild(taxScheme);
         
@@ -2655,7 +2621,9 @@ function getXMLValue(xmlDoc, selector, defaultValue = '') {
     if (!xmlDoc) return defaultValue;
     try {
         const element = xmlDoc.querySelector(selector);
-        return element ? element.textContent : defaultValue;
+        const value = element ? element.textContent : defaultValue;
+        console.log(`getXMLValue: Selector: ${selector}, Value: ${value}`);
+        return value;
     } catch (error) {
         console.warn(`Eroare la obținerea valorii pentru selectorul ${selector}:`, error);
         return defaultValue;
@@ -2802,7 +2770,7 @@ window.removeIdentification = function(id) {
 
 // Update XML parsing
 function parseIdentifications(itemElement, lineItemIndex) {
-    console.log("Parsing identifications for line", lineItemIndex);
+    // console.log("Parsing identifications for line", lineItemIndex);
 
     const container = document.querySelector(`#identifications${lineItemIndex}`);
     if (!container) return;
@@ -2837,12 +2805,6 @@ function parseIdentifications(itemElement, lineItemIndex) {
     // Parse CommodityClassifications
     const commodityClassifications = itemElement.querySelectorAll('cac\\:CommodityClassification cbc\\:ItemClassificationCode, CommodityClassification ItemClassificationCode');
     commodityClassifications.forEach(classification => {
-
-        console.log("Found classification:", {
-            listId: classification.getAttribute('listID'),
-            value: classification.textContent
-        });
-
         const listId = classification.getAttribute('listID') || 'CV';
         const code = classification.textContent;
         if (code && listId) {
@@ -2858,14 +2820,11 @@ function saveIdentificationsToXML(xmlDoc, itemElement, lineItemIndex) {
     const container = document.querySelector(`#identifications${lineItemIndex}`);
     if (!container) return;
 
-    console.log("Saving identifications for line", lineItemIndex);
-
     container.querySelectorAll('.identification-row').forEach(row => {
         const type = row.dataset.type;
         const id = row.dataset.id;
         const schemeInput = document.querySelector(`[name="scheme_${id}"]`);
         const valueInput = document.querySelector(`[name="value_${id}"]`);
-        console.log("Row:", {type, id, scheme: schemeInput?.value, value: valueInput?.value})
 
         if (!valueInput?.value) return;
 
