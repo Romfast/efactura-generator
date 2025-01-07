@@ -110,6 +110,36 @@ const ALLOWANCE_REASON_CODES = {
     '105': 'Cifră de afaceri anuală'
 };
 
+// Structure for item identifications
+const IDENTIFICATION_TYPES = {
+    SELLERS: {
+        type: 'sellers',
+        label: 'Cod Furnizor',
+        xmlTag: 'SellersItemIdentification'
+    },
+    BUYERS: {
+        type: 'buyers',
+        label: 'Cod Client',
+        xmlTag: 'BuyersItemIdentification'
+    },
+    STANDARD: {
+        type: 'standard',
+        label: 'Cod Bare',
+        xmlTag: 'StandardItemIdentification',
+        schemeID: '0160'
+    },
+    COMMODITY: {
+        type: 'commodity',
+        label: 'Cod Clasificare',
+        xmlTag: 'CommodityClassification',
+        schemes: [
+            { id: 'CV', name: 'Cod Vamal' },
+            { id: 'TSP', name: 'Cod CPV' },
+            { id: 'STI', name: 'Cod NC8' }
+        ]
+    }
+};
+
 const formatter = new InvoiceFormatter()
 
 // Global variables
@@ -181,16 +211,14 @@ function setupInlineEditing(element) {
 
     element.addEventListener('click', function() {
         this.setAttribute('contenteditable', 'true');
-        originalValue = formatter.parseCurrency(this.textContent);
-        this.textContent = originalValue.toFixed(2);
+        // Store exact displayed value
+        originalValue = this.textContent;
         this.focus();
     });
 
     element.addEventListener('blur', function() {
         this.setAttribute('contenteditable', 'false');
-        const value = formatter.parseCurrency(this.textContent);
-        this.textContent = formatter.formatCurrency(value);
-        if (value !== originalValue) {
+        if (this.textContent !== originalValue) {
             updateTotals();
         }
     });
@@ -206,17 +234,20 @@ function setupInlineEditing(element) {
 function updateTotalDisplay(elementId, value) {
     const element = document.getElementById(elementId);
     if (element) {
-        element.textContent = formatter.formatCurrency(roundNumber(value, 2));
+        // Convertim la număr folosind parseFloat pentru a evita probleme de truncare
+        const numValue = parseFloat(value);
+        element.textContent = formatter.formatCurrency(numValue);
     }
 }
 
 function displayTotals(totals) {
-    updateTotalDisplay('subtotal', totals.subtotal);
-    updateTotalDisplay('totalAllowances', totals.allowances);
-    updateTotalDisplay('totalCharges', totals.charges);
-    updateTotalDisplay('netAmount', totals.netAmount);
-    updateTotalDisplay('vat', totals.totalVat);
-    updateTotalDisplay('total', totals.total);
+    // Pentru fiecare total, convertim explicit la număr
+    updateTotalDisplay('subtotal', parseFloat(totals.subtotal));
+    updateTotalDisplay('totalAllowances', parseFloat(totals.allowances));
+    updateTotalDisplay('totalCharges', parseFloat(totals.charges));
+    updateTotalDisplay('netAmount', parseFloat(totals.netAmount));
+    updateTotalDisplay('vat', parseFloat(totals.totalVat));
+    updateTotalDisplay('total', parseFloat(totals.total));
 }
 
 function updateVATDisplay(row, amount, type = 'amount') {
@@ -401,7 +432,7 @@ function createAllowanceChargeHTML(index, charge) {
                            value="${charge.vatRate}" ${charge.vatTypeId !== 'S' ? 'disabled' : ''}>
                 </div>
             </div>
-            <button type="button" class="button button-danger remove-line-item" onclick="removeAllowanceCharge(${index})">
+            <button type="button" class="button button-small button-danger remove-line-item" onclick="removeAllowanceCharge(${index})">
                 ✕
             </button>
         </div>
@@ -431,10 +462,10 @@ window.updateReasonCodeOptions = function(index) {
 }
 
 // Create line item HTML
-function createLineItemHTML(index, description, quantity, price, vatRate, unitCode = 'EA', vatTypeId = 'S', 
-    commodityCode = '', commodityListId = 'CV', itemDescription = '', 
-    sellersItemIdentification = '', standardItemId = '', standardItemSchemeId = '0160') {
-    return `
+function createLineItemHTML(index, description = '', quantity = '1', price = '0', vatRate = '19', unitCode = 'EA', 
+    vatTypeId = 'S', itemDescription = '') {
+    
+    const html = `
         <div class="line-item" data-index="${index}">
             <div class="grid">
                 <div class="form-group">
@@ -480,67 +511,62 @@ function createLineItemHTML(index, description, quantity, price, vatRate, unitCo
             </div>
 
             <div class="optional-details" id="optionalDetails${index}" style="display: none;">
-                <div class="grid">
-                    <div class="form-group">
+                <div class="optional-details-content">
+                    <div class="form-group description-group">
                         <label class="form-label">Descriere</label>
                         <textarea class="form-input" name="itemDescription${index}" rows="2">${itemDescription}</textarea>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Cod Intern Furnizor</label>
-                        <input type="text" class="form-input" name="sellersItemIdentification${index}" 
-                            value="${sellersItemIdentification}">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Cod Standard Produs</label>
-                        <div class="commodity-group">
-                            <input type="text" class="form-input" name="standardItemId${index}" 
-                                placeholder="Cod" value="${standardItemId}">
-                            <input type="text" class="form-input" name="standardItemSchemeId${index}" 
-                                placeholder="Schemă" value="${standardItemSchemeId}">
+                    <div class="identifications-container" id="identifications${index}">
+                        <div class="identifications-header">
+                            <h4>Coduri de Identificare</h4>
+                            <div class="identification-buttons">
+                                ${Object.entries(IDENTIFICATION_TYPES).map(([type, info]) => `
+                                    <button type="button" class="button button-small" 
+                                            onclick="window.addIdentification(${index}, '${type}')">
+                                        + ${info.label}
+                                    </button>
+                                `).join('')}
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Clasificare Produs</label>
-                        <div class="commodity-group">
-                            <input type="text" class="form-input" name="commodityCode${index}" 
-                                placeholder="Cod" value="${commodityCode}">
-                            <input type="text" class="form-input" name="commodityListId${index}" 
-                                placeholder="Listă" value="${commodityListId}">
-                        </div>
+                        <div class="identifications-list"></div>
                     </div>
                 </div>
             </div>
 
-            <button type="button" class="button button-danger remove-line-item" onclick="removeLineItem(${index})">
+            <button type="button" class="button button-small button-danger remove-line-item" onclick="removeLineItem(${index})">
                 ✕
             </button>
         </div>
     `;
+    
+    return html;
 }
+
+
 
 // Add VAT breakdown row
 function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existingRowId = null, exemptionCode = '', exemptionReason = '') {
     const container = document.getElementById('vatBreakdownRows');
     const rowId = existingRowId || `vat-row-${Date.now()}`;
-    
+
     const rowHtml = `
         <div class="vat-row" id="${rowId}">
             <div class="total-row">
                 <div class="vat-inputs">
                     <label>Tip:</label>
                     <select class="form-input vat-type" onchange="window.updateVATRow('${rowId}', 'manual')">
-                        ${Object.entries(VAT_TYPES).map(([key, value]) => 
+                        ${Object.entries(VAT_TYPES).map(([key, value]) =>
                             `<option value="${key}" ${key === vatType ? 'selected' : ''}>${value}</option>`
                         ).join('')}
                     </select>
                     <label>Cotă:</label>
-                    <input type="text" class="form-input vat-rate" value="${formatter.formatNumber(rate)}" 
+                    <input type="text" class="form-input vat-rate" value="${rate}"
                            onchange="window.updateVATRow('${rowId}', 'manual')">%
                     <label>Bază Impozabilă:</label>
-                    <input type="text" class="form-input vat-base" value="${formatter.formatCurrency(baseAmount)}" 
+                    <input type="text" class="form-input vat-base" value="${baseAmount}"
                            onchange="window.updateVATRow('${rowId}', 'manual')">
                     <label>Valoare TVA:</label>
-                    <input type="text" class="form-input vat-amount" value="${formatter.formatCurrency(vatAmount)}" 
+                    <input type="text" class="form-input vat-amount" value="${vatAmount}"
                            onchange="window.updateVATRowFromAmount('${rowId}')">
                 </div>
                 <div class="vat-exemption ${['E', 'K', 'O', 'AE'].includes(vatType) ? '' : 'hidden'}">
@@ -552,31 +578,31 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
                     </div>
                     <div class="form-group">
                         <label>Motiv Scutire:</label>
-                        <input type="text" class="form-input vat-exemption-reason" value="${exemptionReason}" 
+                        <input type="text" class="form-input vat-exemption-reason" value="${exemptionReason}"
                                placeholder="Motiv scutire TVA">
                     </div>
                 </div>
-                <button type="button" class="button button-small button-danger" 
-                        onclick="window.removeVATRow('${rowId}')">Șterge</button>
+                <button type="button" class="button button-small button-danger delete-identification"
+                        onclick="window.removeVATRow('${rowId}')">✕</button>
             </div>
         </div>
     `;
-    
+
     container.insertAdjacentHTML('beforeend', rowHtml);
-    
+
     // Add event listener for VAT type changes
     const vatTypeSelect = document.querySelector(`#${rowId} .vat-type`);
     vatTypeSelect.addEventListener('change', () => {
         const exemptionContainer = document.querySelector(`#${rowId} .vat-exemption`);
         const newVatType = vatTypeSelect.value;
-        
+
         if (['E', 'K', 'O', 'AE'].includes(newVatType)) {
             exemptionContainer.classList.remove('hidden');
-            
+
             // Update exemption code options
             const codeSelect = document.querySelector(`#${rowId} .vat-exemption-code`);
             codeSelect.innerHTML = generateExemptionCodeOptions(newVatType);
-            
+
             // Set default values
             const defaultExemption = getDefaultExemption(newVatType);
             if (defaultExemption) {
@@ -1157,23 +1183,29 @@ function createUnitCodeOptionsHTML(selectedCode = 'EA') {
 function storeOriginalTotals(xmlDoc) {
     const taxTotal = xmlDoc.querySelector('cac\\:TaxTotal, TaxTotal');
     const monetaryTotal = xmlDoc.querySelector('cac\\:LegalMonetaryTotal, LegalMonetaryTotal');
-    
+
     originalTotals = {
-        subtotal: getXMLValue(monetaryTotal, 'cbc\\:LineExtensionAmount, LineExtensionAmount', '0'),
+        subtotal: getXMLValue(monetaryTotal, 'cbc\\:LineExtensionAmount, LineExtensionAmount'),
         allowances: getXMLValue(monetaryTotal, 'cbc\\:AllowanceTotalAmount, AllowanceTotalAmount', '0'),
         charges: getXMLValue(monetaryTotal, 'cbc\\:ChargeTotalAmount, ChargeTotalAmount', '0'),
-        netAmount: getXMLValue(monetaryTotal, 'cbc\\:TaxExclusiveAmount, TaxExclusiveAmount', '0'),
-        totalVat: getXMLValue(taxTotal, 'cbc\\:TaxAmount, TaxAmount', '0'),
-        total: getXMLValue(monetaryTotal, 'cbc\\:TaxInclusiveAmount, TaxInclusiveAmount', '0')
+        netAmount: getXMLValue(monetaryTotal, 'cbc\\:TaxExclusiveAmount, TaxExclusiveAmount'),
+        totalVat: getXMLValue(taxTotal, 'cbc\\:TaxAmount, TaxAmount'),
+        total: getXMLValue(monetaryTotal, 'cbc\\:TaxInclusiveAmount, TaxInclusiveAmount')
     };
+
+    console.log('Original totals from XML:', originalTotals);
 
     const vatBreakdown = [];
     const taxSubtotals = xmlDoc.querySelectorAll('cac\\:TaxSubtotal, TaxSubtotal');
     taxSubtotals.forEach(subtotal => {
+        const taxCategory = subtotal.querySelector('cac\\:TaxCategory, TaxCategory');
         vatBreakdown.push({
-            taxableAmount: getXMLValue(subtotal, 'cbc\\:TaxableAmount, TaxableAmount', '0'),
-            taxAmount: getXMLValue(subtotal, 'cbc\\:TaxAmount, TaxAmount', '0'),
-            percent: getXMLValue(subtotal, 'cac\\:TaxCategory cbc\\:Percent, Percent', '0')
+            taxableAmount: getXMLValue(subtotal, 'cbc\\:TaxableAmount, TaxableAmount'),
+            taxAmount: getXMLValue(subtotal, 'cbc\\:TaxAmount, TaxAmount'),
+            percent: getXMLValue(taxCategory, 'cbc\\:Percent, Percent'),
+            type: getXMLValue(taxCategory, 'cbc\\:ID, ID', 'S'),
+            exemptionCode: getXMLValue(taxCategory, 'cbc\\:TaxExemptionReasonCode, TaxExemptionReasonCode'),
+            exemptionReason: getXMLValue(taxCategory, 'cbc\\:TaxExemptionReason, TaxExemptionReason')
         });
     });
     originalTotals.vatBreakdown = vatBreakdown;
@@ -1181,31 +1213,32 @@ function storeOriginalTotals(xmlDoc) {
 
 function restoreOriginalTotals() {
     if (!originalTotals) return;
+
+    // Display exact values from XML with formatting
+    document.getElementById('subtotal').textContent = formatter.formatCurrency(originalTotals.subtotal);
+    document.getElementById('totalAllowances').textContent = formatter.formatCurrency(originalTotals.allowances);
+    document.getElementById('totalCharges').textContent = formatter.formatCurrency(originalTotals.charges);
+    document.getElementById('netAmount').textContent = formatter.formatCurrency(originalTotals.netAmount);
+    document.getElementById('vat').textContent = formatter.formatCurrency(originalTotals.totalVat);
     
-    displayTotals({
-        subtotal: parseFloat(originalTotals.subtotal),
-        allowances: parseFloat(originalTotals.allowances || 0),
-        charges: parseFloat(originalTotals.charges || 0),
-        netAmount: parseFloat(originalTotals.netAmount),
-        totalVat: parseFloat(originalTotals.totalVat),
-        total: parseFloat(originalTotals.total)
-    });
+    // Bypass formatting for total
+    document.getElementById('total').textContent = originalTotals.total;
 
     const container = document.getElementById('vatBreakdownRows');
     if (container) {
         container.innerHTML = '';
-        
+
         if (originalTotals.vatBreakdown && originalTotals.vatBreakdown.length > 0) {
             originalTotals.vatBreakdown.forEach(vat => {
-                const rate = parseFloat(vat.percent);
-                const base = parseFloat(vat.taxableAmount);
-                const amount = parseFloat(vat.taxAmount);
-                addVATBreakdownRow(rate, base, amount);
-            });
-        } else {
-            const { vatBreakdown } = calculateVATBreakdown();
-            vatBreakdown.forEach((data, vatRate) => {
-                addVATBreakdownRow(vatRate, data.baseAmount, data.vatAmount);
+                addVATBreakdownRow(
+                    vat.percent,
+                    vat.taxableAmount,
+                    vat.taxAmount,
+                    vat.type,
+                    null,
+                    vat.exemptionCode,
+                    vat.exemptionReason
+                );
             });
         }
     }
@@ -1272,6 +1305,10 @@ function populateBasicDetails(xmlDoc) {
     
     document.querySelector('[name="documentCurrencyCode"]').value = documentCurrencyCode;
     document.querySelector('[name="taxCurrencyCode"]').value = taxCurrencyCode;
+    
+    // Store original totals and display them
+    storeOriginalTotals(xmlDoc);
+    restoreOriginalTotals();
 }
 
 function populatePartyDetails(xmlDoc) {
@@ -1361,34 +1398,25 @@ function populateLineItems(xmlDoc) {
         const quantity = getXMLValue(item, 'cbc\\:InvoicedQuantity, InvoicedQuantity', '0');
         const unitCode = item.querySelector('cbc\\:InvoicedQuantity, InvoicedQuantity')?.getAttribute('unitCode') || 'EA';
         const price = getXMLValue(item, 'cac\\:Price cbc\\:PriceAmount, PriceAmount', '0');
-        const description = getXMLValue(item, 'cac\\:Item cbc\\:Name, Name', '');
-        const itemDescription = getXMLValue(item, 'cac\\:Item cbc\\:Description, Description', '');
+        const itemElement = item.querySelector('cac\\:Item, Item');
+        const description = getXMLValue(itemElement, 'cbc\\:Name, Name', '');
+        const itemDescription = getXMLValue(itemElement, 'cbc\\:Description, Description', '');
 
-        // Găsește corect categoria de TVA din Item/ClassifiedTaxCategory
-        const taxCategory = item.querySelector('cac\\:Item cac\\:ClassifiedTaxCategory, Item ClassifiedTaxCategory');
+        const taxCategory = itemElement.querySelector('cac\\:ClassifiedTaxCategory, ClassifiedTaxCategory');
         const vatType = getXMLValue(taxCategory, 'cbc\\:ID, ID') || 'S';
         const vatRate = getXMLValue(taxCategory, 'cbc\\:Percent, Percent') || '19';
-        
-        const sellersItemIdentification = getXMLValue(item.querySelector('cac\\:Item, Item'), 
-            'cac\\:SellersItemIdentification cbc\\:ID, SellersItemIdentification ID', '');
-        
-        const standardItemElement = item.querySelector('cac\\:Item cac\\:StandardItemIdentification cbc\\:ID, StandardItemIdentification ID');
-        const standardItemId = standardItemElement ? standardItemElement.textContent : '';
-        const standardItemSchemeId = standardItemElement ? standardItemElement.getAttribute('schemeID') || '0160' : '0160';
-        
-        const commodityCodeElement = item.querySelector('cac\\:Item cac\\:CommodityClassification cbc\\:ItemClassificationCode, ItemClassificationCode');
-        const commodityCode = commodityCodeElement ? commodityCodeElement.textContent : '';
-        const commodityListId = commodityCodeElement ? commodityCodeElement.getAttribute('listID') || 'CV' : 'CV';
 
         addUnitCode(unitCode);
         const lineItemHtml = createLineItemHTML(
-            index, description, quantity, price, vatRate, unitCode, vatType,
-            commodityCode, commodityListId, itemDescription, 
-            sellersItemIdentification, standardItemId, standardItemSchemeId
+            index, description, quantity, price, vatRate, unitCode, vatType, itemDescription
         );
         lineItemsContainer.insertAdjacentHTML('beforeend', lineItemHtml);
+
+        // Parse identifications after adding the line item HTML
+        if (itemElement) {
+            parseIdentifications(itemElement, index);
+        }
         
-        // Verifică și aplică restricțiile pentru neplătitori de TVA
         if (!isVATRegistered()) {
             const vatTypeSelect = document.querySelector(`[name="vatType${index}"]`);
             const vatRateInput = document.querySelector(`[name="vatRate${index}"]`);
@@ -1908,82 +1936,35 @@ function displayVATBreakdown(xmlDoc = null) {
     const container = document.getElementById('vatBreakdownRows');
     if (!container) return;
 
-    // Calculate current VAT breakdown
-    const { vatBreakdown } = calculateVATBreakdown();
-    
-    // Store existing manually edited values
-    const existingValues = new Map();
-    manuallyEditedVatRows.forEach(rowId => {
-        const row = document.getElementById(rowId);
-        if (row) {
-            existingValues.set(rowId, {
-                rate: formatter.parseCurrency(row.querySelector('.vat-rate').value),
-                base: formatter.parseCurrency(row.querySelector('.vat-base').value),
-                amount: formatter.parseCurrency(row.querySelector('.vat-amount').value),
-                type: row.querySelector('.vat-type').value,
-                exemptionCode: row.querySelector('.vat-exemption-code')?.value || '',
-                exemptionReason: row.querySelector('.vat-exemption-reason')?.value || ''
-            });
-        }
-    });
-    
     // Clear container
     container.innerHTML = '';
-    
+
     // If XML is provided, use its VAT breakdown
-    if (xmlDoc) {
-        const taxSubtotals = xmlDoc.querySelectorAll('cac\\:TaxSubtotal, TaxSubtotal');
-        taxSubtotals.forEach((subtotal, index) => {
-            const baseAmount = parseFloat(getXMLValue(subtotal, 'cbc\\:TaxableAmount, TaxableAmount')) || 0;
-            const vatAmount = parseFloat(getXMLValue(subtotal, 'cbc\\:TaxAmount, TaxAmount')) || 0;
-            const taxCategory = subtotal.querySelector('cac\\:TaxCategory, TaxCategory');
-            const vatType = getXMLValue(taxCategory, 'cbc\\:ID, ID') || 'S';
-            const vatRate = parseFloat(getXMLValue(taxCategory, 'cbc\\:Percent, Percent')) || 0;
-            const exemptionCode = getXMLValue(taxCategory, 'cbc\\:TaxExemptionReasonCode, TaxExemptionReasonCode');
-            const exemptionReason = getXMLValue(taxCategory, 'cbc\\:TaxExemptionReason, TaxExemptionReason');
-            
+    if (xmlDoc && originalTotals && originalTotals.vatBreakdown) {
+        originalTotals.vatBreakdown.forEach((vat, index) => {
             addVATBreakdownRow(
-                vatRate,
-                baseAmount,
-                vatAmount,
-                vatType,
+                vat.percent,
+                vat.taxableAmount,
+                vat.taxAmount,
+                vat.type,
                 `vat-row-${index}`,
-                exemptionCode,
-                exemptionReason
+                vat.exemptionCode,
+                vat.exemptionReason
             );
         });
     } else {
-        // Restore manually edited rows
-        existingValues.forEach((values, rowId) => {
-            addVATBreakdownRow(
-                values.rate,
-                values.base,
-                values.amount,
-                values.type,
-                rowId,
-                values.exemptionCode,
-                values.exemptionReason
-            );
-        });
-        
-        // Add new VAT breakdown rows
+        // Calculate current VAT breakdown
+        const { vatBreakdown } = calculateVATBreakdown();
         vatBreakdown.forEach((data, key) => {
-            const exists = Array.from(existingValues.values()).some(values => 
-                values.rate === data.rate && values.type === data.type
+            const [rate, type] = key.split('-');
+            addVATBreakdownRow(
+                parseFloat(rate),
+                data.baseAmount,
+                data.vatAmount,
+                type
             );
-            
-            if (!exists) {
-                addVATBreakdownRow(
-                    data.rate,
-                    data.baseAmount,
-                    data.vatAmount,
-                    data.type
-                );
-            }
         });
     }
-    
-    updateTotalVAT();
 }
 
 function createEmptyInvoice() {
@@ -2198,7 +2179,7 @@ function createPartyElement(xmlDoc, isSupplier, partyData) {
             taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
         }  
         else     {
-            console.log('not adding VAT ID');
+            // console.log('not adding VAT ID');
         }    
         partyTaxScheme.appendChild(taxScheme);
         
@@ -2382,13 +2363,15 @@ function updateLineItems(xmlDoc) {
     document.querySelectorAll('.line-item').forEach((item, index) => {
         const invoiceLine = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:InvoiceLine");
         
-        const quantity = document.querySelector(`[name="quantity${index}"]`).value;
-        const unitCode = document.querySelector(`[name="unit${index}"]`).value;
-        const price = document.querySelector(`[name="price${index}"]`).value;
-        const description = document.querySelector(`[name="description${index}"]`).value;
-        const itemDescription = document.querySelector(`[name="itemDescription${index}"]`).value;
-        const vatType = document.querySelector(`[name="vatType${index}"]`).value;
-        const vatRate = vatType === 'AE' ? '0.00' : document.querySelector(`[name="vatRate${index}"]`).value;
+        // Get basic line item values
+        const quantity = document.querySelector(`[name="quantity${index}"]`)?.value || '0';
+        const unitCode = document.querySelector(`[name="unit${index}"]`)?.value || 'EA';
+        const price = document.querySelector(`[name="price${index}"]`)?.value || '0';
+        const description = document.querySelector(`[name="description${index}"]`)?.value || '';
+        const itemDescription = document.querySelector(`[name="itemDescription${index}"]`)?.value || '';
+        const vatType = document.querySelector(`[name="vatType${index}"]`)?.value || 'S';
+        const vatRate = vatType === 'AE' ? '0.00' : 
+            (document.querySelector(`[name="vatRate${index}"]`)?.value || '0');
         
         // Add basic line item details
         invoiceLine.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", (index + 1).toString()));
@@ -2411,34 +2394,13 @@ function updateLineItems(xmlDoc) {
         
         itemElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Name", description));
         
-        const sellersItemIdentification = document.querySelector(`[name="sellersItemIdentification${index}"]`).value;
-        if (sellersItemIdentification) {
-            const sellersItemElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:SellersItemIdentification");
-            sellersItemElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", sellersItemIdentification));
-            itemElement.appendChild(sellersItemElement);
+        // Add identifications
+        const identificationsContainer = document.querySelector(`#identifications${index}`);
+        if (identificationsContainer) {
+            saveIdentificationsToXML(xmlDoc, itemElement, index);
         }
 
-        const standardItemId = document.querySelector(`[name="standardItemId${index}"]`).value;
-        if (standardItemId) {
-            const standardItemElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:StandardItemIdentification");
-            const standardIdElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", standardItemId);
-            standardIdElement.setAttribute('schemeID', 
-                document.querySelector(`[name="standardItemSchemeId${index}"]`).value || '0160');
-            standardItemElement.appendChild(standardIdElement);
-            itemElement.appendChild(standardItemElement);
-        }
-
-        const commodityCode = document.querySelector(`[name="commodityCode${index}"]`).value;
-        if (commodityCode) {
-            const commodityElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:CommodityClassification");
-            const classificationElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ItemClassificationCode", commodityCode);
-            classificationElement.setAttribute('listID', 
-                document.querySelector(`[name="commodityListId${index}"]`).value || 'CV');
-            commodityElement.appendChild(classificationElement);
-            itemElement.appendChild(commodityElement);
-        }
-
-        // Add tax category with exemption details if applicable
+        // Add tax category
         const taxCategory = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:ClassifiedTaxCategory");
         taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", vatType));
         if (vatType !== 'O') {
@@ -2659,7 +2621,9 @@ function getXMLValue(xmlDoc, selector, defaultValue = '') {
     if (!xmlDoc) return defaultValue;
     try {
         const element = xmlDoc.querySelector(selector);
-        return element ? element.textContent : defaultValue;
+        const value = element ? element.textContent : defaultValue;
+        console.log(`getXMLValue: Selector: ${selector}, Value: ${value}`);
+        return value;
     } catch (error) {
         console.warn(`Eroare la obținerea valorii pentru selectorul ${selector}:`, error);
         return defaultValue;
@@ -2748,6 +2712,174 @@ function renumberLineItems() {
     });
 }
 
+
+function createIdentificationHTML(index, type, value = '', schemeId = '') {
+    const typeInfo = IDENTIFICATION_TYPES[type];
+    const id = `${type.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    if (type === 'COMMODITY') {
+        return `
+            <div class="identification-row" data-type="${type}" data-id="${id}">
+                <div class="identification-content">
+                    <select class="form-input scheme-select" name="scheme_${id}">
+                        ${typeInfo.schemes.map(scheme => 
+                            `<option value="${scheme.id}" ${scheme.id === schemeId ? 'selected' : ''}>
+                                ${scheme.name}
+                            </option>`
+                        ).join('')}
+                    </select>
+                    <input type="text" class="form-input" name="value_${id}" 
+                           value="${value}" placeholder="${typeInfo.label}">
+                    <button type="button" class="button button-small button-danger delete-identification" 
+                            onclick="removeIdentification('${id}')">✕</button>
+                </div>
+            </div>`;
+    }
+    
+    return `
+        <div class="identification-row" data-type="${type}" data-id="${id}">
+            <div class="identification-content">
+                ${type === 'STANDARD' ? `<input type="hidden" name="scheme_${id}" value="0160">` : ''}
+                <input type="text" class="form-input" name="value_${id}" 
+                       value="${value}" placeholder="${typeInfo.label}">
+                <button type="button" class="button button-small button-danger delete-identification" 
+                        onclick="removeIdentification('${id}')">✕</button>
+            </div>
+        </div>`;
+}
+
+window.addIdentification = function(lineItemIndex, type) {
+    const container = document.querySelector(`#identifications${lineItemIndex}`);
+    if (container) {
+        container.insertAdjacentHTML('beforeend', createIdentificationHTML(lineItemIndex, type));
+        validateIdentifications(lineItemIndex);
+    }
+}
+
+window.removeIdentification = function(id) {
+    const element = document.querySelector(`[data-id="${id}"]`);
+    if (element) {
+        const lineItem = element.closest('.line-item');
+        element.remove();
+        if (lineItem) {
+            validateIdentifications(parseInt(lineItem.dataset.index));
+        }
+    }
+};
+
+
+// Update XML parsing
+function parseIdentifications(itemElement, lineItemIndex) {
+    // console.log("Parsing identifications for line", lineItemIndex);
+
+    const container = document.querySelector(`#identifications${lineItemIndex}`);
+    if (!container) return;
+
+    const listContainer = container.querySelector('.identifications-list');
+    listContainer.innerHTML = '';
+
+    // Parse BuyersItemIdentification
+    const buyersId = itemElement.querySelector('cac\\:BuyersItemIdentification cbc\\:ID, BuyersItemIdentification ID');
+    if (buyersId) {
+        listContainer.insertAdjacentHTML('beforeend',
+            createIdentificationHTML(lineItemIndex, 'BUYERS', buyersId.textContent)
+        );
+    }
+
+    // Parse SellersItemIdentification
+    const sellersId = itemElement.querySelector('cac\\:SellersItemIdentification cbc\\:ID, SellersItemIdentification ID');
+    if (sellersId) {
+        listContainer.insertAdjacentHTML('beforeend',
+            createIdentificationHTML(lineItemIndex, 'SELLERS', sellersId.textContent)
+        );
+    }
+
+    // Parse StandardItemIdentification
+    const standardId = itemElement.querySelector('cac\\:StandardItemIdentification cbc\\:ID, StandardItemIdentification ID');
+    if (standardId) {
+        listContainer.insertAdjacentHTML('beforeend',
+            createIdentificationHTML(lineItemIndex, 'STANDARD', standardId.textContent)
+        );
+    }
+
+    // Parse CommodityClassifications
+    const commodityClassifications = itemElement.querySelectorAll('cac\\:CommodityClassification cbc\\:ItemClassificationCode, CommodityClassification ItemClassificationCode');
+    commodityClassifications.forEach(classification => {
+        const listId = classification.getAttribute('listID') || 'CV';
+        const code = classification.textContent;
+        if (code && listId) {
+            listContainer.insertAdjacentHTML('beforeend',
+                createIdentificationHTML(lineItemIndex, 'COMMODITY', code, listId)
+            );
+        }
+    });
+}
+
+// Update XML saving
+function saveIdentificationsToXML(xmlDoc, itemElement, lineItemIndex) {
+    const container = document.querySelector(`#identifications${lineItemIndex}`);
+    if (!container) return;
+
+    container.querySelectorAll('.identification-row').forEach(row => {
+        const type = row.dataset.type;
+        const id = row.dataset.id;
+        const schemeInput = document.querySelector(`[name="scheme_${id}"]`);
+        const valueInput = document.querySelector(`[name="value_${id}"]`);
+
+        if (!valueInput?.value) return;
+
+        if (type === 'COMMODITY') {
+            const schemeSelect = document.querySelector(`[name="scheme_${id}"]`);
+            if (!schemeSelect) return;
+
+            const identificationElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, 'cac:CommodityClassification');
+            const idElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 'cbc:ItemClassificationCode', valueInput.value);
+            idElement.setAttribute('listID', schemeSelect.value);
+            identificationElement.appendChild(idElement);
+            itemElement.appendChild(identificationElement);
+        } else {
+            const typeInfo = IDENTIFICATION_TYPES[type];
+            const identificationElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, `cac:${typeInfo.xmlTag}`);
+            const idElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 'cbc:ID', valueInput.value);
+            
+            if (type === 'STANDARD') {
+                idElement.setAttribute('schemeID', '0160');
+            }
+            
+            identificationElement.appendChild(idElement);
+            itemElement.appendChild(identificationElement);
+        }
+    });
+}
+
+
+// Add validation
+function validateIdentifications(lineItemIndex) {
+    const container = document.querySelector(`#identifications${lineItemIndex}`);
+    if (!container) return true;
+
+    let isValid = true;
+    container.querySelectorAll('.identification-row').forEach(row => {
+        const type = row.dataset.type;
+        const id = row.dataset.id;
+        const input = row.querySelector(`[name="value_${id}"]`);
+        
+        if (type === 'COMMODITY') {
+            const scheme = row.querySelector('.scheme-select').value;
+            if (scheme === 'TSP' && !/^\d{8}-\d$/.test(input.value)) {
+                input.classList.add('invalid');
+                isValid = false;
+            } else if (scheme === 'STI' && !/^\d{8}$/.test(input.value)) {
+                input.classList.add('invalid');
+                isValid = false;
+            } else {
+                input.classList.remove('invalid');
+            }
+        }
+    });
+    
+    return isValid;
+}
 
 // Export for testing if needed
 if (typeof module !== 'undefined' && module.exports) {
