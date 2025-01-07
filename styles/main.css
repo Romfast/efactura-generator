@@ -1,19 +1,10 @@
-/* Variables */
 :root {
-    --primary-color: #2563eb;
-    --secondary-color: #1e40af;
-    --danger-color: #dc2626;
-    --success-color: #059669;
-    --background-color: #f8fafc;
-    --surface-color: #ffffff;
-    --border-color: #e2e8f0;
-    --text-color: #1e293b;
-    --text-light: #64748b;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --primary-color: #0056b3;
+    --danger-color: #dc3545;
+    --border-color: #ced4da;
+    --bg-color: #f8f9fa;
 }
 
-/* Reset & Base Styles */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -21,522 +12,424 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     line-height: 1.5;
-    color: var(--text-color);
-    background-color: var(--background-color);
-    font-size: 14px;
+    color: #333;
+    background-color: #f0f2f5;
 }
 
-/* Layout */
 .container {
     max-width: 1200px;
-    margin: 16px auto;
-    padding: 16px;
-    background-color: var(--surface-color);
-    border-radius: 8px;
-    box-shadow: var(--shadow-md);
+    margin: 0 auto;
+    padding: 1rem;
 }
 
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
-    padding: 20px 0;
-    border-bottom: 2px solid var(--primary-color);
- }
- 
- .header h1 {
-    font-size: 24px;
-    color: var(--primary-color);
-    font-weight: 600;
- }
- 
- .app-author {
-    font-size: 12px;
-    color: var(--text-light);
-    text-align: right;
-    margin-top: 4px;
- }
-
-.invoice-details.form-section, .party-details.form-section, .form-section {
-    background-color: var(--background-color);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 12px;
- }
-
-/* Details Grid Layout */
-.details-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.invoice-details {
-    grid-column: 1 / -1;
+.app-author {
+    font-size: 0.9rem;
+    color: #666;
 }
 
-.invoice-details .compact-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+.button-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
 }
 
-.party-details {
-    background-color: var(--background-color);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 12px;
- }
-
-.party-details .compact-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-}
-
-/* Form Elements */
 .form-section {
-    padding: 12px;
-    border-radius: 6px;
-    box-shadow: var(--shadow-sm);
+    background-color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.section-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .form-group {
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
 }
 
 .form-label {
     display: block;
-    margin-bottom: 4px;
-    font-size: 12px;
-    color: var(--text-light);
+    margin-bottom: 0.25rem;
+    font-weight: 500;
 }
 
 .form-input {
     width: 100%;
-    padding: 6px 8px;
+    padding: 0.5rem;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    font-size: 13px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    font-size: 1rem;
 }
 
 .form-input:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 2px rgba(0,86,179,0.25);
 }
 
 .form-input.invalid {
     border-color: var(--danger-color);
-    background-color: #fef2f2;
 }
 
-/* Make some fields span full width */
-.party-details .form-group:nth-child(1), /* Name */
-.party-details .form-group:nth-child(4) { /* Address */
-    grid-column: 1 / -1;
+.details-grid {
+    display: grid;
+    grid-template-areas: 
+        "invoice"
+        "supplier"
+        "customer";
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
-/* Button Styles */
+.invoice-details {
+    grid-area: invoice;
+}
+
+.compact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.5rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
+}
+
 .button {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 6px 12px;
+    padding: 0.5rem 1rem;
     border: none;
     border-radius: 4px;
+    font-size: 1rem;
     cursor: pointer;
-    font-size: 13px;
-    transition: background-color 0.2s;
-    white-space: nowrap;
+    background-color: var(--primary-color);
+    color: white;
+    min-width: fit-content;
 }
 
 .button:hover {
-    background-color: var(--secondary-color);
-}
-
-.button-small {
-    padding: 4px 8px;
-    font-size: 12px;
+    opacity: 0.9;
 }
 
 .button-secondary {
-    background-color: var(--text-light);
-}
-
-.button-secondary:hover {
-    background-color: #475569;
+    background-color: #6c757d;
 }
 
 .button-danger {
     background-color: var(--danger-color);
 }
 
-.button-danger:hover {
-    background-color: #b91c1c;
+.button-small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
 }
 
-.button-group {
-    display: flex;
-    gap: 8px;
-}
-
-/* Line Items */
-.line-items {
-    margin-bottom: 24px;
-}
-
-.line-item {
-    position: relative;
-    padding: 12px;
-    background-color: var(--background-color);
+.line-item, 
+.allowance-charge {
+    background-color: white;
+    padding: 1rem 2.5rem 1rem 1rem;
     border-radius: 4px;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
     border: 1px solid var(--border-color);
+    position: relative;
 }
 
-.line-item .grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 1fr;
-    gap: 8px;
-    margin-bottom: 8px;
-    align-items: start;
+.vat-row,
+.identification-row {
+    background-color: white;
+    padding: 0.25rem;
+    border-radius: 4px;
+    margin-bottom: 0.25rem;
+    border: 1px solid var(--border-color);
+    position: relative;
 }
 
-.line-item .form-group {
-    margin-bottom: 0;
-}
-
-.remove-line-item {
+.delete-line-item,
+.delete-allowance-charge,
+.delete-identification {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    padding: 2px 6px;
-    font-size: 11px;
-}
-
-/* Optional Details */
-.optional-details-toggle {
-    text-align: left;
-    margin: 4px 0;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px !important;
+    height: 20px !important;
+    padding: 0 !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    min-width: auto !important;
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
 }
 
 .optional-details {
-    padding-top: 8px;
-    border-top: 1px dashed var(--border-color);
-    margin-top: 4px;
-}
-
-.optional-details .grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 8px;
-}
-
-/* Allowances & Charges */
-.allowance-charge {
-    position: relative;
-    padding: 12px;
-    background-color: var(--background-color);
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: var(--bg-color);
     border-radius: 4px;
-    margin-bottom: 8px;
-    border: 1px solid var(--border-color);
 }
 
-.allowance-charge .grid {
+.optional-details-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.identifications-container {
+    width: 100%;
+}
+
+.identifications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.identifications-header h4 {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.identification-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.identifications-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+}
+
+.identification-row {
+    margin: 0;
+    padding: 0.25rem;
+}
+
+.identification-content {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 8px;
-    margin-bottom: 0;
-    padding-right: 30px; /* Make space for the remove button */
+    grid-template-columns: auto 1fr auto;
+    gap: 0.25rem;
+    align-items: center;
 }
 
-.allowance-charge .remove-line-item {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    padding: 2px 6px;
-    font-size: 11px;
+.identification-content .scheme-select {
+    width: 150px;
+    min-width: 150px;
 }
 
-/* Totals Section */
-.totals {
-    margin-top: 24px;
-    padding: 16px;
-    background-color: var(--background-color);
-    border-radius: 4px;
+.identification-content input[type="text"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.date-input-container {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.calendar-button {
+    padding: 0.5rem;
+    background: none;
     border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.totals {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .total-row {
     display: flex;
     justify-content: space-between;
-    padding: 6px 0;
-    font-size: 13px;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.total-row:last-child {
+    border-bottom: none;
 }
 
 .total-row-final {
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-top: 1rem;
     border-top: 2px solid var(--border-color);
-    margin-top: 8px;
-    padding-top: 12px;
-    font-weight: 600;
-    font-size: 14px;
 }
 
-/* VAT Breakdown */
-#vatBreakdown, .vat-breakdown {
-    margin: 16px 0;
-    padding: 16px;
-    background-color: var(--background-light);
-    border: 2px solid var(--primary-color);
-    border-radius: 6px;
-    box-shadow: var(--shadow-sm);
+.editable-total {
+    cursor: pointer;
 }
 
-#vatBreakdown h3.section-title, 
-.vat-breakdown h3.section-title {
-    color: var(--primary-color);
-    border-bottom: 1px solid var(--primary-color);
-    padding-bottom: 8px;
-    margin-bottom: 12px;
-}
-
-.vat-total-group {
-    margin-top: 12px;
-    padding-top: 8px;
-    border-top: 1px solid var(--border-color);
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-.vat-row {
-    margin-bottom: 8px;
-    padding: 8px;
-    background-color: var(--background-color);
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
+/* Updated VAT breakdown layout */
+.vat-row .total-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    position: relative;
 }
 
 .vat-inputs {
     display: flex;
-    align-items: center;
-    gap: 8px;
     flex-wrap: wrap;
-}
-
-.vat-inputs label {
-    font-size: 12px;
-    color: var(--text-light);
-    min-width: 50px;
-}
-
-.vat-inputs input,
-.vat-inputs select {
-    width: 120px;
-    padding: 4px 6px;
-    font-size: 13px;
-}
-
-/* Editable Totals */
-.editable-total {
-    min-width: 80px;
-    text-align: right;
-    padding: 2px 4px;
-    border-radius: 2px;
-}
-
-.editable-total:hover {
-    background-color: rgba(37, 99, 235, 0.05);
-    cursor: pointer;
-}
-
-/* Utilities */
-.file-input {
-    display: none;
-}
-
-.section-title {
-    font-size: 14px;
-    margin-bottom: 8px;
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-/* Commodity Groups */
-.commodity-group {
-    display: flex;
-    gap: 4px;
-}
-
-.date-input-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.date-input {
+    gap: 0.5rem 1rem;
+    width: 100%;
     padding-right: 30px;
 }
 
-.calendar-button {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 5px 8px;
-    font-size: 16px;
+.vat-inputs > label {
+    min-width: 100px;
+    text-align: left;
+    margin: 0;
 }
 
-.calendar-button:hover {
-    opacity: 0.8;
+.vat-inputs > input,
+.vat-inputs > select {
+    min-width: 150px;
+    flex: 1;
+    margin: 0;
 }
 
-/* Note field styles */
-.note-input {
-    resize: vertical;
-    min-height: 80px;
-    font-family: inherit;
+.vat-inputs > input[type="text"] {
+    min-width: 100px;
 }
 
-.note-counter {
-    text-align: right;
-    font-size: 12px;
-    color: var(--text-light);
-    margin-top: 4px;
-}
-
-.app-footer {
-    text-align: center;
-    padding: 10px;
-    background-color: #ffffff;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    font-size: 0.8em;
-    color: #000000;
-    z-index: 1000;
-}
-
-/* Style the Pikaday calendar */
-.pika-single {
-    z-index: 9999;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    font-family: inherit;
-}
-
-.pika-button {
-    background: var(--background-color);
-    border-radius: 4px;
-}
-
-.pika-button:hover {
-    background: var(--primary-color) !important;
-    color: white !important;
-    box-shadow: none !important;
-}
 .vat-exemption {
-    margin-top: 8px;
-    display: flex; 
-    gap: 12px;
-    align-items: center;
-}
-
-.vat-exemption.hidden {
-    display: none;
+    display: flex;
+    gap: 1rem;
+    width: 100%;
 }
 
 .vat-exemption .form-group {
     flex: 1;
-    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
 }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
-    .details-grid {
-        grid-template-columns: 1fr;
-    }
+.vat-exemption label {
+    white-space: nowrap;
+    margin: 0;
+    min-width: 100px;
+}
 
-    .line-item .grid {
-        grid-template-columns: repeat(3, 1fr);
+.vat-exemption .form-input {
+    flex: 1;
+}
+
+.note-input {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.note-counter {
+    text-align: right;
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.app-footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding: 1rem;
+}
+
+.app-footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.file-input {
+    display: none;
+}
+
+@media (max-width: 1200px) {
+    .vat-inputs {
+        flex-wrap: wrap;
     }
     
-    .container {
-        margin: 8px;
+    .vat-exemption {
+        flex-direction: column;
+    }
+    
+    .vat-exemption .form-group {
+        width: 100%;
     }
 }
 
 @media (max-width: 768px) {
     .header {
         flex-direction: column;
-        gap: 12px;
+        gap: 1rem;
         text-align: center;
     }
 
-   .button-group {
-       flex-direction: column;
-       width: auto;
-       min-width: 200px;
-   }
-
-   .button {
-       width: auto;
-   }
-
-    .invoice-details .compact-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .party-details .compact-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .line-item .grid {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .remove-line-item {
-        position: static;
-        width: 100%;
-        margin-top: 8px;
-    }
-
-    .button {
-        width: 100%;
-    }
-
-    .section-title {
-        flex-direction: column;
-        gap: 8px;
-        text-align: center;
+    .button-group {
+        flex-wrap: wrap;
+        justify-content: center;
     }
 
     .vat-inputs {
-        flex-direction: column;
-        align-items: stretch;
+        gap: 0.5rem;
     }
 
-    .vat-inputs input,
-    .vat-inputs select {
+    .vat-inputs > label {
+        min-width: 100px;
+        text-align: left;
+    }
+
+    .vat-inputs > input,
+    .vat-inputs > select {
+        width: calc(100% - 110px);
+    }
+
+    .vat-exemption {
+        flex-direction: column;
         width: 100%;
     }
-}
 
-@media (max-width: 480px) {
-    .line-item .grid {
-        grid-template-columns: 1fr;
+    .identification-content {
+        grid-template-columns: 1fr auto;
     }
     
-    .container {
-        padding: 12px;
+    .scheme-select {
+        grid-column: 1 / -1;
     }
 }
