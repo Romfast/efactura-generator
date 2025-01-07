@@ -56,3 +56,6 @@ Dacă folosiți acest software, chiar și ca serviciu web, trebuie să:
 1. Menționați proiectul original
 2. Partajați toate modificările făcute
 3. Folosiți aceeași licență AGPL-3
+
+## Changelog
+[Istoric modificări](CHANGELOG.md)
