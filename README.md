@@ -59,3 +59,6 @@ Dacă folosiți acest software, chiar și ca serviciu web, trebuie să:
 
 ## Changelog
 [Istoric modificări](CHANGELOG.md)
+
+## TODO
+[De făcut](TODO.md)
