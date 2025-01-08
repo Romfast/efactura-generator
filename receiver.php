@@ -102,7 +102,7 @@ if (false or !checkIP()) {
 }
 
 // Verificare token
-if (!validateToken()) {
+if ($_SERVER['REQUEST_METHOD'] !== 'GET' && !validateToken()) {
     header('HTTP/1.1 401 Unauthorized');
     error_log("Token invalid de la IP: " . $_SERVER['REMOTE_ADDR']);
     die(json_encode([
