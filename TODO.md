@@ -1,7 +1,7 @@
 # TODO
 
 ## Prioritare
-- [ ] Inițializare și editare discount linie factură
+- [x] Inițializare și editare discount linie factură
 
 ## Funcționalități viitoare
 - [ ] Citire și editare modalități de plată
