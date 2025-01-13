@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9-beta-3 - 14.01.2025
+
+### Bugfixes
+- Fixed: Discounturile de pe articole nu se mai cumulează în discount global pe factură.
+
+### New Features
+- Added: Se completează valoare reducere și cod reducere pe fiecare articol.
+
 ## 0.9-beta-2 - 07.01.2025
 
 ### Bugfixes
