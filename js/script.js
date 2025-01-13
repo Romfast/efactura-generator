@@ -142,6 +142,17 @@ const IDENTIFICATION_TYPES = {
 
 const formatter = new InvoiceFormatter()
 
+const resolver = {
+    lookupNamespaceURI: prefix => {
+        const ns = {
+            'cbc': 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2',
+            'cac': 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2',
+            'ubl': 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2'
+        };
+        return ns[prefix] || null;
+    }
+};
+
 // Global variables
 let currentInvoice = null;
 let originalTotals = null;
@@ -241,13 +252,30 @@ function updateTotalDisplay(elementId, value) {
 }
 
 function displayTotals(totals) {
-    // Pentru fiecare total, convertim explicit la număr
-    updateTotalDisplay('subtotal', parseFloat(totals.subtotal));
-    updateTotalDisplay('totalAllowances', parseFloat(totals.allowances));
-    updateTotalDisplay('totalCharges', parseFloat(totals.charges));
-    updateTotalDisplay('netAmount', parseFloat(totals.netAmount));
-    updateTotalDisplay('vat', parseFloat(totals.totalVat));
-    updateTotalDisplay('total', parseFloat(totals.total));
+    // Actualizează toate totalurile cu formatare
+    updateTotalDisplay('subtotal', totals.subtotal);
+    updateTotalDisplay('totalAllowances', totals.allowances);
+    updateTotalDisplay('totalCharges', totals.charges);
+    updateTotalDisplay('netAmount', totals.netAmount);
+    updateTotalDisplay('vat', totals.totalVat);
+    updateTotalDisplay('total', totals.total);
+
+    // Actualizează defalcarea TVA dacă există
+    const container = document.getElementById('vatBreakdownRows');
+    if (container) {
+        container.innerHTML = '';
+        if (totals.vatBreakdown) {
+            totals.vatBreakdown.forEach((data, key) => {
+                const [rate, type] = key.split('-');
+                addVATBreakdownRow(
+                    parseFloat(rate),
+                    data.baseAmount,
+                    data.vatAmount,
+                    type
+                );
+            });
+        }
+    }
 }
 
 function updateVATDisplay(row, amount, type = 'amount') {
@@ -411,12 +439,17 @@ function createAllowanceChargeHTML(index, charge) {
                 <div class="form-group">
                     <label class="form-label">Motiv</label>
                     <input type="text" class="form-input" name="chargeReason${index}" 
-                           value="${charge.reason}">
+                           value="${charge.reason || ''}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Valoare</label>
                     <input type="number" step="0.01" class="form-input" name="chargeAmount${index}" 
-                           value="${charge.amount}">
+                           value="${charge.amount}" onchange="updateTotals()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bază de calcul</label>
+                    <input type="number" step="0.01" class="form-input" name="chargeBaseAmount${index}" 
+                           value="${charge.baseAmount}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Tip TVA</label>
@@ -462,10 +495,10 @@ window.updateReasonCodeOptions = function(index) {
 }
 
 // Create line item HTML
-function createLineItemHTML(index, description = '', quantity = '1', price = '0', vatRate = '19', unitCode = 'EA', 
-    vatTypeId = 'S', itemDescription = '') {
+function createLineItemHTML(index, description = '', quantity = '1', price = '0', vatRate = '19', 
+    unitCode = 'EA', vatTypeId = 'S', itemDescription = '', lineDiscount = '0', discountReasonCode = '') {
     
-    const html = `
+    return `
         <div class="line-item" data-index="${index}">
             <div class="grid">
                 <div class="form-group">
@@ -487,6 +520,17 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
                     <label class="form-label">Preț</label>
                     <input type="number" step="0.01" class="form-input" name="price${index}" 
                         value="${price}" onchange="updateTotals()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Discount</label>
+                    <input type="number" step="0.01" class="form-input" name="lineDiscount${index}" 
+                        value="${lineDiscount}" onchange="updateTotals()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cod Motiv Reducere</label>
+                    <select class="form-input" name="discountReasonCode${index}" ${lineDiscount == 0 ? 'disabled' : ''}>
+                        ${createLineDiscountReasonOptions(discountReasonCode)}
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Tip TVA</label>
@@ -538,11 +582,14 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
             </button>
         </div>
     `;
-    
-    return html;
 }
 
-
+function createLineDiscountReasonOptions(selectedCode = '') {
+    return Object.entries(ALLOWANCE_REASON_CODES)
+        .map(([code, description]) => 
+            `<option value="${code}" ${code === selectedCode ? 'selected' : ''}>${description} (${code})</option>`
+        ).join('');
+}
 
 // Add VAT breakdown row
 function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existingRowId = null, exemptionCode = '', exemptionReason = '') {
@@ -1193,7 +1240,7 @@ function storeOriginalTotals(xmlDoc) {
         total: getXMLValue(monetaryTotal, 'cbc\\:TaxInclusiveAmount, TaxInclusiveAmount')
     };
 
-    console.log('Original totals from XML:', originalTotals);
+    // console.log('Original totals from XML:', originalTotals);
 
     const vatBreakdown = [];
     const taxSubtotals = xmlDoc.querySelectorAll('cac\\:TaxSubtotal, TaxSubtotal');
@@ -1379,7 +1426,7 @@ function populatePartyDetails(xmlDoc) {
     initializeLocationSelectors();
  }
 
-function populateAllowanceCharges(xmlDoc) {
+ function populateAllowanceCharges(xmlDoc) {
     const charges = parseAllowanceCharges(xmlDoc);
     displayAllowanceCharges(charges);
     
@@ -1397,7 +1444,7 @@ function populateLineItems(xmlDoc) {
     lineItems.forEach((item, index) => {
         const quantity = getXMLValue(item, 'cbc\\:InvoicedQuantity, InvoicedQuantity', '0');
         const unitCode = item.querySelector('cbc\\:InvoicedQuantity, InvoicedQuantity')?.getAttribute('unitCode') || 'EA';
-        const price = getXMLValue(item, 'cac\\:Price cbc\\:PriceAmount, PriceAmount', '0');
+        const price = getXMLValue(item, 'cac\\:Price cbc\\:PriceAmount, Price PriceAmount', '0');
         const itemElement = item.querySelector('cac\\:Item, Item');
         const description = getXMLValue(itemElement, 'cbc\\:Name, Name', '');
         const itemDescription = getXMLValue(itemElement, 'cbc\\:Description, Description', '');
@@ -1406,9 +1453,22 @@ function populateLineItems(xmlDoc) {
         const vatType = getXMLValue(taxCategory, 'cbc\\:ID, ID') || 'S';
         const vatRate = getXMLValue(taxCategory, 'cbc\\:Percent, Percent') || '19';
 
+        // Extragem discountul și codul de motiv de pe linie dacă există
+        let lineDiscount = 0;
+        let discountReasonCode = '';
+        const allowanceCharge = item.querySelector('cac\\:AllowanceCharge, AllowanceCharge');
+        if (allowanceCharge) {
+            const chargeIndicator = getXMLValue(allowanceCharge, 'cbc\\:ChargeIndicator, ChargeIndicator');
+            if (chargeIndicator === 'false') {
+                lineDiscount = parseFloat(getXMLValue(allowanceCharge, 'cbc\\:Amount, Amount', '0'));
+                discountReasonCode = getXMLValue(allowanceCharge, 'cbc\\:AllowanceChargeReasonCode, AllowanceChargeReasonCode', '');
+            }
+        }
+
         addUnitCode(unitCode);
         const lineItemHtml = createLineItemHTML(
-            index, description, quantity, price, vatRate, unitCode, vatType, itemDescription
+            index, description, quantity, price, vatRate, unitCode, vatType, 
+            itemDescription, lineDiscount, discountReasonCode
         );
         lineItemsContainer.insertAdjacentHTML('beforeend', lineItemHtml);
 
@@ -1427,7 +1487,17 @@ function populateLineItems(xmlDoc) {
                 vatRateInput.disabled = true;
             }
         }
+
+        // Enable/disable discount reason code field based on discount value
+        const discountInput = document.querySelector(`[name="lineDiscount${index}"]`);
+        const reasonCodeSelect = document.querySelector(`[name="discountReasonCode${index}"]`);
+        if (discountInput && reasonCodeSelect) {
+            reasonCodeSelect.disabled = lineDiscount <= 0;
+        }
+
+        handleLineItemChange(index);
     });
+
 }
 
 function setupAllowanceChargeListeners(index) {
@@ -1477,18 +1547,37 @@ function addChargeVatTypeChangeListener(index) {
 
 function parseAllowanceCharges(xmlDoc) {
     const charges = [];
+    // Folosim Set pentru a preveni dublarea elementelor din cauza namespace-urilor
+    const processedIds = new Set();
+    
+    // Selectăm toate elementele AllowanceCharge care sunt copii direcți ai Invoice
     const allowanceCharges = xmlDoc.querySelectorAll('cac\\:AllowanceCharge, AllowanceCharge');
     
     allowanceCharges.forEach(ac => {
-        const charge = {
-            isCharge: getXMLValue(ac, 'cbc\\:ChargeIndicator, ChargeIndicator') === 'true',
-            reasonCode: getXMLValue(ac, 'cbc\\:AllowanceChargeReasonCode, AllowanceChargeReasonCode'),
-            reason: getXMLValue(ac, 'cbc\\:AllowanceChargeReason, AllowanceChargeReason'),
-            amount: parseFloat(getXMLValue(ac, 'cbc\\:Amount, Amount')) || 0,
-            vatRate: parseFloat(getXMLValue(ac, 'cac\\:TaxCategory cbc\\:Percent, Percent')) || 19.0,
-            vatTypeId: getXMLValue(ac, 'cac\\:TaxCategory cbc\\:ID, ID', 'S')
-        };
-        charges.push(charge);
+        // Verificăm dacă elementul este copil direct al Invoice și nu a fost deja procesat
+        if (ac.parentElement === xmlDoc.documentElement) {
+            const amount = getXMLValue(ac, 'cbc\\:Amount, Amount');
+            const reasonCode = getXMLValue(ac, 'cbc\\:AllowanceChargeReasonCode, AllowanceChargeReasonCode');
+            
+            // Creăm un ID unic bazat pe cod și valoare pentru a evita duplicatele
+            const uniqueId = `${reasonCode}-${amount}`;
+            
+            if (!processedIds.has(uniqueId)) {
+                processedIds.add(uniqueId);
+                
+                const charge = {
+                    isCharge: getXMLValue(ac, 'cbc\\:ChargeIndicator, ChargeIndicator') === 'true',
+                    reasonCode: reasonCode,
+                    reason: getXMLValue(ac, 'cbc\\:AllowanceChargeReason, AllowanceChargeReason'),
+                    amount: parseFloat(amount) || 0,
+                    baseAmount: parseFloat(getXMLValue(ac, 'cbc\\:BaseAmount, BaseAmount')) || 0,
+                    vatRate: parseFloat(getXMLValue(ac, 'cac\\:TaxCategory cbc\\:Percent, TaxCategory Percent')) || 0,
+                    vatTypeId: getXMLValue(ac, 'cac\\:TaxCategory cbc\\:ID, TaxCategory ID', 'S'),
+                    multiplierFactorNumeric: parseFloat(getXMLValue(ac, 'cbc\\:MultiplierFactorNumeric, MultiplierFactorNumeric')) || 0
+                };
+                charges.push(charge);
+            }
+        }
     });
 
     return charges;
@@ -1579,8 +1668,10 @@ function addLineItem() {
         vatTypeSelect.disabled = true;
         newItem.querySelector(`[name="vatRate${index}"]`).disabled = true;
     }
-
+    
+    // Adăugăm event handlers pentru noua linie
     handleLineItemChange(index);
+    
     manuallyEditedVatRows.clear();
     refreshTotals();
 }
@@ -1598,12 +1689,28 @@ function removeLineItem(index) {
 function handleLineItemChange(index) {
     const quantityInput = document.querySelector(`[name="quantity${index}"]`);
     const priceInput = document.querySelector(`[name="price${index}"]`);
+    const discountInput = document.querySelector(`[name="lineDiscount${index}"]`);
+    const reasonCodeSelect = document.querySelector(`[name="discountReasonCode${index}"]`);
     
-    quantityInput.addEventListener('change', refreshTotals);
-    priceInput.addEventListener('change', refreshTotals);
+    // Handler pentru schimbarea discount-ului
+    discountInput?.addEventListener('input', function() {
+        const discountValue = parseFloat(this.value) || 0;
+        if (reasonCodeSelect) {
+            reasonCodeSelect.disabled = discountValue == 0;  // activat pentru orice valoare nenulă
+            // Dacă discount != 0 și nu e selectat niciun cod, selectăm codul implicit
+            if (discountValue != 0 && !reasonCodeSelect.value) {
+                reasonCodeSelect.value = '95'; // Cod implicit pentru reducere
+            }
+        }
+        updateTotals();
+    });
+
+    // Handlers pentru cantitate și preț
+    quantityInput?.addEventListener('change', updateTotals);
+    priceInput?.addEventListener('change', updateTotals);
     
-    // Force refresh when input changes
-    refreshTotals();
+    // Force refresh
+    updateTotals();
 }
 
 function handleStorno() {
@@ -1643,33 +1750,7 @@ function handleStorno() {
 }
 
 function updateTotals() {
-    const totals = calculateTotals();
-    const { vatBreakdown, totalVat } = calculateVATBreakdown();
-
-    // Calculate total VAT from VAT breakdown
-    let calculatedVAT = 0;
-    vatBreakdown.forEach(entry => {
-        calculatedVAT += entry.vatAmount;
-    });
-
-    displayTotals({
-        subtotal: totals.subtotal,
-        allowances: totals.allowances,
-        charges: totals.charges,
-        netAmount: totals.netAmount,
-        totalVat: calculatedVAT,
-        total: totals.netAmount + calculatedVAT
-    });
-
-    displayVATBreakdown();
-    
-    // Update VAT and total displays with proper formatting
-    document.getElementById('vat').textContent = formatter.formatCurrency(calculatedVAT);
-    document.getElementById('total').textContent = formatter.formatCurrency(totals.netAmount + calculatedVAT);
-}
-
-function refreshTotals() {
-    // Calculate base totals
+    // Calculăm totalurile liniilor (deja nete, după discount)
     const lineItemTotals = calculateLineItemTotals();
     const chargeTotals = calculateChargeTotals();
 
@@ -1678,28 +1759,57 @@ function refreshTotals() {
     const charges = chargeTotals.charges;
     const netAmount = subtotal - allowances + charges;
 
-    // Update display
-    displayTotals({
-        subtotal: subtotal,
-        allowances: allowances,
-        charges: charges,
-        netAmount: netAmount,
-        totalVat: calculateTotalVAT(),
-        total: netAmount + calculateTotalVAT()
+    // Calculate VAT breakdown
+    const { vatBreakdown } = calculateVATBreakdown();
+    let totalVat = 0;
+    
+    vatBreakdown.forEach((entry) => {
+        if (entry.type === 'S') {
+            totalVat += entry.vatAmount;
+        }
     });
 
-    displayVATBreakdown();
-    
-    // Calculate total VAT from the actual displayed rows, including manual edits
-    let totalVat = 0;
-    document.querySelectorAll('.vat-row').forEach(row => {
-        const vatAmount = formatter.parseCurrency(row.querySelector('.vat-amount').value) || 0;
-        totalVat += vatAmount;
+    // Display totals with 2 decimal places
+    displayTotals({
+        subtotal: roundNumber(subtotal, 2),
+        allowances: roundNumber(allowances, 2),
+        charges: roundNumber(charges, 2),
+        netAmount: roundNumber(netAmount, 2),
+        totalVat: roundNumber(totalVat, 2),
+        total: roundNumber(netAmount + totalVat, 2),
+        vatBreakdown
     });
-    
-    // Update final totals with proper formatting
-    document.getElementById('vat').textContent = formatter.formatCurrency(totalVat);
-    document.getElementById('total').textContent = formatter.formatCurrency(netAmount + totalVat);
+}
+
+function refreshTotals() {
+    // Calculate line items first
+    const lineItemTotals = calculateLineItemTotals();
+    const chargeTotals = calculateChargeTotals();
+
+    const subtotal = lineItemTotals.subtotal;
+    const allowances = chargeTotals.allowances;
+    const charges = chargeTotals.charges;
+    const netAmount = subtotal - allowances + charges;
+
+    // Calculate VAT breakdown
+    const { vatBreakdown } = calculateVATBreakdown();
+    let totalVat = 0;
+    if (vatBreakdown) {
+        vatBreakdown.forEach(entry => {
+            totalVat += entry.vatAmount;
+        });
+    }
+
+    // Display totals
+    displayTotals({
+        subtotal,
+        allowances,
+        charges,
+        netAmount,
+        totalVat,
+        total: netAmount + totalVat,
+        vatBreakdown
+    });
 }
 
 function calculateLineItemTotals() {
@@ -1708,11 +1818,15 @@ function calculateLineItemTotals() {
     document.querySelectorAll('.line-item').forEach((item, index) => {
         const quantity = parseFloat(document.querySelector(`[name="quantity${index}"]`).value) || 0;
         const price = parseFloat(document.querySelector(`[name="price${index}"]`).value) || 0;
-        subtotal += quantity * price;
+        const lineDiscount = parseFloat(document.querySelector(`[name="lineDiscount${index}"]`).value) || 0;
+
+        // LineExtensionAmount = cantitate * preț - discount
+        const lineAmount = (quantity * price) - lineDiscount;
+        subtotal += lineAmount;
     });
-																								   
+
     return {
-        subtotal: roundNumber(subtotal)
+        subtotal: roundNumber(subtotal, 2)
     };
 }
 
@@ -1731,21 +1845,80 @@ function calculateChargeTotals() {
     });
 
     return {
-        allowances: roundNumber(allowances),
-        charges: roundNumber(charges)
+        allowances: roundNumber(allowances, 2),
+        charges: roundNumber(charges, 2)
     };
 }
 
 function calculateTotals() {
-    const { vatBreakdown, totalVat } = calculateVATBreakdown();
-    const lineItemTotals = calculateLineItemTotals();
-    const chargeTotals = calculateChargeTotals();
+    let subtotal = 0;
+    let vatBreakdown = new Map();
 
-    const subtotal = lineItemTotals.subtotal;
-    const allowances = chargeTotals.allowances;
-    const charges = chargeTotals.charges;
+    // Calculăm totalurile liniilor
+    document.querySelectorAll('.line-item').forEach((item, index) => {
+        const quantity = parseFloat(document.querySelector(`[name="quantity${index}"]`).value) || 0;
+        const price = parseFloat(document.querySelector(`[name="price${index}"]`).value) || 0;
+        const lineDiscount = parseFloat(document.querySelector(`[name="lineDiscount${index}"]`).value) || 0;
+        const vatType = document.querySelector(`[name="vatType${index}"]`).value;
+        const vatRate = parseFloat(document.querySelector(`[name="vatRate${index}"]`).value) || 0;
+        
+        // LineExtensionAmount pentru linie = (cantitate * preț) - discount linie
+        const lineTotal = (quantity * price) - lineDiscount;
+        subtotal += lineTotal;
+
+        // Actualizăm baza de TVA pentru această linie
+        const key = `${vatRate}-${vatType}`;
+        if (!vatBreakdown.has(key)) {
+            vatBreakdown.set(key, {
+                baseAmount: 0,
+                vatAmount: 0,
+                rate: vatRate,
+                type: vatType
+            });
+        }
+        
+        const entry = vatBreakdown.get(key);
+        // Adăugăm la baza de TVA valoarea netă a liniei (după discount)
+        entry.baseAmount += lineTotal;
+    });
+
+    // Calculăm discounturile și taxele globale
+    const { allowances, charges } = calculateChargeTotals();
+
+    // Calculăm suma netă după aplicarea discount-urilor și taxelor globale
     const netAmount = subtotal - allowances + charges;
-    const total = netAmount + totalVat;
+
+    // Pentru fiecare discount/taxă globală, ajustăm baza de TVA corespunzătoare
+    document.querySelectorAll('.allowance-charge').forEach((item, index) => {
+        const amount = parseFloat(document.querySelector(`[name="chargeAmount${index}"]`).value) || 0;
+        const vatType = document.querySelector(`[name="chargeVatType${index}"]`).value;
+        const vatRate = parseFloat(document.querySelector(`[name="chargeVatRate${index}"]`).value) || 0;
+        const isCharge = document.querySelector(`[name="chargeType${index}"]`).value === 'true';
+
+        const key = `${vatRate}-${vatType}`;
+        if (!vatBreakdown.has(key)) {
+            vatBreakdown.set(key, {
+                baseAmount: 0,
+                vatAmount: 0,
+                rate: vatRate,
+                type: vatType
+            });
+        }
+
+        const entry = vatBreakdown.get(key);
+        // Ajustăm baza de TVA în funcție de tipul operațiunii (discount/taxă)
+        const adjustmentAmount = isCharge ? amount : -amount;
+        entry.baseAmount += adjustmentAmount;
+    });
+
+    // Calculăm TVA-ul pentru fiecare rată
+    let totalVat = 0;
+    vatBreakdown.forEach((entry, key) => {
+        if (entry.type === 'S') {
+            entry.vatAmount = roundNumber(entry.baseAmount * entry.rate / 100, 2);
+            totalVat += entry.vatAmount;
+        }
+    });
 
     return {
         subtotal: roundNumber(subtotal),
@@ -1753,8 +1926,54 @@ function calculateTotals() {
         charges: roundNumber(charges),
         netAmount: roundNumber(netAmount),
         totalVat: roundNumber(totalVat),
-        total: roundNumber(total)
+        total: roundNumber(netAmount + totalVat),
+        vatBreakdown
     };
+}
+
+function calculateVATBases(lines, globalAllowances, globalCharges) {
+    // Initialize VAT bases
+    const vatBases = {};
+    
+    // First pass: calculate base amounts per VAT rate from lines
+    lines.forEach(line => {
+        const vatRate = line.vatRate;
+        if (!vatBases[vatRate]) {
+            vatBases[vatRate] = {
+                base: 0,
+                allowances: 0,
+                charges: 0
+            };
+        }
+        
+        const lineTotal = line.quantity * line.price;
+        const lineAfterDiscount = lineTotal - line.lineDiscount;
+        vatBases[vatRate].base += lineAfterDiscount;
+    });
+    
+    // Second pass: apply global allowances and charges per VAT rate
+    globalAllowances.forEach(allowance => {
+        const vatRate = allowance.vatRate;
+        if (vatBases[vatRate]) {
+            vatBases[vatRate].allowances += allowance.amount;
+        }
+    });
+    
+    globalCharges.forEach(charge => {
+        const vatRate = charge.vatRate;
+        if (vatBases[vatRate]) {
+            vatBases[vatRate].charges += charge.amount;
+        }
+    });
+    
+    // Calculate final VAT amounts
+    Object.keys(vatBases).forEach(rate => {
+        const rateData = vatBases[rate];
+        const netBase = rateData.base - rateData.allowances + rateData.charges;
+        rateData.vatAmount = netBase * (parseFloat(rate) / 100);
+    });
+    
+    return vatBases;
 }
 
 function calculateTotalVAT() {
@@ -1771,10 +1990,11 @@ function calculateVATBreakdown() {
     document.querySelectorAll('.line-item').forEach((item, index) => {
         const quantity = parseFloat(document.querySelector(`[name="quantity${index}"]`).value) || 0;
         const price = parseFloat(document.querySelector(`[name="price${index}"]`).value) || 0;
+        const lineDiscount = parseFloat(document.querySelector(`[name="lineDiscount${index}"]`).value) || 0;
         const vatType = document.querySelector(`[name="vatType${index}"]`).value;
         const vatRate = parseFloat(document.querySelector(`[name="vatRate${index}"]`).value) || 0;
         
-        const lineAmount = quantity * price;
+        const lineAmount = (quantity * price) - lineDiscount;
         const key = `${vatRate}-${vatType}`;
         
         if (!vatBreakdown.has(key)) {
@@ -1788,9 +2008,6 @@ function calculateVATBreakdown() {
         
         const entry = vatBreakdown.get(key);
         entry.baseAmount += lineAmount;
-        if (vatType === 'S') {
-            entry.vatAmount += roundNumber(lineAmount * vatRate / 100, 2);
-        }
     });
 
     // Process allowances and charges
@@ -1816,14 +2033,14 @@ function calculateVATBreakdown() {
         const entry = vatBreakdown.get(key);
         const adjustedAmount = isCharge ? amount : -amount;
         entry.baseAmount += adjustedAmount;
-        if (vatType === 'S') {
-            entry.vatAmount += roundNumber(adjustedAmount * vatRate / 100, 2);
-        }
     });
 
-    // Calculate total VAT
-    vatBreakdown.forEach(entry => {
-        totalVat += entry.vatAmount;
+    // Calculate VAT for each rate
+    vatBreakdown.forEach((entry) => {
+        if (entry.type === 'S') {
+            entry.vatAmount = roundNumber(entry.baseAmount * entry.rate / 100, 2);
+            totalVat += entry.vatAmount;
+        }
     });
 
     return { vatBreakdown, totalVat: roundNumber(totalVat, 2) };
@@ -2307,49 +2524,70 @@ function getAllowanceCharges() {
 }
 
 function updateAllowanceCharges(xmlDoc) {
-    const currencyID = xmlDoc.querySelector('cbc\\:DocumentCurrencyCode, DocumentCurrencyCode').textContent;
+    const currencyID = document.querySelector('[name="documentCurrencyCode"]').value.toUpperCase() || 'RON';
     
-    const existingCharges = xmlDoc.querySelectorAll('cac\\:AllowanceCharge, AllowanceCharge');
+    // Remove existing global allowances/charges
+    const existingCharges = xmlDoc.querySelectorAll('Invoice > cac\\:AllowanceCharge, Invoice > AllowanceCharge');
     existingCharges.forEach(charge => charge.remove());
     
-    const charges = getAllowanceCharges();
-    const taxTotalNode = xmlDoc.querySelector('cac\\:TaxTotal, TaxTotal');
-    
-    charges.forEach(charge => {
-        const allowanceCharge = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:AllowanceCharge");
+    // Add global allowances
+    document.querySelectorAll('.allowance-charge').forEach((item, index) => {
+        const allowanceElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:AllowanceCharge");
         
-        allowanceCharge.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ChargeIndicator", 
-            charge.isCharge.toString()));
+        const isCharge = document.querySelector(`[name="chargeType${index}"]`).value === 'true';
+        const amount = parseFloat(document.querySelector(`[name="chargeAmount${index}"]`).value) || 0;
+        const baseAmount = parseFloat(document.querySelector(`[name="chargeBaseAmount${index}"]`).value) || 0;
+        const reasonCode = document.querySelector(`[name="chargeReasonCode${index}"]`).value;
+        const reason = document.querySelector(`[name="chargeReason${index}"]`).value;
+        const vatTypeId = document.querySelector(`[name="chargeVatType${index}"]`).value;
+        const vatRate = parseFloat(document.querySelector(`[name="chargeVatRate${index}"]`).value) || 0;
+
+        allowanceElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ChargeIndicator", 
+            isCharge.toString()));
         
-        if (charge.reasonCode) {
-            allowanceCharge.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
-                "cbc:AllowanceChargeReasonCode", charge.reasonCode));
+        if (reasonCode) {
+            allowanceElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
+                "cbc:AllowanceChargeReasonCode", reasonCode));
         }
         
-        if (charge.reason) {
-            allowanceCharge.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
-                "cbc:AllowanceChargeReason", charge.reason));
+        if (reason) {
+            allowanceElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
+                "cbc:AllowanceChargeReason", reason));
         }
         
-        allowanceCharge.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Amount", 
-            charge.amount.toFixed(2), { currencyID }));
+        // Add multiplier if exists
+        if (baseAmount > 0) {
+            const multiplier = (amount / baseAmount) * 100;
+            allowanceElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc,
+                "cbc:MultiplierFactorNumeric", multiplier.toFixed(2)));
+        }
         
+        allowanceElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Amount", 
+            amount.toFixed(2), { currencyID }));
+            
+        if (baseAmount > 0) {
+            allowanceElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:BaseAmount",
+                baseAmount.toFixed(2), { currencyID }));
+        }
+        
+        // Add tax category
         const taxCategory = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxCategory");
-        taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", charge.vatTypeId));
-        
-        const vatPercent = charge.vatTypeId === 'AE' ? '0.00' : charge.vatRate.toString();
-        taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Percent", vatPercent));
-        
+        taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", vatTypeId));
+        taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Percent",
+            vatRate.toString()));
+            
         const taxScheme = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxScheme");
         taxScheme.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", "VAT"));
         taxCategory.appendChild(taxScheme);
         
-        allowanceCharge.appendChild(taxCategory);
+        allowanceElement.appendChild(taxCategory);
         
-        if (taxTotalNode) {
-            xmlDoc.documentElement.insertBefore(allowanceCharge, taxTotalNode);
+        // Insert before TaxTotal
+        const taxTotal = xmlDoc.querySelector('cac\\:TaxTotal, TaxTotal');
+        if (taxTotal) {
+            xmlDoc.documentElement.insertBefore(allowanceElement, taxTotal);
         } else {
-            xmlDoc.documentElement.appendChild(allowanceCharge);
+            xmlDoc.documentElement.appendChild(allowanceElement);
         }
     });
 }
@@ -2357,13 +2595,14 @@ function updateAllowanceCharges(xmlDoc) {
 function updateLineItems(xmlDoc) {
     const currencyID = xmlDoc.querySelector('cbc\\:DocumentCurrencyCode, DocumentCurrencyCode').textContent;
     
+    // Șterge liniile existente
     const existingLines = xmlDoc.querySelectorAll('cac\\:InvoiceLine, InvoiceLine');
     existingLines.forEach(line => line.remove());
     
     document.querySelectorAll('.line-item').forEach((item, index) => {
         const invoiceLine = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:InvoiceLine");
         
-        // Get basic line item values
+        // Obține valorile liniei
         const quantity = document.querySelector(`[name="quantity${index}"]`)?.value || '0';
         const unitCode = document.querySelector(`[name="unit${index}"]`)?.value || 'EA';
         const price = document.querySelector(`[name="price${index}"]`)?.value || '0';
@@ -2372,19 +2611,53 @@ function updateLineItems(xmlDoc) {
         const vatType = document.querySelector(`[name="vatType${index}"]`)?.value || 'S';
         const vatRate = vatType === 'AE' ? '0.00' : 
             (document.querySelector(`[name="vatRate${index}"]`)?.value || '0');
+        const lineDiscount = parseFloat(document.querySelector(`[name="lineDiscount${index}"]`)?.value) || 0;
         
-        // Add basic line item details
+        // Calculează valorile liniei
+        const baseLineAmount = quantity * price;
+        const lineAmount = roundNumber(baseLineAmount - lineDiscount);
+
+        // Adaugă elementele liniei
         invoiceLine.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", (index + 1).toString()));
         
         const quantityElement = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:InvoicedQuantity", quantity);
         quantityElement.setAttribute('unitCode', unitCode);
         invoiceLine.appendChild(quantityElement);
         
-        const lineAmount = roundNumber(parseFloat(quantity) * parseFloat(price));
+        // Adaugă LineExtensionAmount (valoarea după discount)
         invoiceLine.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:LineExtensionAmount", 
             lineAmount.toFixed(2), { currencyID }));
+        
+        // Adaugă discount pe linie dacă există
+        if (lineDiscount != 0) {
+            const allowanceCharge = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:AllowanceCharge");
+            allowanceCharge.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ChargeIndicator", 
+                lineDiscount < 0 ? "true" : "false"));
+            
+            const reasonCode = document.querySelector(`[name="discountReasonCode${index}"]`)?.value || '95';
+            allowanceCharge.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
+                "cbc:AllowanceChargeReasonCode", reasonCode));
+            allowanceCharge.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 
+                "cbc:AllowanceChargeReason", ALLOWANCE_REASON_CODES[reasonCode] || 'Reducere'));
+            
+            // BaseAmount trebuie să fie valoarea netă înainte de discount
+            const baseAmount = Math.abs(lineAmount);
+            const discountAmount = Math.abs(lineDiscount);
+            const multiplierFactor = (discountAmount / baseAmount * 100).toFixed(2);
 
-        // Add item details
+            allowanceCharge.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc,
+                "cbc:MultiplierFactorNumeric", multiplierFactor));
+                
+            allowanceCharge.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Amount", 
+                discountAmount.toFixed(2), { currencyID }));
+                
+            allowanceCharge.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:BaseAmount", 
+                baseAmount.toFixed(2), { currencyID }));
+                
+            invoiceLine.appendChild(allowanceCharge);
+        }
+
+        // Adaugă detaliile articolului
         const itemElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Item");
         
         if (itemDescription) {
@@ -2394,13 +2667,13 @@ function updateLineItems(xmlDoc) {
         
         itemElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Name", description));
         
-        // Add identifications
+        // Adaugă identificările
         const identificationsContainer = document.querySelector(`#identifications${index}`);
         if (identificationsContainer) {
             saveIdentificationsToXML(xmlDoc, itemElement, index);
         }
 
-        // Add tax category
+        // Adaugă categoria de taxă
         const taxCategory = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:ClassifiedTaxCategory");
         taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:ID", vatType));
         if (vatType !== 'O') {
@@ -2414,6 +2687,7 @@ function updateLineItems(xmlDoc) {
 
         invoiceLine.appendChild(itemElement);
         
+        // Adaugă prețul
         const priceElement = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:Price");
         priceElement.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:PriceAmount", 
             price, { currencyID }));
@@ -2622,7 +2896,7 @@ function getXMLValue(xmlDoc, selector, defaultValue = '') {
     try {
         const element = xmlDoc.querySelector(selector);
         const value = element ? element.textContent : defaultValue;
-        console.log(`getXMLValue: Selector: ${selector}, Value: ${value}`);
+        // console.log(`getXMLValue: Selector: ${selector}, Value: ${value}`);
         return value;
     } catch (error) {
         console.warn(`Eroare la obținerea valorii pentru selectorul ${selector}:`, error);
