@@ -160,7 +160,7 @@ let vatRates = new Map();
 let manuallyEditedVatRows = new Set();
 
 // Initialize event listeners
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('fileInput').addEventListener('change', handleFileSelect);
     initializeUI();
     
@@ -208,7 +208,28 @@ document.addEventListener('DOMContentLoaded', function() {
         
     addExchangeRateField();
 
-    initializeLocationSelectors();    
+    initializeLocationSelectors();  
+    
+    // Verifică dacă avem parametru XML în URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const xmlFileName = urlParams.get('xml');
+    
+    if (xmlFileName) {
+        try {
+            // Încarcă XML-ul din fișierul temporar
+            const response = await fetch('temp/' + xmlFileName);
+            if (response.ok) {
+                const xmlContent = await response.text();
+                parseXML(xmlContent);
+                
+                // Curăță fișierul temporar
+                fetch('receiver.php?cleanup=' + xmlFileName)
+                    .catch(error => console.error('Eroare la ștergerea fișierului temporar:', error));
+            }
+        } catch (error) {
+            console.error('Eroare la încărcarea XML:', error);
+        }
+    }    
 });
 
 // Initialize event listeners for existing line items
