@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9-beta-4 - 07.02.2025
+
+### Bugfixes
+- Fixed: Al doilea tag TaxTotal se generează doar când valuta documentului diferă de valuta TVA.
+
 ## 0.9-beta-3 - 14.01.2025
 
 ### Bugfixes

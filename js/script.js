@@ -2798,7 +2798,7 @@ function updateTaxTotals(xmlDoc) {
     }
 
     // If tax currency is specified, add another TaxTotal element
-    if (taxCurrencyCode) {
+    if (taxCurrencyCode && taxCurrencyCode !== currencyID) {
         const taxCurrencyTotal = createXMLElement(xmlDoc, XML_NAMESPACES.cac, "cac:TaxTotal");
         
         const exchangeRateInput = document.querySelector('[name="exchangeRate"]');
