@@ -83,7 +83,17 @@
 
                 <!-- Supplier Details -->
                 <div class="form-section party-details">
-                    <h2 class="section-title">Detalii Furnizor</h2>
+                    <h2 class="section-title">
+                        Detalii Furnizor
+                        <span class="card-actions" id="supplierProfileActions">
+                            <button type="button" class="button button-secondary button-small"
+                                    id="btnSaveProfile" onclick="window.saveSupplierProfile()">Salvează profil</button>
+                            <button type="button" class="button button-secondary button-small"
+                                    id="btnUseProfile" onclick="window.useSupplierProfile()">Folosește profil</button>
+                            <button type="button" class="button button-secondary button-small"
+                                    id="btnDeleteProfile" onclick="window.deleteSupplierProfile()">Șterge profil</button>
+                        </span>
+                    </h2>
                     <div class="compact-grid">
                         <div class="form-group">
                             <label class="form-label">Nume</label>
@@ -262,7 +272,7 @@
         </form>
 
         <footer class="app-footer">
-            <span id="app-version">v0.9-beta-4</span>
+            <span id="app-version">v0.9-beta-5</span>
             <a href="https://www.romfast.ro">www.romfast.ro</a>
         </footer>        
     </div>
