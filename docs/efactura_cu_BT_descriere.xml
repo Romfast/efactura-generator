@@ -1,0 +1,165 @@
+Sintaxa eFactura
+https://docs.peppol.eu/poacc/billing/3.0/syntax/ubl-invoice/tree/
+
+
+* Serie si sumar factura
+<cbc:ID>CB 495</cbc:ID><!--BT-1-->
+https://docs.peppol.eu/poacc/billing/3.0/syntax/ubl-invoice/cbc-ID/
+
+* Data factura
+<cbc:IssueDate>2023-12-04</cbc:IssueDate><!--BT-2-->
+
+* Data scadenta
+<cbc:DueDate>2024-01-03</cbc:DueDate><!--BT-9-->
+
+* Tip factura: 380 Initiala, 381 Stornare, 384 Finala/Rectificativa, 389 Autofactura
+<cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode><!--BT-3-->
+
+* Mentiuni factura (Taxare inversa, TVA la incasare etc.)
+<cbc:Note>RO23BACX0000009200456014</cbc:Note><!--BT-22-->
+
+* Data TVA, optional, doar daca evenimentul generator TVA diferit de data facturii
+<cbc:TaxPointDate>2023-12-04</cbc:TaxPointDate><!--BT-7-->
+
+* Valuta facturii
+<cbc:DocumentCurrencyCode>RON</cbc:DocumentCurrencyCode><!--BT-5-->
+
+* Informatii Furnizor
+<cac:AccountingSupplierParty><!--BG-4-->
+</cac:AccountingSupplierParty>
+
+			
+* Informatii Client
+<cac:AccountingCustomerParty><!--BG-7-->
+</cac:AccountingCustomerParty>
+
+* Cod judet (ex: RO-CT, RO-B)
+<cbc:CountrySubentity>RO-CT</cbc:CountrySubentity><!--BT-54-->
+
+* Cod Tara (ex: RO)
+<cac:Country>
+	<cbc:IdentificationCode>RO</cbc:IdentificationCode><!--BT-55-->
+</cac:Country>
+
+
+<cac:PartyTaxScheme>
+			* ID Companie: Cod tara + CUI numeric (ex: RO123456)
+			
+			<cbc:CompanyID>RO11087755</cbc:CompanyID><!--BT-48-->
+			
+			* Element obligatoriu
+			<cac:TaxScheme>
+				<cbc:ID>VAT</cbc:ID>
+			</cac:TaxScheme>
+</cac:PartyTaxScheme>
+
+* Informatii despre modalitatile de plata (ex: conturile bancare ale vanzatorului)
+   <cac:PaymentMeans><!--BG-16-->
+        * 42 = Transfer bancar
+		<cbc:PaymentMeansCode>42</cbc:PaymentMeansCode><!--BT-81-->
+        <cbc:PaymentID>CB nr. 495</cbc:PaymentID><!--BT-83-->
+        <cac:PayeeFinancialAccount><!--BG-17-->
+            
+			* Contul bancar
+			<cbc:ID>RO22BACX0000000781494001</cbc:ID><!--BT-84-->
+            
+			* Numele bancii (optional)
+			<cbc:Name>CONT UNICREDIT BANK SA IN RON</cbc:Name><!--BT-85-->
+            
+			* Cod SWIFT (optional)
+			<cac:FinancialInstitutionBranch>
+                <cbc:ID>BACXROBU</cbc:ID><!--BT-86-->
+            </cac:FinancialInstitutionBranch>
+        </cac:PayeeFinancialAccount>
+    </cac:PaymentMeans>
+	
+	
+* Totaluri TVA
+  <cac:TaxTotal>
+        * TOTAL TVA
+		<cbc:TaxAmount currencyID="RON">152.00</cbc:TaxAmount><!--BT-110-->
+        
+		* Valoare TVA pe cote TVA. Se repeta sectiunea cac:TaxSubtotal pentru fiecare cota TVA
+		<cac:TaxSubtotal><!--BG-23-->
+            * Valoare fara TVA (baza)
+			<cbc:TaxableAmount currencyID="RON">800.00</cbc:TaxableAmount><!--BT-116-->
+            * Valoare TVA
+			<cbc:TaxAmount currencyID="RON">152.00</cbc:TaxAmount><!--BT-117-->
+            * Categoria TVA. S = standard 19/9/5
+			<cac:TaxCategory>
+                <cbc:ID>S</cbc:ID><!--BT-118-->
+                <cbc:Percent>19.00</cbc:Percent><!--BT-119-->
+                <cac:TaxScheme>
+                    <cbc:ID>VAT</cbc:ID>
+                </cac:TaxScheme>
+            </cac:TaxCategory>
+        </cac:TaxSubtotal>
+		
+    </cac:TaxTotal>	
+	
+* Totaluri factura . Toate valorile sunt cu 2 zecimale
+    <cac:LegalMonetaryTotal><!--BG-22-->
+        * Valoare fara TVA
+		<cbc:LineExtensionAmount currencyID="RON">800.00</cbc:LineExtensionAmount><!--BT-106-->
+        
+		* Total TVA
+		<cbc:TaxExclusiveAmount currencyID="RON">800.00</cbc:TaxExclusiveAmount><!--BT-109-->
+        
+		* Total cu TVA ( Valoarea fara TVA - Reduceri/Discount + Alte Taxe + TVA)
+		<cbc:TaxInclusiveAmount currencyID="RON">952.00</cbc:TaxInclusiveAmount><!--BT-112-->
+        
+		* Valoare Reducere/Discount fara TVA 
+		<cbc:AllowanceTotalAmount currencyID="RON">0.00</cbc:AllowanceTotalAmount><!--BT-107-->
+        
+		* Valoare alte taxe fara TVA (ex: cheltuieli transport)
+		<cbc:ChargeTotalAmount currencyID="RON">0</cbc:ChargeTotalAmount><!--BT-108-->
+        
+		* Valoare platita in avans
+		<cbc:PrepaidAmount currencyID="RON">0</cbc:PrepaidAmount><!--BT-113-->
+        
+		* Valoare pentru rotunjire (optional)
+		<cbc:PayableRoundingAmount currencyID="RON">0.00</cbc:PayableRoundingAmount><!--BT-114-->
+        
+		* Valoarea de plata
+		<cbc:PayableAmount currencyID="RON">952.00</cbc:PayableAmount><!--BT-115-->
+    </cac:LegalMonetaryTotal>	
+	
+* Linii factura. Se repeta pentru fiecare linie din factura
+https://docs.peppol.eu/poacc/billing/3.0/syntax/ubl-invoice/cac-InvoiceLine/
+
+  <cac:InvoiceLine>
+		* Identificator linie (ex: Nr. crt.: 1,2,3...)
+        <cbc:ID>1</cbc:ID><!--BT-126-->
+		
+		* Cantitate 4 zecimale
+		* unitCode "H87" = bucata, "MON" = month/luna
+        <cbc:InvoicedQuantity unitCode="MON">1.0000</cbc:InvoicedQuantity><!--BT-129 BT-130-->
+        
+		* Valoarea neta fara TVA (inclusiv reduceri, alte taxe)
+		<cbc:LineExtensionAmount currencyID="RON">800.00</cbc:LineExtensionAmount><!--BT-131-->
+        
+		<cac:Item><!--BG-31-->
+            * Denumire articol
+			<cbc:Name>Prestari servicii training online conform contract nr. 1760/31.01.2023 (noiembrie 2023)</cbc:Name><!--BT-153-->
+            
+			* TVA articol
+			<cac:ClassifiedTaxCategory>
+                
+				* S = cota standarda 19/9/5, AE = Taxare inversa, E = Scutit
+				<cbc:ID>S</cbc:ID><!--BT-151-->
+                
+				* Procent TVA 19/9/5
+				<cbc:Percent>19.00</cbc:Percent><!--BT-152-->
+                <cac:TaxScheme>
+                    <cbc:ID>VAT</cbc:ID>
+                </cac:TaxScheme>
+            </cac:ClassifiedTaxCategory>
+        </cac:Item>
+		
+        <cac:Price><!--BG-29-->
+			* Pretul unitar
+            <cbc:PriceAmount currencyID="RON">800.00</cbc:PriceAmount><!--BT-146-->
+            * Optional
+			<cbc:BaseQuantity unitCode="MON">1.0000</cbc:BaseQuantity><!--BT-149 BT-150-->
+        </cac:Price>
+    </cac:InvoiceLine>	
