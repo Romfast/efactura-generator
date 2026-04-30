@@ -20,6 +20,7 @@
             <div class="button-group">
                 <input type="file" id="fileInput" class="file-input" accept=".xml,.zip,application/zip,application/x-zip-compressed">
                 <button onclick="document.getElementById('fileInput').click()" class="button">Alege Fișier XML / ZIP</button>
+                <button id="btnValidateAnaf" onclick="window.validateAnaf()" class="button button-success" style="display:none" title="Validare prin API ANAF (necesită receiver.php)">Validare ANAF</button>
                 <button onclick="handleStorno()" class="button button-danger">Stornează</button>
                 <button onclick="saveXML()" class="button button-secondary">Salvează XML</button>
             </div>
@@ -101,7 +102,10 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Cod TVA</label>
-                            <input type="text" class="form-input mono" name="supplierVAT" style="text-align:left">
+                            <div class="input-with-action">
+                                <input type="text" class="form-input mono" name="supplierVAT" style="text-align:left">
+                                <button type="button" id="btnLookupSupplierCif" class="button button-secondary button-small anaf-cif-btn" style="display:none" onclick="window.lookupCif('supplier')" title="Caută date firmă din ANAF">Caută</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Nr. înregistrare</label>
@@ -148,7 +152,10 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Cod TVA</label>
-                            <input type="text" class="form-input mono" name="customerVAT" style="text-align:left">
+                            <div class="input-with-action">
+                                <input type="text" class="form-input mono" name="customerVAT" style="text-align:left">
+                                <button type="button" id="btnLookupCustomerCif" class="button button-secondary button-small anaf-cif-btn" style="display:none" onclick="window.lookupCif('customer')" title="Caută date firmă din ANAF">Caută</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Nr. înregistrare</label>
@@ -272,7 +279,7 @@
         </form>
 
         <footer class="app-footer">
-            <span id="app-version">v0.9-beta-5</span>
+            <span id="app-version">v0.9-beta-6</span>
             <a href="https://www.romfast.ro">www.romfast.ro</a>
         </footer>        
     </div>

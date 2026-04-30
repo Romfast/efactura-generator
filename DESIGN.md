@@ -110,10 +110,13 @@ Approach: **restrained**. O singură culoare primary, neutrals warm, semantic co
 | `.btn-danger` | transparent | 1px `--danger` | `--danger` | Stornare, ștergere |
 | `.btn-add` | transparent | 1px dashed `--border-strong` | `--text-muted` | Adaugă articol/rând |
 | `.btn-ghost` (header) | transparent | 1px `rgba(255,255,255,0.18)` | `#f1f5f9` | Pe slate-900 background |
-| `.btn-success-ghost` (header) | transparent | 1px `rgba(134,239,172,0.35)` | `#86efac` | Validare ANAF pe header |
+| `.button-success` | transparent | 1px `--success` | `--success` | Validare ANAF, acțiune pozitivă (form) |
+| `.button-success` (header) | transparent | 1px `rgba(134,239,172,0.35)` | `#86efac` | Validare ANAF pe header (ghost verde) |
 | `.btn-danger-ghost` (header) | transparent | 1px `rgba(252,165,165,0.35)` | `#fca5a5` | Stornare pe header |
 
 Sizes: default `padding: 7px 14px; font-size: 13px;`. Small: `padding: 5px 10px; font-size: 12px;`.
+
+**Input cu acțiune inline:** `.input-with-action` = `display: flex; gap: 6px; align-items: center;` cu `.form-input { flex: 1 }`. Folosit pentru câmpul CIF + buton "Caută" (D8 ANAF lookup).
 
 ### Inputs
 
