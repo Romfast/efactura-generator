@@ -9,6 +9,7 @@ import { validateCIF } from './validation/cif.js';
 import { validateIBAN } from './validation/iban.js';
 import { runBRRules } from './validation/br-ro.js';
 import { probeReceiver, anafValidate, anafCifLookup } from './anaf.js';
+import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js';
 
 // Constants
 const XML_NAMESPACES = {
@@ -623,7 +624,10 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
             <div class="grid">
                 <div class="form-group">
                     <label class="form-label">Denumire</label>
-                    <input type="text" class="form-input" name="description${index}" value="${description}">
+                    <div class="description-wrapper">
+                        <input type="text" class="form-input" name="description${index}" value="${description}"
+                               autocomplete="off" data-catalog-input="${index}">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cantitate</label>
@@ -685,6 +689,13 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
                     <div class="form-group description-group">
                         <label class="form-label">Descriere</label>
                         <textarea class="form-input" name="itemDescription${index}" rows="2">${itemDescription}</textarea>
+                    </div>
+                    <div class="form-group" style="margin-top:4px">
+                        <button type="button" class="button button-secondary button-small"
+                                onclick="window.saveLineToLocalCatalog(${index})"
+                                title="Salvează articolul curent în catalogul local (IndexedDB)">
+                            Salvează în catalog
+                        </button>
                     </div>
                     <div class="identifications-container" id="identifications${index}">
                         <div class="identifications-header">
@@ -4711,6 +4722,190 @@ function _checkYearRollover() {
 
 // Verifică rollover la DOMContentLoaded (după ce restul UI este inițializat)
 document.addEventListener('DOMContentLoaded', _checkYearRollover);
+
+// ============================================================================
+// PR-A13: Catalog produse IndexedDB — autocomplete + save (D15)
+// Câmpul "Denumire" din fiecare linie factură primește sugestii din catalog.
+// ============================================================================
+
+/** ID-ul timeout-ului de debounce pentru autocomplete. */
+let _catalogDebounceTimer = null;
+
+/** Dropdown curent deschis (referință pentru cleanup). */
+let _activeCatalogDropdown = null;
+
+/**
+ * Creează și afișează dropdown-ul de sugestii catalog sub input-ul dat.
+ * @param {HTMLInputElement} input
+ * @param {Array} items - Produse din catalog
+ * @param {number} lineIndex
+ */
+function _showCatalogDropdown(input, items, lineIndex) {
+    _hideCatalogDropdown();
+
+    const wrapper = input.closest('.description-wrapper');
+    if (!wrapper) return;
+
+    const dd = document.createElement('div');
+    dd.className = 'catalog-dropdown';
+    dd.setAttribute('role', 'listbox');
+    dd.setAttribute('aria-label', 'Sugestii catalog produse');
+
+    if (!items.length) {
+        dd.innerHTML = `<div class="catalog-item-empty">Niciun produs în catalog pentru "${_escapeHtml(input.value)}"</div>`;
+    } else {
+        dd.innerHTML = items.map((item, i) => `
+<div class="catalog-dropdown-item" role="option" data-catalog-id="${_escapeHtml(item.id)}" data-catalog-idx="${i}">
+    <div class="catalog-item-name">${_escapeHtml(item.name)}</div>
+    <div class="catalog-item-meta">${_escapeHtml(item.unit)} · ${_escapeHtml(item.price)} RON · TVA ${_escapeHtml(item.vatType)} ${_escapeHtml(item.vatRate)}%</div>
+</div>`).join('');
+
+        // Click pe un item → aplică în linia de factură
+        dd.addEventListener('mousedown', function(e) {
+            const itemEl = e.target.closest('[data-catalog-id]');
+            if (!itemEl) return;
+            e.preventDefault(); // evită blur pe input
+            const idx    = parseInt(itemEl.dataset.catalogIdx, 10);
+            const chosen = items[idx];
+            if (chosen) _applyCatalogItem(chosen, lineIndex);
+            _hideCatalogDropdown();
+        });
+    }
+
+    wrapper.appendChild(dd);
+    _activeCatalogDropdown = dd;
+}
+
+/** Ascunde dropdown-ul activ. */
+function _hideCatalogDropdown() {
+    if (_activeCatalogDropdown) {
+        _activeCatalogDropdown.remove();
+        _activeCatalogDropdown = null;
+    }
+}
+
+/**
+ * Aplică un produs din catalog în câmpurile liniei de factură.
+ * @param {Object} item - Produs din catalog
+ * @param {number} lineIndex
+ */
+function _applyCatalogItem(item, lineIndex) {
+    const set = (name, val) => {
+        const el = document.querySelector(`[name="${name}${lineIndex}"]`);
+        if (el && val !== undefined) el.value = val;
+    };
+
+    set('description', item.name);
+    set('unit', item.unit);
+
+    const priceEl = document.querySelector(`[name="price${lineIndex}"]`);
+    if (priceEl && item.price) {
+        priceEl.value = item.price;
+        if (priceEl.dataset) priceEl.dataset.raw = item.price;
+    }
+
+    const vatTypeEl = document.querySelector(`[name="vatType${lineIndex}"]`);
+    if (vatTypeEl && item.vatType) vatTypeEl.value = item.vatType;
+
+    const vatRateEl = document.querySelector(`[name="vatRate${lineIndex}"]`);
+    if (vatRateEl && item.vatRate !== undefined) vatRateEl.value = item.vatRate;
+
+    if (item.description) {
+        const descEl = document.querySelector(`[name="itemDescription${lineIndex}"]`);
+        if (descEl) descEl.value = item.description;
+    }
+
+    updateTotals();
+}
+
+/**
+ * Inițializează event delegation pe #lineItems pentru autocomplete catalog.
+ * Apelat din initializeUI().
+ */
+function _initCatalogAutocomplete() {
+    const container = document.getElementById('lineItems');
+    if (!container) return;
+
+    container.addEventListener('input', function(e) {
+        const input = e.target;
+        if (!input.dataset.catalogInput) return;
+        const lineIndex = parseInt(input.dataset.catalogInput, 10);
+        const prefix    = input.value.trim();
+
+        clearTimeout(_catalogDebounceTimer);
+
+        if (!prefix || prefix.length < 2) {
+            _hideCatalogDropdown();
+            return;
+        }
+
+        _catalogDebounceTimer = setTimeout(async () => {
+            try {
+                const items = await catalogSearch(prefix, 8);
+                _showCatalogDropdown(input, items, lineIndex);
+            } catch (err) {
+                // IndexedDB indisponibil (private browsing) — ignorat silențios
+            }
+        }, 200);
+    });
+
+    container.addEventListener('blur', function(e) {
+        if (!e.target.dataset?.catalogInput) return;
+        // Delay pentru a permite click pe dropdown înainte de close
+        setTimeout(_hideCatalogDropdown, 200);
+    }, true);
+
+    container.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && _activeCatalogDropdown) {
+            _hideCatalogDropdown();
+        }
+    });
+}
+
+/**
+ * Salvează linia de factură curentă în catalog local (IndexedDB).
+ * @param {number} lineIndex
+ */
+window.saveLineToLocalCatalog = async function(lineIndex) {
+    const nameInput = document.querySelector(`[name="description${lineIndex}"]`);
+    const name      = (nameInput?.value || '').trim();
+
+    if (!name) {
+        showToast('Introduceți o denumire înainte de a salva în catalog.', 'warning');
+        return;
+    }
+
+    const priceEl   = document.querySelector(`[name="price${lineIndex}"]`);
+    const vatTypeEl = document.querySelector(`[name="vatType${lineIndex}"]`);
+    const vatRateEl = document.querySelector(`[name="vatRate${lineIndex}"]`);
+    const unitEl    = document.querySelector(`[name="unit${lineIndex}"]`);
+    const descEl    = document.querySelector(`[name="itemDescription${lineIndex}"]`);
+
+    const product = {
+        name,
+        unit:        unitEl?.value         || 'EA',
+        price:       priceEl?.dataset?.raw || priceEl?.value || '0',
+        vatType:     vatTypeEl?.value      || 'S',
+        vatRate:     vatRateEl?.value      || '19',
+        description: descEl?.value        || '',
+    };
+
+    try {
+        const id = await catalogAdd(product);
+        showToast(`"${name}" salvat în catalog.`, 'success', `ID: ${id.slice(0, 8)}…`);
+    } catch (err) {
+        const isUnavailable = err?.message?.includes('indexeddb');
+        showToast(
+            isUnavailable
+                ? 'Catalogul nu este disponibil (private browsing sau browser blocat IndexedDB).'
+                : 'Eroare la salvare în catalog: ' + err.message,
+            'error'
+        );
+    }
+};
+
+// Inițializare catalog la DOMContentLoaded
+document.addEventListener('DOMContentLoaded', _initCatalogAutocomplete);
 
 // Export for testing if needed
 if (typeof module !== 'undefined' && module.exports) {

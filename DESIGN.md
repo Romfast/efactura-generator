@@ -150,6 +150,18 @@ Cheie localStorage: `efactura.{tip}.v1` (ex. `efactura.profil.v1` pentru profil 
 
 Atunci când e folosit pe `.section-title`, span-ul `.card-actions` NU primește `border-top` / `padding-top` / `margin-top` (override în CSS) — rămâne inline cu titlul.
 
+### Catalog produse autocomplete (D15 — A13)
+
+Dropdown custom poziționat via `.description-wrapper { position: relative }` + `.catalog-dropdown { position: absolute }` sub câmpul "Denumire" din liniile de factură.
+
+- `.catalog-dropdown`: `background: --surface; border: 1px solid --border-strong; border-radius: --radius-sm; box-shadow: --shadow-card; z-index: 500; max-height: 240px; overflow-y: auto;`
+- `.catalog-dropdown-item`: `padding: 8px 12px; cursor: pointer; border-bottom: 1px solid --border;` Hover: `background: --surface-muted`.
+- `.catalog-item-name`: 13px / 500 / `--text`. `.catalog-item-meta`: 11px Geist Mono / `--text-muted` — `{unit} · {price} RON · TVA {type} {rate}%`.
+
+Comportament: debounce 200ms pe `input`, prefix search IDB (min 2 caractere). Click pe item populează: Denumire, UM, Preț (cu `dataset.raw`), Tip TVA, Cotă TVA, Descriere. Blur → close cu delay 200ms (permite click). Esc = close. Erorile IDB (private browsing) sunt ignorate silențios.
+
+Buton "Salvează în catalog" (`.button-secondary.button-small`) în Detalii Suplimentare per linie. Salvează `{name, unit, price, vatType, vatRate, description}` în IDB store `products` (UUID keyPath). Confirmare toast `success`.
+
 ### Tables
 
 Headings: `text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; color: --text-muted; font-weight: 500;`. Rows: `padding: 10px; border-bottom: 1px solid --border;`. Hover row: `background: --surface-muted`. Coloanele numerice: `text-align: right; font-family: Geist Mono; tabular-nums`.
