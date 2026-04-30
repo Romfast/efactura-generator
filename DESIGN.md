@@ -182,6 +182,35 @@ Animation: `slide-in 150ms ease-out` (translateX 16px → 0). NO icon, NO emoji.
 
 ARIA: container `aria-live="polite"`. Toast = `role="status"` (info/success), `role="alert"` (warning/error).
 
+### BR Validation Panel (floating, D5)
+
+Container fix `bottom: 16px; right: 16px`, lățime 360px, z-index 900. Colaps implicit — header vizibil permanent, body toggle la click.
+
+Header:
+- `background: --surface-muted; padding: 10px 14px; cursor: pointer;`
+- Text summary: `font-weight: 500; 13px` — "X critice / Y erori / Z warnings" cu culoare semantică (danger / warning / success).
+- Label toggle `▲ extinde` / `▼ restrânge` dreapta.
+
+Body (expand):
+- `max-height: 360px; overflow-y: auto;`
+- Per item: `padding: 8px 14px; border-bottom: 1px solid --border; cursor: pointer;`
+  - Coloana stânga: cod (`Geist Mono 11px --text-muted`), minim 70px.
+  - Coloana dreapta: mesaj (`12px --text`).
+  - Click pe item → scroll la câmpul cu eroare + highlight 2s `--warning-soft` (animation `br-field-flash`).
+- Severity `fatal/error`: cod + mesaj roșu `--danger`.
+- Severity `warning`: cod galben `--warning`.
+- Footer când 0 erori: "Toate verificările trecute." verde.
+
+Comportament:
+- Panel ascuns când 0 violări.
+- Update live pe orice `updateTotals()` / `refreshTotals()` și după `parseXML()`.
+- `role="region"` + `aria-label="Probleme de validare"` + `aria-live="polite"`.
+
+Mobile ≤720px (D20):
+- `position: fixed; bottom: 0; left: 0; right: 0; width: 100%;`
+- Header: `min-height: 44px; border-top: 3px solid --warning; background: --warning-soft;`
+- Panel cu erori critice: `border-top-color: --danger; background: --danger-soft`.
+
 ### Drop-zone (empty state pentru încărcare XML)
 
 Pentru `index.html` fresh-load (no XML loaded) și pentru bulk drop A14.
