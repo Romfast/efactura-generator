@@ -97,6 +97,12 @@ Bumping a release means three coordinated edits:
 
 There's no automated version source.
 
+## Design System
+
+Citește `DESIGN.md` înainte de orice decizie vizuală sau UI. Toate alegerile de font, paletă, spațiere, radius, butoane, badges, alerts și layout sunt definite acolo. Nu te abate fără aprobare explicită din partea utilizatorului. La code review (sau în mod QA), semnalează orice cod care nu se aliniază cu DESIGN.md (ex: `parseFloat` display fără `.mono`, gradient/blob/decor adăugat, font default OS în loc de Geist, border-radius uniform, header alb în loc de slate-900).
+
+Înainte să introduci o componentă vizuală nouă (badge, modal, sidebar item, tabel sumar, etc.), verifică secțiunea **Components** și **Dogfood checklist** din DESIGN.md.
+
 ## Workspace rules (from /workspace/CLAUDE.md)
 
 When invoked non-interactively (`claude -p` / `claudep.sh`), put new scratch files under `/workspace/.claude-work/<timestamp>_<task>/` rather than this repo. Modifications to existing files in this repo stay in place.

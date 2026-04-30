@@ -62,3 +62,4 @@ out/
 
 # Optional test coverage directory
 coverage/
+.gstack/
