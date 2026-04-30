@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editor Factură Electronică</title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=geist:400,500,600,700|geist-mono:400,500,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/css/pikaday.min.css">
     <link rel="stylesheet" href="./styles/main.css">
     <link rel="shortcut icon" href="./favicon.ico" type="image/x-icon" />
-</head>
 </head>
 <body>
     <div class="container">
@@ -33,29 +34,29 @@
                     <div class="compact-grid">
                         <div class="form-group">
                             <label class="form-label">Număr Factură</label>
-                            <input type="text" class="form-input" name="invoiceNumber">
+                            <input type="text" class="form-input mono" name="invoiceNumber" style="text-align:left">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Data Emiterii</label>
                             <div class="date-input-container">
-                                <input type="text" class="form-input date-input" name="issueDate" placeholder="dd.mm.yyyy" maxlength="10" pattern="\d{2}.\d{2}.\d{4}">
+                                <input type="text" class="form-input date-input num" name="issueDate" placeholder="dd.mm.yyyy" maxlength="10" pattern="\d{2}.\d{2}.\d{4}">
                                 <button type="button" class="calendar-button" tabindex="-1">📅</button>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Data Scadentă</label>
                             <div class="date-input-container">
-                                <input type="text" class="form-input date-input" name="dueDate" placeholder="dd.mm.yyyy" maxlength="10" pattern="\d{2}.\d{2}.\d{4}">
+                                <input type="text" class="form-input date-input num" name="dueDate" placeholder="dd.mm.yyyy" maxlength="10" pattern="\d{2}.\d{2}.\d{4}">
                                 <button type="button" class="calendar-button" tabindex="-1">📅</button>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Monedă Factură</label>
-                            <input type="text" class="form-input" name="documentCurrencyCode" value="RON" maxlength="3">
+                            <input type="text" class="form-input mono" name="documentCurrencyCode" value="RON" maxlength="3" style="text-align:left">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Monedă TVA (opțional)</label>
-                            <input type="text" class="form-input" name="taxCurrencyCode" maxlength="3">
+                            <input type="text" class="form-input mono" name="taxCurrencyCode" maxlength="3" style="text-align:left">
                         </div>
                     </div>
                 </div>
@@ -70,11 +71,11 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Cod TVA</label>
-                            <input type="text" class="form-input" name="supplierVAT">
+                            <input type="text" class="form-input mono" name="supplierVAT" style="text-align:left">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Nr. înregistrare</label>
-                            <input type="text" class="form-input" name="supplierCompanyId">
+                            <input type="text" class="form-input mono" name="supplierCompanyId" style="text-align:left">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Adresă</label>
@@ -94,7 +95,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Telefon</label>
-                            <input type="tel" class="form-input" name="supplierPhone" pattern="[0-9]*">
+                            <input type="tel" class="form-input mono" name="supplierPhone" pattern="[0-9]*" style="text-align:left">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Persoană Contact</label>
@@ -117,11 +118,11 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Cod TVA</label>
-                            <input type="text" class="form-input" name="customerVAT">
+                            <input type="text" class="form-input mono" name="customerVAT" style="text-align:left">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Nr. înregistrare</label>
-                            <input type="text" class="form-input" name="customerCompanyId">
+                            <input type="text" class="form-input mono" name="customerCompanyId" style="text-align:left">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Adresă</label>
@@ -141,7 +142,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Telefon</label>
-                            <input type="tel" class="form-input" name="customerPhone" pattern="[0-9]*">
+                            <input type="tel" class="form-input mono" name="customerPhone" pattern="[0-9]*" style="text-align:left">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Persoană Contact</label>

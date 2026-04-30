@@ -464,12 +464,12 @@ function createAllowanceChargeHTML(index, charge) {
                 </div>
                 <div class="form-group">
                     <label class="form-label">Valoare</label>
-                    <input type="number" step="0.01" class="form-input" name="chargeAmount${index}" 
+                    <input type="number" step="0.01" class="form-input num" name="chargeAmount${index}"
                            value="${charge.amount}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Bază de calcul</label>
-                    <input type="number" step="0.01" class="form-input" name="chargeBaseAmount${index}" 
+                    <input type="number" step="0.01" class="form-input num" name="chargeBaseAmount${index}"
                            value="${charge.baseAmount}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
@@ -482,7 +482,7 @@ function createAllowanceChargeHTML(index, charge) {
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cotă TVA (%)</label>
-                    <input type="number" step="0.1" class="form-input" name="chargeVatRate${index}" 
+                    <input type="number" step="0.1" class="form-input num" name="chargeVatRate${index}"
                            value="${charge.vatRate}" ${charge.vatTypeId !== 'S' ? 'disabled' : ''}>
                 </div>
             </div>
@@ -528,7 +528,7 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cantitate</label>
-                    <input type="number" step="0.001" class="form-input" name="quantity${index}" 
+                    <input type="number" step="0.001" class="form-input num" name="quantity${index}"
                         value="${quantity}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
@@ -539,12 +539,12 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
                 </div>
                 <div class="form-group">
                     <label class="form-label">Preț</label>
-                    <input type="number" step="0.01" class="form-input" name="price${index}" 
+                    <input type="number" step="0.01" class="form-input num" name="price${index}"
                         value="${price}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Discount</label>
-                    <input type="number" step="0.01" class="form-input" name="lineDiscount${index}" 
+                    <input type="number" step="0.01" class="form-input num" name="lineDiscount${index}"
                         value="${lineDiscount}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
@@ -563,7 +563,7 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cotă TVA (%)</label>
-                    <input type="number" step="1" class="form-input" name="vatRate${index}" 
+                    <input type="number" step="1" class="form-input num" name="vatRate${index}"
                         value="${vatRate}" onchange="updateTotals()">
                 </div>
             </div>
@@ -628,13 +628,13 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
                         ).join('')}
                     </select>
                     <label>Cotă:</label>
-                    <input type="text" class="form-input vat-rate" value="${rate}"
+                    <input type="text" class="form-input vat-rate num" value="${rate}"
                            onchange="window.updateVATRow('${rowId}', 'manual')">%
                     <label>Bază Impozabilă:</label>
-                    <input type="text" class="form-input vat-base" value="${baseAmount}"
+                    <input type="text" class="form-input vat-base num" value="${baseAmount}"
                            onchange="window.updateVATRow('${rowId}', 'manual')">
                     <label>Valoare TVA:</label>
-                    <input type="text" class="form-input vat-amount" value="${vatAmount}"
+                    <input type="text" class="form-input vat-amount num" value="${vatAmount}"
                            onchange="window.updateVATRowFromAmount('${rowId}')">
                 </div>
                 <div class="vat-exemption ${['E', 'K', 'O', 'AE'].includes(vatType) ? '' : 'hidden'}">
