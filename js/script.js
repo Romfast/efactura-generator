@@ -4161,7 +4161,7 @@ function _updateBRPanel() {
     body.innerHTML = violations.map(v => {
         const sev = v.severity === 'fatal' ? 'fatal' : v.severity;
         return `<div class="br-panel__item br-panel__item--${sev}"
-                     data-field-ref="${v.fieldRef || ''}"
+                     data-field-ref="${(v.fieldRef || '').replace(/"/g, '&quot;')}"
                      role="button" tabindex="0"
                      aria-label="${v.code}: ${v.message.replace(/"/g, '&quot;')}">
             <span class="br-panel__item-code">${v.code}</span>
