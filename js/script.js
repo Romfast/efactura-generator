@@ -8,6 +8,7 @@ import JSZip from './vendor/jszip.mjs';
 import { validateCIF } from './validation/cif.js';
 import { validateIBAN } from './validation/iban.js';
 import { runBRRules } from './validation/br-ro.js';
+import { probeReceiver, anafValidate, anafCifLookup } from './anaf.js';
 
 // Constants
 const XML_NAMESPACES = {
@@ -4197,6 +4198,155 @@ function _escapeHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
 }
+
+// ============================================================================
+// PR-ANAF: Integrare API ANAF (validare + CIF lookup)
+// Butonul "Validare ANAF" și butoanele "Caută CIF" sunt ascunse la start;
+// probeReceiver() le afișează dacă receiver.php este disponibil.
+// ============================================================================
+
+/**
+ * Serializează starea curentă a formularului în XML string.
+ * Atenție: mutează currentInvoice in-place (la fel ca saveXML).
+ * @returns {string|null} XML string sau null dacă nu există factură.
+ */
+function _currentXMLString() {
+    if (!currentInvoice) return null;
+    const xmlDoc = currentInvoice;
+
+    updateBasicDetails(xmlDoc);
+    updatePartyDetails(xmlDoc);
+    updateBillingReference(xmlDoc);
+    updatePaymentMeans(xmlDoc);
+    updateAllowanceCharges(xmlDoc);
+
+    xmlDoc.querySelectorAll('cac\\:TaxTotal, TaxTotal').forEach(el => el.remove());
+    const mt = xmlDoc.querySelector('cac\\:LegalMonetaryTotal, LegalMonetaryTotal');
+    if (mt) mt.remove();
+    xmlDoc.querySelectorAll('cac\\:InvoiceLine, InvoiceLine').forEach(el => el.remove());
+
+    updateTaxTotals(xmlDoc);
+    updateMonetaryTotals(xmlDoc);
+    updateLineItems(xmlDoc);
+
+    const serializer = new XMLSerializer();
+    let xmlString = serializer.serializeToString(xmlDoc);
+    if (!xmlString.startsWith('<?xml')) {
+        xmlString = '<?xml version="1.0" encoding="UTF-8"?>\n' + xmlString;
+    }
+    return xmlString;
+}
+
+/** Setează starea loading pe un buton (spinner braille + disabled). */
+function _btnLoading(btn, label) {
+    btn.disabled = true;
+    btn.dataset.origText = btn.textContent;
+    btn.innerHTML = `<span class="spinner-mono"></span> ${label}`;
+}
+
+/** Restaurează starea normală a unui buton. */
+function _btnDone(btn) {
+    btn.disabled = false;
+    btn.textContent = btn.dataset.origText || btn.textContent;
+}
+
+/**
+ * Validează factura curentă prin API-ul ANAF.
+ * Necesită receiver.php cu "anaf_token" configurat în config.json.
+ */
+window.validateAnaf = async function() {
+    if (!currentInvoice) {
+        showToast('Nicio factură încărcată. Deschideți un XML eFactura mai întâi.', 'warning');
+        return;
+    }
+    const btn = document.getElementById('btnValidateAnaf');
+    if (btn) _btnLoading(btn, 'Se validează...');
+    try {
+        const xmlString = _currentXMLString();
+        if (!xmlString) throw new Error('Nu s-a putut genera XML-ul facturii.');
+
+        const result = await anafValidate(xmlString);
+        if (result.valid) {
+            showToast('Factură validă ANAF — nicio eroare detectată.', 'success');
+        } else {
+            const errors = result.messages.filter(m => m.severity === 'ERROR' || m.severity === 'FATAL');
+            const warns  = result.messages.filter(m => m.severity === 'WARNING');
+            const parts  = [];
+            if (errors.length) parts.push(`${errors.length} erori`);
+            if (warns.length)  parts.push(`${warns.length} avertismente`);
+            const sub = result.messages.slice(0, 3).map(m => m.message).join(' | ');
+            showToast(`ANAF: ${parts.join(', ')}`, 'error', sub.slice(0, 200));
+        }
+    } catch (err) {
+        showToast('Eroare validare ANAF: ' + err.message, 'error',
+                  'Verificați că receiver.php este configurat cu anaf_token valid.');
+    } finally {
+        if (btn) _btnDone(btn);
+    }
+};
+
+/**
+ * Caută datele firmei după CIF din câmpul supplierVAT / customerVAT.
+ * @param {'supplier'|'customer'} party
+ */
+window.lookupCif = async function(party) {
+    const isSupplier = party === 'supplier';
+    const cifInput   = document.querySelector(`[name="${isSupplier ? 'supplier' : 'customer'}VAT"]`);
+    if (!cifInput) return;
+
+    const cif = (cifInput.value || '').trim();
+    if (!cif) {
+        showToast('Introduceți un CIF/CUI în câmpul Cod TVA mai întâi.', 'warning');
+        return;
+    }
+
+    const btnId = isSupplier ? 'btnLookupSupplierCif' : 'btnLookupCustomerCif';
+    const btn   = document.getElementById(btnId);
+    if (btn) _btnLoading(btn, 'Caută...');
+
+    try {
+        const result = await anafCifLookup(cif);
+        if (!result.found) {
+            const note = result.async
+                ? 'API ANAF asincron — rezultatele nu sunt disponibile imediat. Reîncercați.'
+                : 'CIF-ul nu a fost găsit în baza de date ANAF.';
+            showToast('CIF negăsit în ANAF.', 'info', note);
+            return;
+        }
+
+        // Populează câmpurile firmei
+        const prefix = isSupplier ? 'supplier' : 'customer';
+        const set = (name, val) => {
+            const el = document.querySelector(`[name="${prefix}${name}"]`);
+            if (el && val) el.value = val;
+        };
+
+        set('Name',      result.denumire);
+        set('CompanyId', result.nrRegCom);
+
+        // Parsare adresă simplă: ANAF returnează o singură string cu tot
+        if (result.adresa) {
+            set('Address', result.adresa);
+        }
+
+        const msg = result.tvaActiv ? 'Platitor TVA activ' : 'Neplatitor TVA';
+        showToast(`Date ANAF importate: ${result.denumire || cif}`, 'success', msg);
+    } catch (err) {
+        showToast('Eroare lookup CIF ANAF: ' + err.message, 'error',
+                  'Verificați că receiver.php este disponibil pe server.');
+    } finally {
+        if (btn) _btnDone(btn);
+    }
+};
+
+// Probează receiver.php la startup — dacă e disponibil, afișează butoanele ANAF.
+(async () => {
+    const available = await probeReceiver().catch(() => false);
+    if (available) {
+        document.getElementById('btnValidateAnaf')?.style?.setProperty('display', '');
+        document.querySelectorAll('.anaf-cif-btn').forEach(b => b.style.removeProperty('display'));
+    }
+})();
 
 // Export for testing if needed
 if (typeof module !== 'undefined' && module.exports) {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9-beta-6 - 30.04.2026
+
+### New Features
+- Added: Integrare API ANAF (PR-ANAF). Modul nou `js/anaf.js` (ESM) cu trei funcții: `probeReceiver()` (health check `?action=ping` — returnează `true/false` în funcție de disponibilitatea receiver.php), `anafValidate(xmlContent)` (proxy POST validare ANAF `prod/FCTEL/rest/validare/FACT1`, normalizează `{valid, messages[]}`) și `anafCifLookup(cif)` (proxy GET CIF din ANAF `AsynchWebService/api/v8/ws/tva`, returnează `{found, denumire, adresa, nrRegCom, tvaActiv}`). Buton "Validare ANAF" (`.button-success` ghost pe header) și butoane "Caută CIF" (`.button-secondary.button-small`) lângă câmpurile Cod TVA furnizor/client. Butoanele sunt ascunse la startup; `probeReceiver()` le afișează dacă receiver.php răspunde. Loading D8: spinner braille `⠋…⠏` pe buton + `disabled` pe durata apelului. Toast: `success` (valid), `error` (invalid, cu primele 3 mesaje ANAF), `info` (CIF negăsit). Lookup CIF populează automat: Nume, Nr. înregistrare, Adresă. `_currentXMLString()` helper intern — serializează starea curentă a formularului ca XML fără a declanșa download-ul.
+- Added: Refactored `receiver.php` cu action dispatcher clar (PR-ANAF). Structura: (1) config, (2) funcții helper (validateXML, checkIP, validateToken, curlPost), (3) routing `?action=` înaintea auth (ping fără auth, ANAF proxy fără X-Api-Key — protejat doar prin IP check, upload/cleanup cu X-Api-Key full auth), (4) switch `{validate, pdf, cif}`, (5) upload XML legacy, (6) cleanup manual, (7) auto-cleanup. Handler `handleAnafValidate()` + `handleAnafPdf()` proxiesc ANAF cu `Bearer anaf_token` din config.json (configurat de operator). Handler `handleAnafCif()` folosește endpoint public ANAF v8 (verificat 2026-04-30: HTTP 200, v9 → 404) cu normalizare răspuns. `?action=ping` returnează `{pong:true}` fără auth. CSS adăugat: `.button.button-success` (verde, conform DESIGN.md `btn-success-ghost`), `.header .button.button-success` (green ghost pe slate-900), `.input-with-action` (flexbox inline pentru input + buton Caută).
+
 ## 0.9-beta-5 - 30.04.2026
 
 ### New Features

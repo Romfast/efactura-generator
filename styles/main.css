@@ -429,6 +429,41 @@ button.button {
     font-size: 12px;
 }
 
+/* Success — validare ANAF ok (green ghost pe header, filled pe form) */
+.button.button-success {
+    background-color: transparent;
+    border: 1px solid var(--success);
+    color: var(--success);
+}
+
+.button.button-success:hover {
+    background-color: var(--success-soft);
+}
+
+/* Header success ghost — pe slate-900 (DESIGN.md: btn-success-ghost) */
+.header .button.button-success {
+    background-color: transparent;
+    border: 1px solid rgba(134, 239, 172, 0.35);
+    color: #86efac;
+}
+
+.header .button.button-success:hover {
+    background-color: rgba(134, 239, 172, 0.12);
+    border-color: rgba(134, 239, 172, 0.6);
+    color: #bbf7d0;
+}
+
+/* Input cu buton inline (CIF Caută, etc.) */
+.input-with-action {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.input-with-action .form-input {
+    flex: 1;
+}
+
 /* Add button — dashed border */
 .button.button-add,
 .button-add {
