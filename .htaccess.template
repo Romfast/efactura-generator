@@ -4,4 +4,6 @@
 </FilesMatch>
 
 # Native ESM (.mjs) require JavaScript MIME type pe Apache.
-AddType text/javascript .mjs
+<IfModule mod_mime.c>
+    AddType text/javascript .mjs
+</IfModule>
