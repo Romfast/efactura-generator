@@ -174,7 +174,8 @@ export function formatRaw(value, decimals = 2) {
 export function setRaw(input, value, decimals = 2) {
     const big = (value instanceof Big) ? value : parseStrictOr(value);
     input.dataset.raw = big.toFixed(decimals);
-    input.value = _format(big, decimals);
+    // type="number" acceptă doar punct decimal; type="text" primește display ro-RO
+    input.value = (input.type === 'number') ? big.toFixed(decimals) : _format(big, decimals);
 }
 
 /**
