@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9-beta-5 (în pregătire) - 30.04.2026
+
+### Modifications
+- Added: `DESIGN.md` — sistem de design formal pentru editor (industrial/utilitarian, Geist + Geist Mono, paletă warm-paper + slate-900 header, border-radius hierarchic, anti-SaaS-chrome posture). Decizii bazate pe research competitive (SmartBill, Oblio, B2BRouter, e-invoice.be) și principiul "respectă timpul contabilului".
+- Modified: `CLAUDE.md` — adăugată secțiunea "Design System" care indică DESIGN.md ca sursă autoritativă pentru orice decizie UI înainte de implementarea Track 1 + Track 2 D.
+
 ## 0.9-beta-4 - 07.02.2025
 
 ### Bugfixes
