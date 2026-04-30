@@ -7,6 +7,7 @@ import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js';
 import JSZip from './vendor/jszip.mjs';
 import { validateCIF } from './validation/cif.js';
 import { validateIBAN } from './validation/iban.js';
+import { runBRRules } from './validation/br-ro.js';
 
 // Constants
 const XML_NAMESPACES = {
@@ -528,6 +529,9 @@ function parseXML(xmlContent) {
         // PR-A11: după ce toate elementele sunt populate, rulează math
         // validation pentru a popula badge-urile (per-line + per-VAT-row + footer).
         if (typeof validateMath === 'function') validateMath();
+
+        // PR-BR: inițializează panelul de validare după load XML.
+        _updateBRPanel();
     } catch (error) {
         handleError(error, 'Eroare la parsarea fișierului XML');
     }
@@ -2355,6 +2359,9 @@ function updateTotals() {
 
     // PR-A11: refresh badge-uri math validation după displayTotals.
     if (typeof validateMath === 'function') validateMath();
+
+    // PR-BR: actualizează panelul de validare BR live pe orice editare.
+    _updateBRPanel();
 }
 
 function refreshTotals() {
@@ -2389,6 +2396,9 @@ function refreshTotals() {
 
     // PR-A11: refresh badge-uri math validation după displayTotals.
     if (typeof validateMath === 'function') validateMath();
+
+    // PR-BR: actualizează panelul de validare BR live.
+    _updateBRPanel();
 }
 
 function calculateLineItemTotals() {
@@ -3987,6 +3997,206 @@ function showToast(message, variant = 'info', subtext = '') {
 // Expose pentru consumeri externi / debugging.
 window.validateMath = validateMath;
 window.showToast = showToast;
+
+// ============================================================================
+// PR-BR (A2): Floating BR Validation Panel (D5)
+// Panel sticky bottom-right — colecteaza snapshot form, rulează cele 30
+// reguli BR/CIUS-RO și afișează violările cu link la câmp + highlight 2s.
+// ============================================================================
+
+/**
+ * Colectează snapshot-ul datelor din formular pentru validarea BR.
+ * Citește valorile afișate (sau dataset.raw pentru numerice).
+ */
+function collectInvoiceDataForBR() {
+    const lineItemEls = Array.from(document.querySelectorAll('.line-item'));
+
+    const lineItems = lineItemEls.map(el => {
+        const idx = el.dataset.index;
+        const qEl = document.querySelector(`[name="quantity${idx}"]`);
+        const pEl = document.querySelector(`[name="price${idx}"]`);
+        const dEl = document.querySelector(`[name="lineDiscount${idx}"]`);
+        const tEl = document.querySelector(`[data-line-total-index="${idx}"]`);
+        return {
+            index: parseInt(idx, 10),
+            description: (document.querySelector(`[name="description${idx}"]`)?.value || '').trim(),
+            quantity: qEl ? (qEl.dataset.raw || qEl.value) : '',
+            unitPrice: pEl ? (pEl.dataset.raw || pEl.value) : '',
+            discount: dEl ? (dEl.dataset.raw || dEl.value || '0') : '0',
+            vatType: (document.querySelector(`[name="vatType${idx}"]`)?.value || ''),
+            vatRate: (document.querySelector(`[name="vatRate${idx}"]`)?.value || '0'),
+            lineTotal: tEl ? tEl.textContent.replace(/[^\d,.-]/g, '') : '0',
+        };
+    });
+
+    const vatRows = Array.from(document.querySelectorAll('.vat-row')).map(row => {
+        const rEl = row.querySelector('.vat-rate');
+        const bEl = row.querySelector('.vat-base');
+        const aEl = row.querySelector('.vat-amount');
+        return {
+            type: (row.querySelector('.vat-type')?.value || ''),
+            rate: rEl ? (rEl.dataset.raw || rEl.value) : '0',
+            base: bEl ? (bEl.dataset.raw || bEl.value) : '0',
+            amount: aEl ? (aEl.dataset.raw || aEl.value) : '0',
+        };
+    });
+
+    // IBAN-uri din rândurile Payment Means dinamice
+    const ibans = Array.from(document.querySelectorAll('[name^="paymentMeansIBAN"]'))
+        .map(el => el.value.trim());
+
+    const parseDisplay = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return '0';
+        return el.textContent.replace(/[^\d,.-]/g, '');
+    };
+
+    return {
+        invoiceNumber: (document.querySelector('[name="invoiceNumber"]')?.value || '').trim(),
+        issueDate: (document.querySelector('[name="issueDate"]')?.value || '').trim(),
+        dueDate: (document.querySelector('[name="dueDate"]')?.value || '').trim(),
+        invoiceTypeCode: (document.querySelector('[name="invoiceTypeCode"]')?.value || '').trim(),
+        currencyCode: (document.querySelector('[name="documentCurrencyCode"]')?.value || '').trim(),
+
+        supplierName: (document.querySelector('[name="supplierName"]')?.value || '').trim(),
+        supplierVAT: (document.querySelector('[name="supplierVAT"]')?.value || '').trim(),
+        supplierCity: (document.querySelector('[name="supplierCity"]')?.value || '').trim(),
+        supplierCountry: (document.querySelector('[name="supplierCountry"]')?.value || '').trim(),
+
+        customerName: (document.querySelector('[name="customerName"]')?.value || '').trim(),
+        customerVAT: (document.querySelector('[name="customerVAT"]')?.value || '').trim(),
+        customerCity: (document.querySelector('[name="customerCity"]')?.value || '').trim(),
+        customerCountry: (document.querySelector('[name="customerCountry"]')?.value || '').trim(),
+
+        lineItems,
+        vatRows,
+        ibans,
+
+        subtotal: parseDisplay('subtotal'),
+        allowances: parseDisplay('totalAllowances'),
+        charges: parseDisplay('totalCharges'),
+        totalVat: parseDisplay('vat'),
+        grandTotal: parseDisplay('total'),
+    };
+}
+
+/** Injectează panelul BR în DOM dacă nu există deja. */
+function _ensureBRPanel() {
+    if (document.getElementById('br-panel')) return;
+
+    const panel = document.createElement('div');
+    panel.id = 'br-panel';
+    panel.className = 'br-panel br-panel--hidden';
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-label', 'Probleme de validare');
+    panel.setAttribute('aria-live', 'polite');
+
+    panel.innerHTML = `
+        <div class="br-panel__header" id="br-panel-header" tabindex="0" aria-expanded="false">
+            <span class="br-panel__summary" id="br-panel-summary">Verificare BR...</span>
+            <span class="br-panel__toggle" id="br-panel-toggle">▲ extinde</span>
+        </div>
+        <div class="br-panel__body" id="br-panel-body" aria-labelledby="br-panel-header">
+            <p class="br-panel__empty">Toate verificările trecute.</p>
+        </div>
+    `;
+
+    document.body.appendChild(panel);
+
+    // Toggle expand/collapse
+    const header = panel.querySelector('#br-panel-header');
+    header.addEventListener('click', () => {
+        const expanded = panel.classList.toggle('is-expanded');
+        header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        panel.querySelector('#br-panel-toggle').textContent = expanded ? '▼ restrânge' : '▲ extinde';
+    });
+    header.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); header.click(); }
+    });
+}
+
+/**
+ * Actualizează panelul BR cu lista de violări.
+ * Apelat după fiecare updateTotals() și după parseXML().
+ */
+function _updateBRPanel() {
+    _ensureBRPanel();
+    const panel = document.getElementById('br-panel');
+    const summary = document.getElementById('br-panel-summary');
+    const body = document.getElementById('br-panel-body');
+    if (!panel || !summary || !body) return;
+
+    // Rulează regulile
+    const data = collectInvoiceDataForBR();
+    const violations = runBRRules(data);
+
+    const fatals = violations.filter(v => v.severity === 'fatal').length;
+    const errors = violations.filter(v => v.severity === 'error').length;
+    const warnings = violations.filter(v => v.severity === 'warning').length;
+    const totalIssues = fatals + errors + warnings;
+
+    if (totalIssues === 0) {
+        panel.classList.add('br-panel--hidden');
+        panel.classList.remove('br-panel--errors');
+        summary.className = 'br-panel__summary br-panel__summary--ok';
+        summary.textContent = '✓ 0 erori BR, 0 warnings';
+        body.innerHTML = '<p class="br-panel__empty">Toate verificările trecute.</p>';
+        return;
+    }
+
+    panel.classList.remove('br-panel--hidden');
+    panel.classList.toggle('br-panel--errors', (fatals + errors) > 0);
+
+    // Summary text
+    const parts = [];
+    if (fatals > 0) parts.push(`${fatals} critice`);
+    if (errors > 0) parts.push(`${errors} erori`);
+    if (warnings > 0) parts.push(`${warnings} warning${warnings > 1 ? 's' : ''}`);
+    summary.textContent = parts.join(' / ');
+    summary.className = 'br-panel__summary ' + (
+        (fatals + errors) > 0 ? 'br-panel__summary--errors' : 'br-panel__summary--warnings'
+    );
+
+    // Render items
+    body.innerHTML = violations.map(v => {
+        const sev = v.severity === 'fatal' ? 'fatal' : v.severity;
+        return `<div class="br-panel__item br-panel__item--${sev}"
+                     data-field-ref="${v.fieldRef || ''}"
+                     role="button" tabindex="0"
+                     aria-label="${v.code}: ${v.message.replace(/"/g, '&quot;')}">
+            <span class="br-panel__item-code">${v.code}</span>
+            <span class="br-panel__item-msg">${_escapeHtml(v.message)}</span>
+        </div>`;
+    }).join('');
+
+    // Wire click → scroll + highlight
+    body.querySelectorAll('.br-panel__item').forEach(item => {
+        const handler = () => {
+            const ref = item.dataset.fieldRef;
+            if (!ref) return;
+            const target = document.querySelector(ref);
+            if (!target) return;
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.remove('br-field-highlight');
+            void target.offsetWidth; // reflow to restart animation
+            target.classList.add('br-field-highlight');
+            setTimeout(() => target.classList.remove('br-field-highlight'), 2100);
+            target.focus?.();
+        };
+        item.addEventListener('click', handler);
+        item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+        });
+    });
+}
+
+function _escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
 
 // Export for testing if needed
 if (typeof module !== 'undefined' && module.exports) {
