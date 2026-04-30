@@ -19,6 +19,18 @@ const VAT_TYPES = {
     "E": "Neimpozabil"
 };
 
+// PR-TODO (A5): cod-uri UN/CEFACT 4461 PaymentMeansCode folosite frecvent în RO.
+const PAYMENT_MEANS_CODES = {
+    '30': 'Transfer bancar',
+    '10': 'Numerar',
+    '48': 'Card',
+    '58': 'Transfer SEPA',
+    '42': 'Plată în cont furnizor',
+    '49': 'Debit direct',
+    '97': 'Compensare',
+    '1': 'Instrument neidentificat'
+};
+
 const VAT_EXEMPTION_CODES = {
     'AE': {
         code: 'VATEX-EU-AE',
@@ -432,6 +444,8 @@ function parseXML(xmlContent) {
 
         populateBasicDetails(xmlDoc);
         populatePartyDetails(xmlDoc);
+        populateBillingReference(xmlDoc);
+        populatePaymentMeans(xmlDoc);
         populateAllowanceCharges(xmlDoc);
         populateLineItems(xmlDoc);
         storeOriginalTotals(xmlDoc);
@@ -1129,6 +1143,8 @@ function initializeUI() {
     window.removeLineItem = removeLineItem;
     window.addAllowanceCharge = addAllowanceCharge;
     window.removeAllowanceCharge = removeAllowanceCharge;
+    window.addPaymentMeansRow = addPaymentMeansRow;
+    window.removePaymentMeansRow = removePaymentMeansRow;
     window.handleStorno = handleStorno;
     window.updateTotals = updateTotals;
     window.saveXML = saveXML;
@@ -1483,10 +1499,172 @@ function populatePartyDetails(xmlDoc) {
  function populateAllowanceCharges(xmlDoc) {
     const charges = parseAllowanceCharges(xmlDoc);
     displayAllowanceCharges(charges);
-    
+
     charges.forEach((_, index) => {
         setupAllowanceChargeListeners(index);
         addChargeVatTypeChangeListener(index);
+    });
+}
+
+// ============================================================================
+// A6: BillingReference (cac:BillingReference / cac:InvoiceDocumentReference)
+// Populate + update helpers. UI: câmpuri billingRefId + billingRefDate în
+// Detalii Factură. La Stornare, handleStorno() auto-populează cu ID + dată
+// facturii originale.
+// ============================================================================
+
+function populateBillingReference(xmlDoc) {
+    const refEl = xmlDoc.querySelector('cac\\:BillingReference cac\\:InvoiceDocumentReference, BillingReference InvoiceDocumentReference');
+    const idInput = document.querySelector('[name="billingRefId"]');
+    const dateInput = document.querySelector('[name="billingRefDate"]');
+    if (!idInput || !dateInput) return;
+
+    if (refEl) {
+        idInput.value = getXMLValue(refEl, 'cbc\\:ID, ID') || '';
+        const rawDate = getXMLValue(refEl, 'cbc\\:IssueDate, IssueDate') || '';
+        if (rawDate) {
+            const [year, month, day] = rawDate.split('-');
+            dateInput.value = `${day}.${month}.${year}`;
+        } else {
+            dateInput.value = '';
+        }
+    } else {
+        idInput.value = '';
+        dateInput.value = '';
+    }
+}
+
+function updateBillingReference(xmlDoc) {
+    // Remove existing BillingReference elements.
+    xmlDoc.querySelectorAll('cac\\:BillingReference, BillingReference').forEach(el => el.remove());
+
+    const id = (document.querySelector('[name="billingRefId"]')?.value || '').trim();
+    if (!id) return; // Nu scriem BillingReference dacă câmpul e gol.
+
+    const dateRaw = (document.querySelector('[name="billingRefDate"]')?.value || '').trim();
+    let isoDate = '';
+    if (dateRaw && /^\d{2}\.\d{2}\.\d{4}$/.test(dateRaw)) {
+        const [dd, mm, yyyy] = dateRaw.split('.');
+        isoDate = `${yyyy}-${mm}-${dd}`;
+    }
+
+    const billingRef = createXMLElement(xmlDoc, XML_NAMESPACES.cac, 'cac:BillingReference');
+    const docRef = createXMLElement(xmlDoc, XML_NAMESPACES.cac, 'cac:InvoiceDocumentReference');
+    docRef.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 'cbc:ID', id));
+    if (isoDate) {
+        docRef.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 'cbc:IssueDate', isoDate));
+    }
+    billingRef.appendChild(docRef);
+
+    // Insert before cac:AccountingSupplierParty (per UBL 2.1 ordering).
+    const supplierParty = xmlDoc.querySelector('cac\\:AccountingSupplierParty, AccountingSupplierParty');
+    if (supplierParty) {
+        xmlDoc.documentElement.insertBefore(billingRef, supplierParty);
+    } else {
+        xmlDoc.documentElement.appendChild(billingRef);
+    }
+}
+
+// ============================================================================
+// A5: PaymentMeans (cac:PaymentMeans multiple)
+// UI: secțiune "Modalități de Plată" cu rânduri dinamice (cod + IBAN).
+// ============================================================================
+
+const PAYMENT_MEANS_CODES = {
+    '10': 'Numerar',
+    '30': 'Transfer bancar (virament)',
+    '42': 'Transfer cont bancar',
+    '48': 'Card bancar',
+    '49': 'Debit direct',
+    '57': 'Transfer online',
+    '58': 'SEPA credit transfer',
+    '59': 'SEPA direct debit',
+    'ZZZ': 'Alt mod',
+};
+
+let _paymentMeansCount = 0;
+
+function createPaymentMeansRowHTML(index, code = '30', iban = '') {
+    const options = Object.entries(PAYMENT_MEANS_CODES)
+        .map(([val, label]) =>
+            `<option value="${val}" ${val === String(code) ? 'selected' : ''}>${val} — ${label}</option>`)
+        .join('');
+
+    return `
+        <div class="payment-means-row" data-pm-index="${index}">
+            <div class="payment-means-grid">
+                <div class="form-group">
+                    <label class="form-label">Cod Modalitate</label>
+                    <select class="form-input" name="paymentMeansCode${index}">${options}</select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">IBAN</label>
+                    <input type="text" class="form-input mono" name="paymentMeansIBAN${index}"
+                           value="${iban}" placeholder="RO49AAAA1B31007593840000" style="text-align:left">
+                </div>
+                <button type="button" class="button button-small button-danger"
+                        onclick="window.removePaymentMeansRow(${index})" style="align-self:flex-end">✕</button>
+            </div>
+        </div>
+    `;
+}
+
+function addPaymentMeansRow(code = '30', iban = '') {
+    const container = document.getElementById('paymentMeansRows');
+    if (!container) return;
+    const index = _paymentMeansCount++;
+    container.insertAdjacentHTML('beforeend', createPaymentMeansRowHTML(index, code, iban));
+}
+
+function removePaymentMeansRow(index) {
+    const row = document.querySelector(`.payment-means-row[data-pm-index="${index}"]`);
+    if (row) row.remove();
+}
+
+function populatePaymentMeans(xmlDoc) {
+    const container = document.getElementById('paymentMeansRows');
+    if (!container) return;
+    container.innerHTML = '';
+    _paymentMeansCount = 0;
+
+    const pmElements = xmlDoc.querySelectorAll('cac\\:PaymentMeans, PaymentMeans');
+    pmElements.forEach(pmEl => {
+        const code = getXMLValue(pmEl, 'cbc\\:PaymentMeansCode, PaymentMeansCode') || '30';
+        const iban = getXMLValue(pmEl, 'cac\\:PayeeFinancialAccount cbc\\:ID, PayeeFinancialAccount ID') || '';
+        addPaymentMeansRow(code, iban);
+    });
+}
+
+function updatePaymentMeans(xmlDoc) {
+    // Remove existing PaymentMeans elements.
+    xmlDoc.querySelectorAll('cac\\:PaymentMeans, PaymentMeans').forEach(el => el.remove());
+
+    const rows = document.querySelectorAll('.payment-means-row');
+    if (rows.length === 0) return;
+
+    // Insert before cac:AllowanceCharge (sau TaxTotal dacă nu există AllowanceCharge).
+    const refEl = xmlDoc.querySelector('cac\\:AllowanceCharge, AllowanceCharge') ||
+                  xmlDoc.querySelector('cac\\:TaxTotal, TaxTotal');
+
+    rows.forEach(row => {
+        const idx = row.dataset.pmIndex;
+        const code = document.querySelector(`[name="paymentMeansCode${idx}"]`)?.value || '30';
+        const iban = (document.querySelector(`[name="paymentMeansIBAN${idx}"]`)?.value || '').trim();
+
+        const pmEl = createXMLElement(xmlDoc, XML_NAMESPACES.cac, 'cac:PaymentMeans');
+        pmEl.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 'cbc:PaymentMeansCode', code));
+
+        if (iban) {
+            const account = createXMLElement(xmlDoc, XML_NAMESPACES.cac, 'cac:PayeeFinancialAccount');
+            account.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 'cbc:ID', iban));
+            pmEl.appendChild(account);
+        }
+
+        if (refEl) {
+            xmlDoc.documentElement.insertBefore(pmEl, refEl);
+        } else {
+            xmlDoc.documentElement.appendChild(pmEl);
+        }
     });
 }
 
@@ -1845,6 +2023,19 @@ function handleLineItemChange(index) {
 }
 
 function handleStorno() {
+    // A6: populează câmpurile BillingReference cu datele facturii curente
+    // înainte de negare (referința facturii originale pentru nota de credit).
+    const currentInvoiceNumber = document.querySelector('[name="invoiceNumber"]')?.value || '';
+    const currentIssueDate = document.querySelector('[name="issueDate"]')?.value || '';
+    const billingRefIdInput = document.querySelector('[name="billingRefId"]');
+    const billingRefDateInput = document.querySelector('[name="billingRefDate"]');
+    if (billingRefIdInput && !billingRefIdInput.value && currentInvoiceNumber) {
+        billingRefIdInput.value = currentInvoiceNumber;
+    }
+    if (billingRefDateInput && !billingRefDateInput.value && currentIssueDate) {
+        billingRefDateInput.value = currentIssueDate;
+    }
+
     // PR-A11: folosim getRaw/setRaw/markDirty în loc de parseFloat
     // pentru a păstra dataset.raw consistent cu input.value după negare.
     document.querySelectorAll('.line-item').forEach((item, index) => {
@@ -2460,6 +2651,8 @@ function saveXML() {
         // Update all the data
         updateBasicDetails(xmlDoc);
         updatePartyDetails(xmlDoc);
+        updateBillingReference(xmlDoc);
+        updatePaymentMeans(xmlDoc);
         updateAllowanceCharges(xmlDoc);
         
         // Remove existing TaxTotal and LegalMonetaryTotal elements

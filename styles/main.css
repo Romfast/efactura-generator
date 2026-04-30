@@ -936,6 +936,23 @@ button.button {
 }
 
 /* ----------------------------------------------------------------------------
+   PaymentMeans row grid (A5)
+   ---------------------------------------------------------------------------- */
+
+.payment-means-grid {
+    display: grid;
+    grid-template-columns: minmax(200px, 1fr) minmax(240px, 2fr) auto;
+    align-items: end;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.payment-means-row:last-child .payment-means-grid {
+    border-bottom: none;
+}
+
+/* ----------------------------------------------------------------------------
    Alerts (BR validation, system messages)
    ---------------------------------------------------------------------------- */
 
