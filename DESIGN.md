@@ -137,6 +137,16 @@ Border-left 3px solid (color = severitate), background semantic-soft, padding 12
 
 `background: --surface; border: 1px solid --border; border-radius: --radius-md; padding: 18px 20px; box-shadow: --shadow-card;`. Card-head conține eyebrow + card-title pe stânga, card-actions (buttons-sm) pe dreapta.
 
+### Profile Actions (A12 — D6)
+
+Pe `card-head` Furnizor (sau orice card cu profil persistent localStorage), `<span class="card-actions">` cu butoane `.button-secondary.button-small` aliniate la dreapta titlului (datorită `display: flex; justify-content: space-between` pe `.section-title`).
+
+Butoane: `Salvează profil` / `Folosește profil` / `Șterge profil`. Empty state (no profil saved): doar `Salvează profil` vizibil; celelalte au `display: none` until `_updateProfileButtons()` le afișează după primul save.
+
+Cheie localStorage: `efactura.{tip}.v1` (ex. `efactura.profil.v1` pentru profil furnizor). Setterii din `js/storage.js` enforțează prefixul `efactura.` și tratează `QuotaExceededError` cu toast `warning` "spațiu local plin" (NU aruncă, NU corupe state-ul existent).
+
+Atunci când e folosit pe `.section-title`, span-ul `.card-actions` NU primește `border-top` / `padding-top` / `margin-top` (override în CSS) — rămâne inline cu titlul.
+
 ### Tables
 
 Headings: `text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; color: --text-muted; font-weight: 500;`. Rows: `padding: 10px; border-bottom: 1px solid --border;`. Hover row: `background: --surface-muted`. Coloanele numerice: `text-align: right; font-family: Geist Mono; tabular-nums`.
