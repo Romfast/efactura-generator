@@ -883,6 +883,58 @@ button.button {
     color: var(--danger);
 }
 
+/* Empty badge slot — invisible until populated. */
+.badge:empty {
+    display: none;
+}
+
+/* Wrap pentru badge-ul de footer total (păstrează inline cu valoarea). */
+.total-with-badge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.total-with-badge .badge {
+    margin-left: 0;
+}
+
+/* Linia "Total linie" la fiecare line-item (PR-A11 / D4). */
+.line-total-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.line-total-label {
+    font-family: 'Geist', system-ui, sans-serif;
+    font-weight: 500;
+}
+
+.line-total-value {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    color: var(--text);
+    min-width: 80px;
+    text-align: right;
+}
+
+.line-total-row .badge {
+    margin-left: 0;
+}
+
+/* Badge inline dupa input vat-amount (PR-A11 / D4). */
+.vat-inputs .badge {
+    margin-left: 0;
+}
+
 /* ----------------------------------------------------------------------------
    Alerts (BR validation, system messages)
    ---------------------------------------------------------------------------- */

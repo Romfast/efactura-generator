@@ -1,7 +1,7 @@
 import { InvoiceFormatter } from './formatter.js';
 import {
-    Big, parseStrict, parseStrictOr, formatRaw,
-    setRaw, getRaw, lineTotal as numericLineTotal, wireDatasetRaw, withinTolerance
+    Big, parseStrict, parseStrictOr, formatRaw, format2,
+    setRaw, getRaw, markDirty, lineTotal as numericLineTotal, wireDatasetRaw, withinTolerance
 } from './numeric.js';
 
 // Constants
@@ -437,7 +437,10 @@ function parseXML(xmlContent) {
         storeOriginalTotals(xmlDoc);
         restoreOriginalTotals();
         displayVATBreakdown(xmlDoc);
-        
+
+        // PR-A11: după ce toate elementele sunt populate, rulează math
+        // validation pentru a popula badge-urile (per-line + per-VAT-row + footer).
+        if (typeof validateMath === 'function') validateMath();
     } catch (error) {
         handleError(error, 'Eroare la parsarea fișierului XML');
     }
@@ -572,8 +575,14 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
                 </div>
             </div>
 
+            <div class="line-total-row">
+                <span class="line-total-label">Total linie:</span>
+                <span class="line-total-value mono" data-line-total-index="${index}">0,00</span>
+                <span class="badge" data-line-badge-index="${index}"></span>
+            </div>
+
             <div class="optional-details-toggle">
-                <button type="button" class="button button-secondary" 
+                <button type="button" class="button button-secondary"
                     onclick="toggleOptionalDetails(${index})">
                     ▼ Detalii Suplimentare
                 </button>
@@ -640,6 +649,7 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
                     <label>Valoare TVA:</label>
                     <input type="text" class="form-input vat-amount num" value="${vatAmount}"
                            onchange="window.updateVATRowFromAmount('${rowId}')">
+                    <span class="badge vat-amount-badge"></span>
                 </div>
                 <div class="vat-exemption ${['E', 'K', 'O', 'AE'].includes(vatType) ? '' : 'hidden'}">
                     <div class="form-group">
@@ -1329,6 +1339,10 @@ function restoreOriginalTotals() {
             });
         }
     }
+
+    // PR-A11: run math validation după ce displayed-urile sunt setate la
+    // valorile XML loaded (înainte ca user să editeze ceva).
+    if (typeof validateMath === 'function') validateMath();
 }
 
 function updateNoteCounter() {
@@ -1485,6 +1499,8 @@ function populateLineItems(xmlDoc) {
         const quantity = getXMLValue(item, 'cbc\\:InvoicedQuantity, InvoicedQuantity', '0');
         const unitCode = item.querySelector('cbc\\:InvoicedQuantity, InvoicedQuantity')?.getAttribute('unitCode') || 'EA';
         const price = getXMLValue(item, 'cac\\:Price cbc\\:PriceAmount, Price PriceAmount', '0');
+        // PR-A11: capture original LineExtensionAmount from XML for math validation badge.
+        const xmlLineAmount = getXMLValue(item, 'cbc\\:LineExtensionAmount, LineExtensionAmount', '');
         const itemElement = item.querySelector('cac\\:Item, Item');
         const description = getXMLValue(itemElement, 'cbc\\:Name, Name', '');
         const itemDescription = getXMLValue(itemElement, 'cbc\\:Description, Description', '');
@@ -1511,6 +1527,17 @@ function populateLineItems(xmlDoc) {
             itemDescription, lineDiscount, discountReasonCode
         );
         lineItemsContainer.insertAdjacentHTML('beforeend', lineItemHtml);
+
+        // PR-A11: stash original XML LineExtensionAmount on the line-item element
+        // for math validation badge (compare computed vs XML loaded with ±0.01 RON
+        // tolerance când row-ul e clean — toate input-urile dataset.dirty='0').
+        const lineItemEl = lineItemsContainer.querySelector(`.line-item[data-index="${index}"]`);
+        if (lineItemEl && xmlLineAmount !== '') {
+            const parsedXmlAmount = parseStrict(xmlLineAmount);
+            if (parsedXmlAmount !== null) {
+                lineItemEl.dataset.xmlLineAmount = parsedXmlAmount.toFixed(2);
+            }
+        }
 
         // PR-E E1: dataset.raw seeded din XML (canonical source of truth).
         // Wire blur listeners care normalizează la commit (parseStrict + setRaw).
@@ -1818,30 +1845,34 @@ function handleLineItemChange(index) {
 }
 
 function handleStorno() {
+    // PR-A11: folosim getRaw/setRaw/markDirty în loc de parseFloat
+    // pentru a păstra dataset.raw consistent cu input.value după negare.
     document.querySelectorAll('.line-item').forEach((item, index) => {
         const quantityInput = document.querySelector(`[name="quantity${index}"]`);
-        const currentValue = parseFloat(quantityInput.value);
-        quantityInput.value = -currentValue;
+        if (!quantityInput) return;
+        setRaw(quantityInput, getRaw(quantityInput).times(-1), 3);
+        markDirty(quantityInput);
     });
 
     document.querySelectorAll('.allowance-charge').forEach((item, index) => {
         const amountInput = document.querySelector(`[name="chargeAmount${index}"]`);
-        const currentAmount = parseFloat(amountInput.value);
-        amountInput.value = -currentAmount;
+        if (!amountInput) return;
+        setRaw(amountInput, getRaw(amountInput).times(-1), 2);
+        markDirty(amountInput);
     });
 
     document.querySelectorAll('.vat-row').forEach(row => {
         const baseInput = row.querySelector('.vat-base');
         const amountInput = row.querySelector('.vat-amount');
-        
+
         if (baseInput) {
-            const currentBase = parseFloat(baseInput.value) || 0;
-            baseInput.value = (-currentBase).toFixed(2);
+            setRaw(baseInput, getRaw(baseInput).times(-1), 2);
+            markDirty(baseInput);
         }
-        
+
         if (amountInput) {
-            const currentAmount = parseFloat(amountInput.value) || 0;
-            amountInput.value = (-currentAmount).toFixed(2);
+            setRaw(amountInput, getRaw(amountInput).times(-1), 2);
+            markDirty(amountInput);
         }
     });
 
@@ -1883,6 +1914,9 @@ function updateTotals() {
         total: roundNumber(netAmount + totalVat, 2),
         vatBreakdown
     });
+
+    // PR-A11: refresh badge-uri math validation după displayTotals.
+    if (typeof validateMath === 'function') validateMath();
 }
 
 function refreshTotals() {
@@ -1914,6 +1948,9 @@ function refreshTotals() {
         total: netAmount + totalVat,
         vatBreakdown
     });
+
+    // PR-A11: refresh badge-uri math validation după displayTotals.
+    if (typeof validateMath === 'function') validateMath();
 }
 
 function calculateLineItemTotals() {
@@ -2236,6 +2273,9 @@ window.updateVATRowFromAmount = function(rowId) {
     const netAmountBig = parseStrictOr(document.getElementById('netAmount').textContent, '0');
     document.getElementById('vat').textContent = formatter.formatCurrency(Number(totalVatBig.toFixed(2)));
     document.getElementById('total').textContent = formatter.formatCurrency(Number(netAmountBig.plus(totalVatBig).toFixed(2)));
+
+    // PR-A11: refresh badge-uri math validation după edit manual de vat-amount.
+    if (typeof validateMath === 'function') validateMath();
 };
 
 window.removeVATRow = function(rowId) {
@@ -2394,6 +2434,21 @@ function createEmptyInvoice() {
 
 function saveXML() {
     if (!validateForm()) return;
+
+    // PR-A11: math validation pre-save. Ruleaza validateMath și dacă footer
+    // diff > tolerance, afișează toast warning ORANGE — DAR NU bloca save-ul.
+    try {
+        if (typeof validateMath === 'function') {
+            const { footerDiff, footerOver } = validateMath();
+            if (footerOver) {
+                showToast(
+                    `Atenție: totalul afișat diferă cu ${footerDiff.toFixed(2)} RON față de calculul intern.`,
+                    'warning',
+                    'Verifică liniile și defalcarea TVA. Salvarea continuă.'
+                );
+            }
+        }
+    } catch (_) { /* validation must never block save */ }
 
     try {
         if (!currentInvoice) {
@@ -3290,6 +3345,189 @@ function validateIdentifications(lineItemIndex) {
     
     return isValid;
 }
+
+// ============================================================================
+// PR-A11: math validation inline (badge per-line / per-VAT-row / footer total)
+// ============================================================================
+
+const A11_TOLERANCE_LEGACY = new Big('0.01'); // ±0.01 RON pe rows complet clean
+const A11_TOLERANCE_DIRTY = new Big('0');     // zero pe rows cu dirty='1'
+
+function _a11RowDirty(rowEl) {
+    if (!rowEl) return false;
+    return Array.from(rowEl.querySelectorAll('input')).some(
+        i => i.dataset && i.dataset.dirty === '1'
+    );
+}
+
+function _a11Tolerance(rowEl) {
+    return _a11RowDirty(rowEl) ? A11_TOLERANCE_DIRTY : A11_TOLERANCE_LEGACY;
+}
+
+function _a11SetBadge(badgeEl, computedBig, displayedBig, epsBig, opts = {}) {
+    if (!badgeEl) return;
+    const { footer = false } = opts;
+    const diff = computedBig.minus(displayedBig);
+    const absDiff = diff.abs();
+    badgeEl.classList.remove('badge-ok', 'badge-warn', 'badge-error');
+    if (absDiff.lte(epsBig)) {
+        badgeEl.classList.add('badge-ok');
+        badgeEl.textContent = '✓';
+        return false;
+    }
+    if (footer) {
+        badgeEl.classList.add('badge-warn');
+        badgeEl.textContent = `diferență ${absDiff.toFixed(2)} RON`;
+    } else {
+        badgeEl.classList.add('badge-error');
+        const sign = diff.gte(0) ? '+' : '−';
+        badgeEl.textContent = `${sign}${absDiff.toFixed(2)} RON`;
+    }
+    return true;
+}
+
+/**
+ * PR-A11: validează consistența matematică a formularului și actualizează
+ * badge-urile (per-line, per-VAT-row, footer total).
+ *
+ * Lect: input.dataset.raw (canonical decimal-dot, source of truth E1).
+ * Compară:
+ *   - line item: computed (qty*price-discount) vs XML loaded LineExtensionAmount.
+ *   - VAT row: computed (base*rate/100, doar pentru type='S') vs vat-amount input.
+ *   - footer total: computed (subtotal-allow+charges+totalVat) vs #total displayed.
+ *
+ * Tolerance switching pe row: dacă orice input din row are dataset.dirty='1' →
+ * zero (newly computed must match exact). Altfel ±0.01 RON (legacy float
+ * reconciliation pe XML încărcat).
+ *
+ * @returns {{footerDiff: Big, footerOver: boolean}} info pentru save toast.
+ */
+function validateMath() {
+    // Per-line: computed line net vs XML loaded LineExtensionAmount.
+    document.querySelectorAll('.line-item').forEach(item => {
+        const idx = item.dataset.index;
+        const qtyInput = document.querySelector(`[name="quantity${idx}"]`);
+        const priceInput = document.querySelector(`[name="price${idx}"]`);
+        const discountInput = document.querySelector(`[name="lineDiscount${idx}"]`);
+        if (!qtyInput || !priceInput) return;
+
+        const qty = getRaw(qtyInput);
+        const price = getRaw(priceInput);
+        const discount = discountInput ? getRaw(discountInput) : new Big('0');
+        const computed = qty.times(price).minus(discount);
+
+        // Update vizibilul "Total linie" la valoarea recalculată.
+        const totalEl = item.querySelector(`[data-line-total-index="${idx}"]`);
+        if (totalEl) totalEl.textContent = format2(computed.round(2, 1));
+
+        const badgeEl = item.querySelector(`[data-line-badge-index="${idx}"]`);
+        if (!badgeEl) return;
+
+        // Linii nou-adăugate (fără XML referință) → badge ✓ trivial.
+        const xmlAmt = item.dataset.xmlLineAmount;
+        if (xmlAmt === undefined || xmlAmt === '') {
+            badgeEl.textContent = '';
+            badgeEl.classList.remove('badge-ok', 'badge-warn', 'badge-error');
+            return;
+        }
+        const displayed = parseStrictOr(xmlAmt, '0');
+        const eps = _a11Tolerance(item);
+        _a11SetBadge(badgeEl, computed.round(2, 1), displayed, eps);
+    });
+
+    // Per-VAT-row: computed (base*rate/100) vs vat-amount input.
+    document.querySelectorAll('.vat-row').forEach(row => {
+        const typeSelect = row.querySelector('.vat-type');
+        const baseInput = row.querySelector('.vat-base');
+        const rateInput = row.querySelector('.vat-rate');
+        const amountInput = row.querySelector('.vat-amount');
+        const badgeEl = row.querySelector('.vat-amount-badge');
+        if (!badgeEl || !typeSelect || !baseInput || !rateInput || !amountInput) return;
+
+        const type = typeSelect.value;
+        const base = getRaw(baseInput);
+        const rate = getRaw(rateInput);
+        const displayed = getRaw(amountInput);
+
+        const computed = (type === 'S')
+            ? base.times(rate).div(100).round(2, 1)
+            : new Big('0');
+        const eps = _a11Tolerance(row);
+        _a11SetBadge(badgeEl, computed, displayed, eps);
+    });
+
+    // Footer total: computed (subtotal-allow+charges+totalVat) vs #total displayed.
+    const totalBadge = document.getElementById('total-badge');
+    let footerDiff = new Big('0');
+    let footerOver = false;
+    if (totalBadge) {
+        const subtotalBig = parseStrictOr(document.getElementById('subtotal').textContent, '0');
+        const allowancesBig = parseStrictOr(document.getElementById('totalAllowances').textContent, '0');
+        const chargesBig = parseStrictOr(document.getElementById('totalCharges').textContent, '0');
+        const vatBig = parseStrictOr(document.getElementById('vat').textContent, '0');
+        const displayed = parseStrictOr(document.getElementById('total').textContent, '0');
+
+        const computed = subtotalBig.minus(allowancesBig).plus(chargesBig).plus(vatBig).round(2, 1);
+        // Footer tolerance: orice input dirty în întreaga formă → zero, altfel ±0.01.
+        const anyDirty = Array.from(
+            document.querySelectorAll('.line-item, .vat-row, .allowance-charge')
+        ).some(_a11RowDirty);
+        const eps = anyDirty ? A11_TOLERANCE_DIRTY : A11_TOLERANCE_LEGACY;
+        footerDiff = computed.minus(displayed).abs();
+        footerOver = _a11SetBadge(totalBadge, computed, displayed, eps, { footer: true }) === true;
+    }
+    return { footerDiff, footerOver };
+}
+
+/**
+ * PR-A11: minimal toast helper. Compatibil cu DESIGN.md spec D14 (border-left
+ * 3px semantic, slide-in 150ms, auto-dismiss success 4s / info 6s / warning 6s
+ * / error persistent). NU bloca save — doar avertizează.
+ */
+function showToast(message, variant = 'info', subtext = '') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        container.setAttribute('aria-live', 'polite');
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${variant}`;
+    toast.setAttribute('role', (variant === 'warning' || variant === 'error') ? 'alert' : 'status');
+
+    const msgEl = document.createElement('div');
+    msgEl.className = 'toast-message';
+    msgEl.textContent = message;
+    if (subtext) {
+        const subEl = document.createElement('span');
+        subEl.className = 'toast-sub';
+        subEl.textContent = subtext;
+        msgEl.appendChild(subEl);
+    }
+    toast.appendChild(msgEl);
+
+    const dismiss = document.createElement('button');
+    dismiss.className = 'toast-dismiss';
+    dismiss.type = 'button';
+    dismiss.setAttribute('aria-label', 'Închide');
+    dismiss.textContent = '×';
+    dismiss.onclick = () => toast.remove();
+    toast.appendChild(dismiss);
+
+    container.appendChild(toast);
+
+    const timeouts = { success: 4000, info: 6000, warning: 6000, error: 0 };
+    const ms = timeouts[variant] ?? 6000;
+    if (ms > 0) {
+        setTimeout(() => { if (toast.isConnected) toast.remove(); }, ms);
+    }
+}
+
+// Expose pentru consumeri externi / debugging.
+window.validateMath = validateMath;
+window.showToast = showToast;
 
 // Export for testing if needed
 if (typeof module !== 'undefined' && module.exports) {
