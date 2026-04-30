@@ -3,6 +3,9 @@
 ## 0.9-beta-5 (în pregătire) - 30.04.2026
 
 ### New Features
+- Added: Pipeline numeric Big.js pentru aritmetica fiscală (PR-E / E2+E3+E1+E4+E6). Vendored `js/vendor/big.mjs` (big.js@6.2.1, ESM build pinned, ~30KB raw, native ESM import fără bundler — confirmat prin spike). Modul nou `js/numeric.js` cu helpers: `parseStrict` (acceptă canonical decimal-dot și RO comma + thousands; refuză EN ambiguu), `parseStrictOr`, `format2/3/4` (display ro-RO via `Intl.NumberFormat`), `formatRaw` (canonical XML output), `setRaw`/`getRaw` (dataset.raw canonical state), `wireDatasetRaw` (blur handler care normalizează input.value), `lineTotal` și `withinTolerance`. `Big.RM` setat global la HALF_UP (mod fiscal RO). Recalcularea totalurilor (`calculateLineItemTotals`, `calculateChargeTotals`, `calculateTotals`, `calculateVATBreakdown`, `updateVATRow`, `updateVATRowFromAmount`, `updateTotalVAT`) folosește exclusiv Big.js și citește din `dataset.raw`. La populare din XML, `seedNumericRawForLineItem`/`seedNumericRawForCharge` și `addVATBreakdownRow` setează `dataset.raw` cu valoarea canonical decimal-dot.
+- Added: Locale `ro-RO` hardcoded în `js/formatter.js` (PR-E / E2). Eliminat `navigator.language` care făcea afișarea fragilă pe browsere/OS-uri non-RO. Toate formatările trec acum printr-un singur source of truth (`numeric.js` → `Intl.NumberFormat('ro-RO')`).
+- Added: Test infrastructure — `test/assert.js` (mini framework ~50 LOC, zero deps, ESM, API: `test`, `assertEqual`, `assertClose`, `assertTrue`, `assertThrows`, `report`), `test/numeric.html` (39 teste pentru parser/format/Big arithmetic/dataset.raw helpers/lineTotal — toate verzi), `test/regression.html` (suite round-trip pe corpus-ul existent `/docs/efactura_*.xml`: încarcă fixture în iframe, verifică line-items count, dataset.raw populat canonical, saveXML emite blob valid, structura UBL preservată după round-trip — 14 teste verzi).
 - Added: Componente vizuale noi documentate în `DESIGN.md` și implementate în `styles/main.css` (PR-CSS / D17): `.toast` / `.toast-container` (notificări sistem cu border-left semantic), `.drop-zone` (empty state pentru încărcare XML cu hover state primary-soft), `.spinner-mono` (spinner inline braille `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` la 80ms/frame pentru stările loading ANAF). Toate respectă posture industrial / utilitarian — zero icons, text-only.
 
 ### Modifications
@@ -12,6 +15,10 @@
 - Added: `DESIGN.md` (PR-CSS) — secțiuni noi pentru Toast, Drop-zone și Spinner Mono cycle (per D17). Tabel decisions log extins.
 - Added: `DESIGN.md` — sistem de design formal pentru editor (industrial/utilitarian, Geist + Geist Mono, paletă warm-paper + slate-900 header, border-radius hierarchic, anti-SaaS-chrome posture). Decizii bazate pe research competitive (SmartBill, Oblio, B2BRouter, e-invoice.be) și principiul "respectă timpul contabilului".
 - Modified: `CLAUDE.md` — adăugată secțiunea "Design System" care indică DESIGN.md ca sursă autoritativă pentru orice decizie UI înainte de implementarea Track 1 + Track 2 D.
+- Modified: `js/server.js` și `.htaccess.template` — adăugată extensia `.mjs` la lista de fișiere servite cu MIME `text/javascript` (necesar pentru `import` ESM nativ pe browsere; altfel browser refuză cu MIME mismatch). PR-E necesar; PR-ZIP avea aceeași schimbare deja landed pe feat branch.
+
+### Notes (PR-E sweep status)
+- Sweep parseFloat în PR-E: au fost migrate funcțiile critice de calcul totaluri (line items, charges, VAT breakdown, VAT row update, totalVAT, updateVATRowFromAmount). Restul ~25 call sites parseFloat (validation, exchange rate, storno handling, identification parsing) rămân pe pipeline-ul vechi (Number) — vor fi migrate în PR-A11 când contextul math validation cere oricum re-vizitarea acelor zone. Documentat ca follow-up.
 
 ## 0.9-beta-4 - 07.02.2025
 

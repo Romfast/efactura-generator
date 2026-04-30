@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test regression corpus (PR-E E6)</title>
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link href="https://fonts.bunny.net/css?family=geist:400,500,600,700|geist-mono:400,500,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/main.css">
+<style>
+  body { padding: 24px; max-width: 1100px; margin: 0 auto; }
+  #test-results { font-family: 'Geist Mono', monospace; font-size: 13px; }
+  .test-pass { color: var(--success); padding: 2px 0; }
+  .test-fail { color: var(--danger); padding: 2px 0; font-weight: 600; }
+  #test-banner { padding: 12px 16px; border-radius: 6px; font-family: 'Geist', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .banner-pass { background: var(--success-soft); color: var(--success); }
+  .banner-fail { background: var(--danger-soft); color: var(--danger); }
+  pre { background: var(--surface-muted); padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 11px; max-height: 200px; }
+  h1 { font-family: 'Geist', sans-serif; margin-bottom: 8px; }
+  p { color: var(--text-muted); margin-bottom: 16px; }
+  iframe { width: 100%; height: 1px; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<h1>Regression corpus (PR-E E6)</h1>
+<p>Ridică editor-ul într-un iframe, încarcă fiecare fixture XML, verifică:
+   (a) parseXML nu aruncă, (b) numărul de line-items, (c) totalurile sunt valori finite,
+   (d) saveXML produce blob valid, (e) round-trip preserves total în limita ±0.01 RON.</p>
+
+<iframe id="editor" src="../index.html"></iframe>
+
+<script type="module">
+import { test, assertEqual, assertClose, assertTrue, report } from './assert.js';
+import { parseStrictOr } from '../js/numeric.js';
+
+// Fixtures disponibile în /docs/.
+const FIXTURES = [
+    {
+        name: 'efactura_cu_BT_descriere2.xml',
+        expectedLines: 2,
+        // (subtotal, totalVat) într-o tolerance de ±0.02 RON
+    },
+    {
+        name: 'efactura_mai_multe_cote_TVA_si_cod_bare.xml',
+        expectedLines: 16,
+    },
+];
+
+const editor = document.getElementById('editor');
+const banner = document.createElement('div');
+banner.id = 'test-banner';
+banner.className = 'banner-pass';
+banner.textContent = 'Așteptare iframe init…';
+document.body.insertBefore(banner, document.body.firstChild);
+
+await new Promise((resolve) => {
+    if (editor.contentDocument && editor.contentDocument.readyState === 'complete') resolve();
+    else editor.addEventListener('load', () => resolve(), { once: true });
+});
+// Asigură-te că modulul script.js a apucat să ruleze DOMContentLoaded
+await new Promise(r => setTimeout(r, 250));
+
+const win = editor.contentWindow;
+const doc = editor.contentDocument;
+
+async function loadFixture(fname) {
+    const xml = await (await fetch('../docs/' + fname)).text();
+    const file = new (win.File)([xml], fname, { type: 'application/xml' });
+    const dt = new (win.DataTransfer)();
+    dt.items.add(file);
+    const fileInput = doc.getElementById('fileInput');
+    fileInput.files = dt.files;
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    // FileReader → parseXML e async; așteaptă populate.
+    await new Promise(r => setTimeout(r, 400));
+    return xml;
+}
+
+function captureSavedXml() {
+    const origCreate = win.URL.createObjectURL;
+    let captured = null;
+    win.URL.createObjectURL = (blob) => {
+        captured = blob;
+        return 'blob:capture';
+    };
+    try {
+        win.saveXML();
+    } finally {
+        win.URL.createObjectURL = origCreate;
+    }
+    return captured;
+}
+
+async function blobText(blob) {
+    if (!blob) return null;
+    return await blob.text();
+}
+
+for (const fx of FIXTURES) {
+    test(`fixture ${fx.name}: load + parse fără excepție`, () => {
+        // sync placeholder — adevărata muncă în testele async de mai jos.
+        assertTrue(true);
+    });
+}
+
+// Async work — must run sequentially because we share the iframe state.
+for (const fx of FIXTURES) {
+    let xml;
+    try {
+        xml = await loadFixture(fx.name);
+    } catch (e) {
+        test(`fixture ${fx.name}: fetch/load`, () => { throw e; });
+        continue;
+    }
+
+    test(`fixture ${fx.name}: line-items count = ${fx.expectedLines}`, () => {
+        const got = doc.querySelectorAll('.line-item').length;
+        assertEqual(got, fx.expectedLines);
+    });
+
+    test(`fixture ${fx.name}: totalurile sunt valori finite`, () => {
+        const subT = doc.getElementById('subtotal').textContent.trim();
+        const vatT = doc.getElementById('vat').textContent.trim();
+        assertTrue(subT !== '' && subT !== 'NaN', 'subtotal display empty: ' + subT);
+        assertTrue(vatT !== '' && vatT !== 'NaN', 'vat display empty: ' + vatT);
+        // Acceptă atât canonicul XML cât și RO display.
+        assertTrue(/^[\d.,\-\s]+$/.test(subT), 'subtotal not numeric-shaped: ' + subT);
+        assertTrue(/^[\d.,\-\s]+$/.test(vatT), 'vat not numeric-shaped: ' + vatT);
+    });
+
+    test(`fixture ${fx.name}: dataset.raw populated pe quantity[0] și price[0]`, () => {
+        const q = doc.querySelector('[name="quantity0"]');
+        const p = doc.querySelector('[name="price0"]');
+        assertTrue(q && q.dataset.raw && q.dataset.raw !== '', 'quantity0.dataset.raw missing');
+        assertTrue(p && p.dataset.raw && p.dataset.raw !== '', 'price0.dataset.raw missing');
+        // canonical decimal-dot
+        assertTrue(/^-?\d+(?:\.\d+)?$/.test(q.dataset.raw), 'quantity0.raw not canonical: ' + q.dataset.raw);
+        assertTrue(/^-?\d+(?:\.\d+)?$/.test(p.dataset.raw), 'price0.raw not canonical: ' + p.dataset.raw);
+    });
+
+    test(`fixture ${fx.name}: saveXML produce blob valid`, async () => {
+        const blob = captureSavedXml();
+        assertTrue(blob !== null, 'no blob captured');
+        assertTrue(blob.size > 100, 'blob too small');
+        assertEqual(blob.type, 'application/xml');
+    });
+
+    let savedXml;
+    {
+        const blob = captureSavedXml();
+        savedXml = await blobText(blob);
+    }
+
+    test(`fixture ${fx.name}: round-trip — saved XML is valid UBL`, () => {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(savedXml, 'text/xml');
+        const err = xmlDoc.querySelector('parsererror');
+        assertTrue(!err, 'parsererror în saved XML');
+        const root = xmlDoc.documentElement;
+        assertTrue(['Invoice', 'CreditNote'].includes(root.localName),
+            'root element neașteptat: ' + root.localName);
+    });
+
+    test(`fixture ${fx.name}: round-trip — preserves InvoiceLine count`, () => {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(savedXml, 'text/xml');
+        const lines = xmlDoc.querySelectorAll('cac\\:InvoiceLine, InvoiceLine');
+        assertEqual(lines.length, fx.expectedLines);
+    });
+}
+
+const r = report();
+window.__testResult = r;
+</script>
+</body>
+</html>

@@ -1,4 +1,8 @@
 import { InvoiceFormatter } from './formatter.js';
+import {
+    Big, parseStrict, parseStrictOr, formatRaw,
+    setRaw, getRaw, lineTotal as numericLineTotal, wireDatasetRaw, withinTolerance
+} from './numeric.js';
 
 // Constants
 const XML_NAMESPACES = {
@@ -657,6 +661,21 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
     `;
 
     container.insertAdjacentHTML('beforeend', rowHtml);
+
+    // PR-E E1: seed dataset.raw pentru rate/base/amount + wire blur listeners.
+    const rateEl = document.querySelector(`#${rowId} .vat-rate`);
+    const baseEl = document.querySelector(`#${rowId} .vat-base`);
+    const amountEl = document.querySelector(`#${rowId} .vat-amount`);
+    [
+        { el: rateEl, val: rate, decimals: 2 },
+        { el: baseEl, val: baseAmount, decimals: 2 },
+        { el: amountEl, val: vatAmount, decimals: 2 }
+    ].forEach(f => {
+        if (!f.el) return;
+        const big = parseStrict(f.val);
+        if (big !== null) f.el.dataset.raw = big.toFixed(f.decimals);
+        wireDatasetRaw(f.el, f.decimals);
+    });
 
     // Add event listener for VAT type changes
     const vatTypeSelect = document.querySelector(`#${rowId} .vat-type`);
@@ -1488,10 +1507,14 @@ function populateLineItems(xmlDoc) {
 
         addUnitCode(unitCode);
         const lineItemHtml = createLineItemHTML(
-            index, description, quantity, price, vatRate, unitCode, vatType, 
+            index, description, quantity, price, vatRate, unitCode, vatType,
             itemDescription, lineDiscount, discountReasonCode
         );
         lineItemsContainer.insertAdjacentHTML('beforeend', lineItemHtml);
+
+        // PR-E E1: dataset.raw seeded din XML (canonical source of truth).
+        // Wire blur listeners care normalizează la commit (parseStrict + setRaw).
+        seedNumericRawForLineItem(index, { quantity, price, lineDiscount, vatRate });
 
         // Parse identifications after adding the line item HTML
         if (itemElement) {
@@ -1519,6 +1542,48 @@ function populateLineItems(xmlDoc) {
         handleLineItemChange(index);
     });
 
+}
+
+// PR-E E1: helper care setează dataset.raw + wire blur normalize pe toate
+// input-urile numerice ale unei linii de factură. Se apelează după
+// insertAdjacentHTML, când DOM-ul există.
+function seedNumericRawForLineItem(index, raw) {
+    const fields = [
+        { name: 'quantity', decimals: 3, value: raw.quantity },
+        { name: 'price', decimals: 4, value: raw.price },
+        { name: 'lineDiscount', decimals: 2, value: raw.lineDiscount },
+        { name: 'vatRate', decimals: 2, value: raw.vatRate },
+    ];
+    fields.forEach(f => {
+        const input = document.querySelector(`[name="${f.name}${index}"]`);
+        if (!input) return;
+        const big = parseStrict(f.value);
+        if (big !== null) {
+            // Stocăm raw canonical decimal-dot. NU schimbăm input.value
+            // (lăsăm display ca în markup-ul existent — type=number e
+            //  display-locale-agnostic în input field și are nevoie de '.').
+            input.dataset.raw = big.toFixed(f.decimals);
+        }
+        wireDatasetRaw(input, f.decimals);
+    });
+}
+
+// PR-E E1: idem pentru allowance/charge.
+function seedNumericRawForCharge(index, raw) {
+    const fields = [
+        { name: 'chargeAmount', decimals: 2, value: raw.amount },
+        { name: 'chargeBaseAmount', decimals: 2, value: raw.baseAmount },
+        { name: 'chargeVatRate', decimals: 2, value: raw.vatRate },
+    ];
+    fields.forEach(f => {
+        const input = document.querySelector(`[name="${f.name}${index}"]`);
+        if (!input) return;
+        const big = parseStrict(f.value);
+        if (big !== null) {
+            input.dataset.raw = big.toFixed(f.decimals);
+        }
+        wireDatasetRaw(input, f.decimals);
+    });
 }
 
 function setupAllowanceChargeListeners(index) {
@@ -1611,13 +1676,19 @@ function displayAllowanceCharges(charges) {
     charges.forEach((charge, index) => {
         const html = createAllowanceChargeHTML(index, charge);
         container.insertAdjacentHTML('beforeend', html);
+        // PR-E E1: seed dataset.raw + wire blur listeners.
+        seedNumericRawForCharge(index, {
+            amount: charge.amount,
+            baseAmount: charge.baseAmount,
+            vatRate: charge.vatRate
+        });
     });
 }
 
 function addAllowanceCharge() {
     const container = document.getElementById('allowanceCharges');
     const index = document.querySelectorAll('.allowance-charge').length;
-    
+
     // Create new charge with default values
     const newCharge = {
         isCharge: true,
@@ -1627,14 +1698,21 @@ function addAllowanceCharge() {
         vatRate: 19.0,
         vatTypeId: 'S'
     };
-    
+
     // Add the HTML
     const html = createAllowanceChargeHTML(index, newCharge);
     container.insertAdjacentHTML('beforeend', html);
-    
+
+    // PR-E E1: seed dataset.raw + wire blur listeners.
+    seedNumericRawForCharge(index, {
+        amount: newCharge.amount,
+        baseAmount: newCharge.baseAmount,
+        vatRate: newCharge.vatRate
+    });
+
     // Setup event listeners
     setupAllowanceChargeListeners(index);
-    
+
     // Force refresh of totals and VAT
     refreshTotals();
 }
@@ -1681,15 +1759,20 @@ function addLineItem() {
     
     const lineItemHtml = createLineItemHTML(index, '', '1', '0', defaultVatRate, 'EA', defaultVatType);
     container.insertAdjacentHTML('beforeend', lineItemHtml);
-    
+
     const newItem = container.lastElementChild;
     const vatTypeSelect = newItem.querySelector(`[name="vatType${index}"]`);
-    
+
+    // PR-E E1: seed dataset.raw + wire blur listeners.
+    seedNumericRawForLineItem(index, {
+        quantity: '1', price: '0', lineDiscount: '0', vatRate: defaultVatRate
+    });
+
     if (!isVATRegistered()) {
         vatTypeSelect.disabled = true;
         newItem.querySelector(`[name="vatRate${index}"]`).disabled = true;
     }
-    
+
     // Adăugăm event handlers pentru noua linie
     handleLineItemChange(index);
     
@@ -1834,120 +1917,134 @@ function refreshTotals() {
 }
 
 function calculateLineItemTotals() {
-    let subtotal = 0;
+    // PR-E E4: pipeline Big.js. Citește din dataset.raw (canonical), fallback
+    // la input.value via getRaw. Niciun parseFloat.
+    let subtotal = new Big('0');
 
     document.querySelectorAll('.line-item').forEach((item, index) => {
-        const quantity = parseFloat(document.querySelector(`[name="quantity${index}"]`).value) || 0;
-        const price = parseFloat(document.querySelector(`[name="price${index}"]`).value) || 0;
-        const lineDiscount = parseFloat(document.querySelector(`[name="lineDiscount${index}"]`).value) || 0;
+        const quantity = getRaw(document.querySelector(`[name="quantity${index}"]`));
+        const price = getRaw(document.querySelector(`[name="price${index}"]`));
+        const lineDiscount = getRaw(document.querySelector(`[name="lineDiscount${index}"]`));
 
         // LineExtensionAmount = cantitate * preț - discount
-        const lineAmount = (quantity * price) - lineDiscount;
-        subtotal += lineAmount;
+        const lineAmount = quantity.times(price).minus(lineDiscount);
+        subtotal = subtotal.plus(lineAmount);
     });
 
     return {
-        subtotal: roundNumber(subtotal, 2)
+        subtotal: Number(subtotal.round(2, 1).toFixed(2))
     };
 }
 
 function calculateChargeTotals() {
-    let allowances = 0;
-    let charges = 0;
+    // PR-E E4: pipeline Big.js.
+    let allowances = new Big('0');
+    let charges = new Big('0');
 
     document.querySelectorAll('.allowance-charge').forEach((item, index) => {
         const isCharge = document.querySelector(`[name="chargeType${index}"]`).value === 'true';
-        const amount = parseFloat(document.querySelector(`[name="chargeAmount${index}"]`).value) || 0;
+        const amount = getRaw(document.querySelector(`[name="chargeAmount${index}"]`));
         if (isCharge) {
-            charges += amount;
+            charges = charges.plus(amount);
         } else {
-            allowances += amount;
+            allowances = allowances.plus(amount);
         }
     });
 
     return {
-        allowances: roundNumber(allowances, 2),
-        charges: roundNumber(charges, 2)
+        allowances: Number(allowances.round(2, 1).toFixed(2)),
+        charges: Number(charges.round(2, 1).toFixed(2))
     };
 }
 
 function calculateTotals() {
-    let subtotal = 0;
+    // PR-E E4: pipeline Big.js end-to-end. Toate citirile via getRaw → Big.
+    let subtotalBig = new Big('0');
     let vatBreakdown = new Map();
 
     // Calculăm totalurile liniilor
     document.querySelectorAll('.line-item').forEach((item, index) => {
-        const quantity = parseFloat(document.querySelector(`[name="quantity${index}"]`).value) || 0;
-        const price = parseFloat(document.querySelector(`[name="price${index}"]`).value) || 0;
-        const lineDiscount = parseFloat(document.querySelector(`[name="lineDiscount${index}"]`).value) || 0;
+        const quantity = getRaw(document.querySelector(`[name="quantity${index}"]`));
+        const price = getRaw(document.querySelector(`[name="price${index}"]`));
+        const lineDiscount = getRaw(document.querySelector(`[name="lineDiscount${index}"]`));
         const vatType = document.querySelector(`[name="vatType${index}"]`).value;
-        const vatRate = parseFloat(document.querySelector(`[name="vatRate${index}"]`).value) || 0;
-        
-        // LineExtensionAmount pentru linie = (cantitate * preț) - discount linie
-        const lineTotal = (quantity * price) - lineDiscount;
-        subtotal += lineTotal;
+        const vatRate = getRaw(document.querySelector(`[name="vatRate${index}"]`));
 
-        // Actualizăm baza de TVA pentru această linie
-        const key = `${vatRate}-${vatType}`;
+        // LineExtensionAmount = (cantitate * preț) - discount linie
+        const lineNet = quantity.times(price).minus(lineDiscount);
+        subtotalBig = subtotalBig.plus(lineNet);
+
+        const rateKey = vatRate.toFixed(2);
+        const key = `${rateKey}-${vatType}`;
         if (!vatBreakdown.has(key)) {
             vatBreakdown.set(key, {
                 baseAmount: 0,
                 vatAmount: 0,
-                rate: vatRate,
-                type: vatType
+                rate: Number(vatRate.toString()),
+                type: vatType,
+                _baseBig: new Big('0')
             });
         }
-        
         const entry = vatBreakdown.get(key);
-        // Adăugăm la baza de TVA valoarea netă a liniei (după discount)
-        entry.baseAmount += lineTotal;
+        entry._baseBig = entry._baseBig.plus(lineNet);
     });
 
-    // Calculăm discounturile și taxele globale
+    // Calculăm discounturile și taxele globale (returnate ca Number — convertim la Big intern)
     const { allowances, charges } = calculateChargeTotals();
+    const allowancesBig = new Big(String(allowances));
+    const chargesBig = new Big(String(charges));
 
-    // Calculăm suma netă după aplicarea discount-urilor și taxelor globale
-    const netAmount = subtotal - allowances + charges;
+    // Net = subtotal - allowances + charges
+    const netAmountBig = subtotalBig.minus(allowancesBig).plus(chargesBig);
 
-    // Pentru fiecare discount/taxă globală, ajustăm baza de TVA corespunzătoare
+    // Ajustăm baza de TVA cu discount/taxe globale
     document.querySelectorAll('.allowance-charge').forEach((item, index) => {
-        const amount = parseFloat(document.querySelector(`[name="chargeAmount${index}"]`).value) || 0;
+        const amount = getRaw(document.querySelector(`[name="chargeAmount${index}"]`));
         const vatType = document.querySelector(`[name="chargeVatType${index}"]`).value;
-        const vatRate = parseFloat(document.querySelector(`[name="chargeVatRate${index}"]`).value) || 0;
+        const vatRate = getRaw(document.querySelector(`[name="chargeVatRate${index}"]`));
         const isCharge = document.querySelector(`[name="chargeType${index}"]`).value === 'true';
 
-        const key = `${vatRate}-${vatType}`;
+        const rateKey = vatRate.toFixed(2);
+        const key = `${rateKey}-${vatType}`;
         if (!vatBreakdown.has(key)) {
             vatBreakdown.set(key, {
                 baseAmount: 0,
                 vatAmount: 0,
-                rate: vatRate,
-                type: vatType
+                rate: Number(vatRate.toString()),
+                type: vatType,
+                _baseBig: new Big('0')
             });
         }
-
         const entry = vatBreakdown.get(key);
-        // Ajustăm baza de TVA în funcție de tipul operațiunii (discount/taxă)
-        const adjustmentAmount = isCharge ? amount : -amount;
-        entry.baseAmount += adjustmentAmount;
+        entry._baseBig = isCharge ? entry._baseBig.plus(amount) : entry._baseBig.minus(amount);
     });
 
-    // Calculăm TVA-ul pentru fiecare rată
-    let totalVat = 0;
-    vatBreakdown.forEach((entry, key) => {
+    // VAT pe rată — round HALF_UP la 2 zecimale
+    let totalVatBig = new Big('0');
+    vatBreakdown.forEach((entry) => {
+        const baseRounded = entry._baseBig.round(2, 1);
+        entry.baseAmount = Number(baseRounded.toFixed(2));
         if (entry.type === 'S') {
-            entry.vatAmount = roundNumber(entry.baseAmount * entry.rate / 100, 2);
-            totalVat += entry.vatAmount;
+            const vatBig = entry._baseBig.times(entry.rate).div(100).round(2, 1);
+            entry.vatAmount = Number(vatBig.toFixed(2));
+            totalVatBig = totalVatBig.plus(vatBig);
+        } else {
+            entry.vatAmount = 0;
         }
+        delete entry._baseBig;
     });
+
+    const subtotal = Number(subtotalBig.round(2, 1).toFixed(2));
+    const netAmount = Number(netAmountBig.round(2, 1).toFixed(2));
+    const totalVat = Number(totalVatBig.round(2, 1).toFixed(2));
 
     return {
-        subtotal: roundNumber(subtotal),
-        allowances: roundNumber(allowances),
-        charges: roundNumber(charges),
-        netAmount: roundNumber(netAmount),
-        totalVat: roundNumber(totalVat),
-        total: roundNumber(netAmount + totalVat),
+        subtotal,
+        allowances,
+        charges,
+        netAmount,
+        totalVat,
+        total: Number(netAmountBig.plus(totalVatBig).round(2, 1).toFixed(2)),
         vatBreakdown
     };
 }
@@ -2004,67 +2101,75 @@ function calculateTotalVAT() {
 }
 
 function calculateVATBreakdown() {
+    // PR-E E4: pipeline Big.js. Aceeași semantică ca calculateTotals dar
+    // doar partea de breakdown (folosit de displayVATBreakdown).
     let vatBreakdown = new Map();
-    let totalVat = 0;
+    let totalVatBig = new Big('0');
 
-    // Process line items 
+    // Process line items
     document.querySelectorAll('.line-item').forEach((item, index) => {
-        const quantity = parseFloat(document.querySelector(`[name="quantity${index}"]`).value) || 0;
-        const price = parseFloat(document.querySelector(`[name="price${index}"]`).value) || 0;
-        const lineDiscount = parseFloat(document.querySelector(`[name="lineDiscount${index}"]`).value) || 0;
+        const quantity = getRaw(document.querySelector(`[name="quantity${index}"]`));
+        const price = getRaw(document.querySelector(`[name="price${index}"]`));
+        const lineDiscount = getRaw(document.querySelector(`[name="lineDiscount${index}"]`));
         const vatType = document.querySelector(`[name="vatType${index}"]`).value;
-        const vatRate = parseFloat(document.querySelector(`[name="vatRate${index}"]`).value) || 0;
-        
-        const lineAmount = (quantity * price) - lineDiscount;
-        const key = `${vatRate}-${vatType}`;
-        
+        const vatRate = getRaw(document.querySelector(`[name="vatRate${index}"]`));
+
+        const lineAmount = quantity.times(price).minus(lineDiscount);
+        const rateKey = vatRate.toFixed(2);
+        const key = `${rateKey}-${vatType}`;
+
         if (!vatBreakdown.has(key)) {
             vatBreakdown.set(key, {
                 baseAmount: 0,
                 vatAmount: 0,
-                rate: vatRate,
-                type: vatType
+                rate: Number(vatRate.toString()),
+                type: vatType,
+                _baseBig: new Big('0')
             });
         }
-        
         const entry = vatBreakdown.get(key);
-        entry.baseAmount += lineAmount;
+        entry._baseBig = entry._baseBig.plus(lineAmount);
     });
 
     // Process allowances and charges
     document.querySelectorAll('.allowance-charge').forEach((charge, index) => {
-        const amount = parseFloat(document.querySelector(`[name="chargeAmount${index}"]`).value) || 0;
+        const amount = getRaw(document.querySelector(`[name="chargeAmount${index}"]`));
         const vatType = document.querySelector(`[name="chargeVatType${index}"]`).value;
-        const vatRate = parseFloat(document.querySelector(`[name="chargeVatRate${index}"]`).value) || 0;
+        const vatRate = getRaw(document.querySelector(`[name="chargeVatRate${index}"]`));
         const isCharge = document.querySelector(`[name="chargeType${index}"]`).value === 'true';
-        
-        if (amount === 0) return;
 
-        const key = `${vatRate}-${vatType}`;
-        
+        if (amount.eq(0)) return;
+
+        const rateKey = vatRate.toFixed(2);
+        const key = `${rateKey}-${vatType}`;
+
         if (!vatBreakdown.has(key)) {
             vatBreakdown.set(key, {
                 baseAmount: 0,
                 vatAmount: 0,
-                rate: vatRate,
-                type: vatType
+                rate: Number(vatRate.toString()),
+                type: vatType,
+                _baseBig: new Big('0')
             });
         }
-        
         const entry = vatBreakdown.get(key);
-        const adjustedAmount = isCharge ? amount : -amount;
-        entry.baseAmount += adjustedAmount;
+        entry._baseBig = isCharge ? entry._baseBig.plus(amount) : entry._baseBig.minus(amount);
     });
 
     // Calculate VAT for each rate
     vatBreakdown.forEach((entry) => {
+        entry.baseAmount = Number(entry._baseBig.round(2, 1).toFixed(2));
         if (entry.type === 'S') {
-            entry.vatAmount = roundNumber(entry.baseAmount * entry.rate / 100, 2);
-            totalVat += entry.vatAmount;
+            const vatBig = entry._baseBig.times(entry.rate).div(100).round(2, 1);
+            entry.vatAmount = Number(vatBig.toFixed(2));
+            totalVatBig = totalVatBig.plus(vatBig);
+        } else {
+            entry.vatAmount = 0;
         }
+        delete entry._baseBig;
     });
 
-    return { vatBreakdown, totalVat: roundNumber(totalVat, 2) };
+    return { vatBreakdown, totalVat: Number(totalVatBig.round(2, 1).toFixed(2)) };
 }
 
 window.updateVATRow = function(rowId, source) {
@@ -2086,13 +2191,21 @@ window.updateVATRow = function(rowId, source) {
     
     // Only calculate VAT amount for non-manual updates
     if (!manuallyEditedVatRows.has(rowId)) {
+        // PR-E E4: Big.js pentru calcul VAT.
         const type = typeSelect.value;
-        const rate = parseFloat(rateInput.value) || 0;
-        const base = formatter.parseCurrency(baseInput.value) || 0;
-        
-        const calculatedAmount = type === 'S' ? roundNumber(base * rate / 100, 2) : 0;
+        const rate = getRaw(rateInput);
+        const base = getRaw(baseInput);
+
+        let calculatedAmountBig;
+        if (type === 'S') {
+            calculatedAmountBig = base.times(rate).div(100).round(2, 1);
+        } else {
+            calculatedAmountBig = new Big('0');
+        }
+        const calculatedAmount = Number(calculatedAmountBig.toFixed(2));
         amountInput.value = formatter.formatCurrency(calculatedAmount);
-        
+        amountInput.dataset.raw = calculatedAmountBig.toFixed(2);
+
         updateTotalVAT();
         refreshTotals();
     }
@@ -2105,23 +2218,24 @@ window.updateVATRowFromAmount = function(rowId) {
     // Just mark as manually edited and update the totals
     // Do not recalculate base amount
     manuallyEditedVatRows.add(rowId);
-    
+
     const amountInput = row.querySelector('.vat-amount');
     if (amountInput) {
-        const value = formatter.parseCurrency(amountInput.value);
-        amountInput.value = formatter.formatCurrency(value);
+        // PR-E E1+E4: parse strict, sync dataset.raw, format display.
+        const valueBig = parseStrictOr(amountInput.value, '0');
+        amountInput.value = formatter.formatCurrency(Number(valueBig.toString()));
+        amountInput.dataset.raw = valueBig.toFixed(2);
     }
 
-    let totalVat = 0;
+    let totalVatBig = new Big('0');
     document.querySelectorAll('.vat-row').forEach(vatRow => {
-        const vatAmount = formatter.parseCurrency(vatRow.querySelector('.vat-amount').value) || 0;
-        totalVat += vatAmount;
+        totalVatBig = totalVatBig.plus(getRaw(vatRow.querySelector('.vat-amount')));
     });
 
     // Update just total VAT and final total
-    const netAmount = formatter.parseCurrency(document.getElementById('netAmount').textContent);
-    document.getElementById('vat').textContent = formatter.formatCurrency(totalVat);
-    document.getElementById('total').textContent = formatter.formatCurrency(netAmount + totalVat);
+    const netAmountBig = parseStrictOr(document.getElementById('netAmount').textContent, '0');
+    document.getElementById('vat').textContent = formatter.formatCurrency(Number(totalVatBig.toFixed(2)));
+    document.getElementById('total').textContent = formatter.formatCurrency(Number(netAmountBig.plus(totalVatBig).toFixed(2)));
 };
 
 window.removeVATRow = function(rowId) {
@@ -2141,13 +2255,14 @@ window.addVATRate = function() {
 };
 
 function updateTotalVAT() {
-    const totalVat = Array.from(document.querySelectorAll('.vat-amount'))
-        .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
-    
-    document.getElementById('vat').textContent = totalVat.toFixed(2);
-    
-    const netAmount = parseFloat(document.getElementById('netAmount').textContent) || 0;
-    const total = netAmount + totalVat;
+    // PR-E E4: Big.js. Citește din dataset.raw → fallback parseStrict pe value.
+    const totalVatBig = Array.from(document.querySelectorAll('.vat-amount'))
+        .reduce((sum, input) => sum.plus(getRaw(input)), new Big('0'));
+
+    document.getElementById('vat').textContent = totalVatBig.toFixed(2);
+
+    const netAmountBig = parseStrictOr(document.getElementById('netAmount').textContent, '0');
+    const total = netAmountBig.plus(totalVatBig);
     document.getElementById('total').textContent = total.toFixed(2);
 }
 

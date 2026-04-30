@@ -1,13 +1,24 @@
+// js/formatter.js
+//
+// Compatibility-layer formatter folosit de print template + script.js
+// pentru afișare. Internal delegate la js/numeric.js (PR-E E1+E3+E4).
+//
+// E2: locale hardcoded "ro-RO" (înlocuit `navigator.language`). Audiența
+// țintă e RO; print PDF / display formular trebuie să fie consistent
+// între browsere și OS-uri.
+
+import { RO_LOCALE, parseStrict, parseStrictOr, format2, format3, format4 } from './numeric.js';
+
 export class InvoiceFormatter {
     constructor() {
-        this.locale = navigator.language;
-        
+        this.locale = RO_LOCALE;
+
         this.currencyFormatter = new Intl.NumberFormat(this.locale, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
             useGrouping: true
         });
-        
+
         this.quantityFormatter = new Intl.NumberFormat(this.locale, {
             minimumFractionDigits: 3,
             maximumFractionDigits: 3,
@@ -22,50 +33,39 @@ export class InvoiceFormatter {
     }
 
     formatCurrency(value) {
-        const numValue = parseFloat(value);
-        return isNaN(numValue) ? '0,00' : this.currencyFormatter.format(numValue);
+        const big = (value === '' || value === null || value === undefined)
+            ? null
+            : parseStrict(value);
+        return big === null ? '0,00' : format2(big);
     }
 
     formatQuantity(value) {
-        const numValue = parseFloat(value);
-        return isNaN(numValue) ? '0,000' : this.quantityFormatter.format(numValue);
+        const big = (value === '' || value === null || value === undefined)
+            ? null
+            : parseStrict(value);
+        return big === null ? '0,000' : format3(big);
     }
 
     formatNumber(value) {
-        const numValue = parseFloat(value);
-        return isNaN(numValue) ? '0,0000' : this.numberFormatter.format(numValue);
+        const big = (value === '' || value === null || value === undefined)
+            ? null
+            : parseStrict(value);
+        return big === null ? '0,0000' : format4(big);
     }
 
+    /**
+     * Strict-but-pragmatic parsing → number (pentru consumatorii vechi).
+     * Pentru cod nou, preferă `parseStrict` din numeric.js (returnează Big).
+     */
     parseCurrency(value) {
-        if (typeof value !== 'string') {
-            value = value.toString();
-        }
-        // Remove all non-digit characters except decimal and minus
-        const normalized = value.replace(/[^\d\-.,]/g, '')
-                              // Replace thousands separator
-                              .replace(/[.,](?=.*[.,])/g, '')
-                              // Last dot/comma is decimal separator
-                              .replace(/[.,]/, '.');
-        return parseFloat(normalized) || 0;
+        return Number(parseStrictOr(value, '0').toString());
     }
 
     parseQuantity(value) {
-        if (typeof value !== 'string') {
-            value = value.toString();
-        }
-        const normalized = value.replace(/[^\d\-.,]/g, '')
-                              .replace(/[.,](?=.*[.,])/g, '')
-                              .replace(/[.,]/, '.');
-        return parseFloat(normalized) || 0;
+        return Number(parseStrictOr(value, '0').toString());
     }
 
     parseNumber(value) {
-        if (typeof value !== 'string') {
-            value = value.toString();
-        }
-        const normalized = value.replace(/[^\d\-.,]/g, '')
-                              .replace(/[.,](?=.*[.,])/g, '')
-                              .replace(/[.,]/, '.');
-        return parseFloat(normalized) || 0;
+        return Number(parseStrictOr(value, '0').toString());
     }
 }

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test numeric pipeline (PR-E E6)</title>
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link href="https://fonts.bunny.net/css?family=geist:400,500,600,700|geist-mono:400,500,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/main.css">
+<style>
+  body { padding: 24px; max-width: 900px; margin: 0 auto; }
+  #test-results { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; }
+  .test-pass { color: var(--success); padding: 2px 0; }
+  .test-fail { color: var(--danger); padding: 2px 0; font-weight: 600; }
+  #test-banner { padding: 12px 16px; border-radius: 6px; font-family: 'Geist', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .banner-pass { background: var(--success-soft); color: var(--success); }
+  .banner-fail { background: var(--danger-soft); color: var(--danger); }
+  h1 { font-family: 'Geist', sans-serif; margin-bottom: 8px; }
+  p { color: var(--text-muted); margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h1>Test numeric pipeline</h1>
+<p>Verifică <code>js/numeric.js</code> + <code>js/formatter.js</code>: parseStrict, format ro-RO,
+   Big.js arithmetic, dataset.raw helpers, lineTotal. Acoperă cazurile critice din PR-E E2/E3/E1/E4.</p>
+<script type="module">
+import { test, assertEqual, assertClose, assertTrue, assertThrows, report } from './assert.js';
+import {
+    Big, parseStrict, parseStrictOr, format2, format3, format4, formatRaw,
+    setRaw, getRaw, lineTotal, withinTolerance, RO_LOCALE
+} from '../js/numeric.js';
+import { InvoiceFormatter } from '../js/formatter.js';
+
+// ---------- E4: Big.js + HALF_UP rounding -----------------------------------
+
+test('Big: 0.1 + 0.2 = 0.3 (no float drift)', () => {
+    const sum = new Big('0.1').plus('0.2');
+    assertEqual(sum.toFixed(1), '0.3');
+});
+
+test('Big.RM is HALF_UP', () => {
+    assertEqual(Big.RM, 1);
+});
+
+test('HALF_UP: 0.5 → 1 (not banker rounding)', () => {
+    assertEqual(new Big('0.5').round(0, 1).toString(), '1');
+});
+
+test('HALF_UP: 2.5 → 3 (not banker rounding)', () => {
+    assertEqual(new Big('2.5').round(0, 1).toString(), '3');
+});
+
+test('HALF_UP: 1.235 → 1.24 (currency rounding)', () => {
+    assertEqual(new Big('1.235').round(2, 1).toString(), '1.24');
+});
+
+// ---------- E2: locale RO hardcoded -----------------------------------------
+
+test('RO_LOCALE constant is "ro-RO"', () => {
+    assertEqual(RO_LOCALE, 'ro-RO');
+});
+
+test('format2 uses RO comma decimal', () => {
+    assertEqual(format2('1234.56'), '1.234,56');
+});
+
+test('format3 uses RO 3-decimal qty', () => {
+    assertEqual(format3('1.5'), '1,500');
+});
+
+test('format4 uses RO 4-decimal price', () => {
+    assertEqual(format4('99.1234'), '99,1234');
+});
+
+// ---------- E3: parseStrict ------------------------------------------------
+
+test('parseStrict accepts canonical decimal-dot', () => {
+    assertEqual(parseStrict('1234.56').toString(), '1234.56');
+});
+
+test('parseStrict accepts RO comma decimal', () => {
+    assertEqual(parseStrict('1234,56').toString(), '1234.56');
+});
+
+test('parseStrict accepts RO with thousands separator', () => {
+    assertEqual(parseStrict('1.234,56').toString(), '1234.56');
+});
+
+test('parseStrict accepts integer', () => {
+    assertEqual(parseStrict('42').toString(), '42');
+});
+
+test('parseStrict accepts negative', () => {
+    assertEqual(parseStrict('-1234,56').toString(), '-1234.56');
+});
+
+test('parseStrict accepts 4-decimal price (precision preserved)', () => {
+    assertEqual(parseStrict('99.1234').toString(), '99.1234');
+});
+
+test('parseStrict rejects empty string', () => {
+    assertEqual(parseStrict(''), null);
+});
+
+test('parseStrict rejects null/undefined', () => {
+    assertEqual(parseStrict(null), null);
+    assertEqual(parseStrict(undefined), null);
+});
+
+test('parseStrict rejects garbage', () => {
+    assertEqual(parseStrict('abc'), null);
+});
+
+test('parseStrict rejects ambiguous EN format "1,234.56"', () => {
+    assertEqual(parseStrict('1,234.56'), null);
+});
+
+test('parseStrict rejects "1.2.3" (multiple dots)', () => {
+    assertEqual(parseStrict('1.2.3'), null);
+});
+
+test('parseStrict accepts Number value', () => {
+    assertEqual(parseStrict(1.5).toString(), '1.5');
+});
+
+test('parseStrict passes through Big', () => {
+    const b = new Big('99.99');
+    assertTrue(parseStrict(b) === b);
+});
+
+test('parseStrictOr fallback to "0"', () => {
+    assertEqual(parseStrictOr('garbage').toString(), '0');
+});
+
+// ---------- formatRaw (canonical XML output) --------------------------------
+
+test('formatRaw 2 decimals canonical', () => {
+    assertEqual(formatRaw('1234.5', 2), '1234.50');
+});
+
+test('formatRaw 4 decimals preserves precision', () => {
+    assertEqual(formatRaw('99.1234', 4), '99.1234');
+});
+
+test('formatRaw rounds HALF_UP at 2 decimals', () => {
+    assertEqual(formatRaw('1.235', 2), '1.24');
+});
+
+// ---------- E1: dataset.raw helpers -----------------------------------------
+
+test('setRaw + getRaw round-trip', () => {
+    const input = document.createElement('input');
+    setRaw(input, '1234.5678', 4);
+    assertEqual(input.dataset.raw, '1234.5678');
+    assertEqual(input.value, '1.234,5678');
+    assertEqual(getRaw(input).toString(), '1234.5678');
+});
+
+test('getRaw fallback to input.value when dataset.raw absent', () => {
+    const input = document.createElement('input');
+    input.value = '99,1234'; // RO display
+    assertEqual(getRaw(input).toString(), '99.1234');
+});
+
+test('getRaw fallback to "0" on garbage', () => {
+    const input = document.createElement('input');
+    input.value = 'abc';
+    assertEqual(getRaw(input).toString(), '0');
+});
+
+// ---------- lineTotal -------------------------------------------------------
+
+test('lineTotal: simple qty * price', () => {
+    const t = lineTotal('2', '10.00', '0', '19');
+    assertEqual(t.net.toFixed(2), '20.00');
+    assertEqual(t.vat.toFixed(2), '3.80');
+    assertEqual(t.gross.toFixed(2), '23.80');
+});
+
+test('lineTotal: with line discount', () => {
+    const t = lineTotal('1', '100', '10', '19');
+    assertEqual(t.net.toFixed(2), '90.00');
+    assertEqual(t.vat.toFixed(2), '17.10');
+    assertEqual(t.gross.toFixed(2), '107.10');
+});
+
+test('lineTotal: 4-decimal price (precision preserved through multiply)', () => {
+    const t = lineTotal('3', '99.1234', '0', '19');
+    // 3 * 99.1234 = 297.3702
+    assertEqual(t.net.toFixed(4), '297.3702');
+    // round2(297.3702 * 0.19) = round2(56.500338) = 56.50
+    assertEqual(t.vat.toFixed(2), '56.50');
+});
+
+test('lineTotal: 0% VAT (E type)', () => {
+    const t = lineTotal('1', '100', '0', '0');
+    assertEqual(t.vat.toFixed(2), '0.00');
+});
+
+// ---------- withinTolerance --------------------------------------------------
+
+test('withinTolerance: ±0.01 RON', () => {
+    assertTrue(withinTolerance('100.00', '100.01', '0.01'));
+    assertTrue(withinTolerance('100.00', '99.99', '0.01'));
+    assertTrue(!withinTolerance('100.00', '100.02', '0.01'));
+});
+
+// ---------- InvoiceFormatter compatibility layer ----------------------------
+
+test('InvoiceFormatter.formatCurrency uses ro-RO', () => {
+    const f = new InvoiceFormatter();
+    assertEqual(f.formatCurrency('1234.56'), '1.234,56');
+});
+
+test('InvoiceFormatter.formatQuantity uses 3 decimals', () => {
+    const f = new InvoiceFormatter();
+    assertEqual(f.formatQuantity('1'), '1,000');
+});
+
+test('InvoiceFormatter.parseCurrency RO display → number', () => {
+    const f = new InvoiceFormatter();
+    assertClose(f.parseCurrency('1.234,56'), 1234.56, 0.001);
+});
+
+test('InvoiceFormatter.parseCurrency canonical → number', () => {
+    const f = new InvoiceFormatter();
+    assertClose(f.parseCurrency('1234.56'), 1234.56, 0.001);
+});
+
+test('InvoiceFormatter.parseCurrency garbage → 0 (legacy contract)', () => {
+    const f = new InvoiceFormatter();
+    assertClose(f.parseCurrency('abc'), 0, 0.001);
+});
+
+// ---------- Report -----------------------------------------------------------
+
+const r = report();
+window.__testResult = r;
+</script>
+</body>
+</html>
