@@ -1060,6 +1060,100 @@ div.card-actions {
 }
 
 /* ----------------------------------------------------------------------------
+   Modal overlay (DESIGN.md D24 — Factură Nouă modal + orice modal viitor)
+   Fond semi-transparent + box centrată.
+   ---------------------------------------------------------------------------- */
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 950;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.is-open {
+    display: flex;
+}
+
+.modal-box {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    max-width: 480px;
+    width: 100%;
+    box-shadow: var(--shadow-modal);
+    animation: modal-in 150ms ease-out;
+}
+
+@keyframes modal-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: var(--space-1);
+    letter-spacing: -0.005em;
+}
+
+.modal-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+}
+
+.modal-preview {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4);
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+    letter-spacing: 0.02em;
+    margin-bottom: var(--space-2);
+}
+
+/* Year rollover banner (D24) — apare sub header dacă an ≠ an curent */
+.year-rollover-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    background: var(--warning-soft);
+    border-left: 3px solid var(--warning);
+    padding: var(--space-3) var(--space-4);
+    font-size: 13px;
+    color: var(--text);
+}
+
+.year-rollover-banner p {
+    flex: 1;
+    min-width: 200px;
+}
+
+.year-rollover-banner .banner-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
+/* ----------------------------------------------------------------------------
    Toast component (DESIGN.md D14)
    Container fixed bottom-right, stack vertical 8px gap.
    ---------------------------------------------------------------------------- */

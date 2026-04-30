@@ -4477,6 +4477,241 @@ window.downloadPDF = async function() {
     }
 };
 
+// ============================================================================
+// PR-A19 (Track 2 D): Numerotare automată cu serie + contor + an
+// Cheia localStorage: efactura.sequence.v1
+// Structura: { serie: string, an: number, contor: number }
+// Generează numere de forma: RFT2026-0001
+// ============================================================================
+
+const SEQ_KEY = 'efactura.sequence.v1';
+const SEQ_DEFAULT = { serie: 'RFT', an: new Date().getFullYear(), contor: 1 };
+
+/** Citește secvența curentă din localStorage. */
+function _seqRead() {
+    return getJSON(SEQ_KEY, { ...SEQ_DEFAULT });
+}
+
+/** Salvează secvența în localStorage. */
+function _seqWrite(seq) {
+    setJSON(SEQ_KEY, seq);
+}
+
+/**
+ * Formatează un număr de factură din secvență.
+ * Pattern: {serie}{an}-{contor:4} → ex. "RFT2026-0042"
+ */
+function _seqFormat(seq) {
+    const pad = String(seq.contor).padStart(4, '0');
+    return `${seq.serie || 'RFT'}${seq.an || new Date().getFullYear()}-${pad}`;
+}
+
+/** Actualizează previzualizarea din modal cu valorile curente. */
+function _seqUpdatePreview() {
+    const serie   = (document.getElementById('seq-serie')?.value   || '').trim().toUpperCase();
+    const year    = parseInt(document.getElementById('seq-year')?.value)  || new Date().getFullYear();
+    const contor  = parseInt(document.getElementById('seq-counter')?.value) || 1;
+    const preview = document.getElementById('seq-preview');
+    if (preview) {
+        const pad = String(Math.max(1, contor)).padStart(4, '0');
+        preview.textContent = `${serie || 'RFT'}${year}-${pad}`;
+    }
+}
+
+/** Injectează modal-ul în DOM dacă nu există deja. */
+function _ensureNewInvoiceModal() {
+    if (document.getElementById('modal-new-invoice')) return;
+    const modal = document.createElement('div');
+    modal.id = 'modal-new-invoice';
+    modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'modal-new-invoice-title');
+    modal.innerHTML = `
+<div class="modal-box">
+    <h2 class="modal-title" id="modal-new-invoice-title">Factură Nouă</h2>
+    <p class="modal-sub">Configurați seria și numărul următor. Contorul se incrementează automat după generare.</p>
+    <div class="form-group">
+        <label class="form-label" for="seq-serie">Serie</label>
+        <input id="seq-serie" class="form-input mono" maxlength="10" placeholder="RFT" style="text-transform:uppercase">
+    </div>
+    <div class="compact-grid" style="grid-template-columns:1fr 1fr;gap:8px">
+        <div class="form-group">
+            <label class="form-label" for="seq-year">An</label>
+            <input id="seq-year" class="form-input mono" type="number" min="2000" max="2099" readonly>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="seq-counter">Nr. următor</label>
+            <input id="seq-counter" class="form-input mono" type="number" min="1" max="99999" step="1">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Previzualizare număr factură</label>
+        <div id="seq-preview" class="modal-preview">RFT${new Date().getFullYear()}-0001</div>
+    </div>
+    <div class="modal-actions">
+        <button type="button" class="button button-secondary" id="btnCloseNewInvoice">Anulare</button>
+        <button type="button" class="button" id="btnGenerateInvoice">Generează Factură</button>
+    </div>
+</div>`;
+    document.body.appendChild(modal);
+
+    // Wire events
+    document.getElementById('btnCloseNewInvoice').addEventListener('click', window.closeNewInvoiceModal);
+    document.getElementById('btnGenerateInvoice').addEventListener('click', window.generateNewInvoice);
+    document.getElementById('seq-serie').addEventListener('input', _seqUpdatePreview);
+    document.getElementById('seq-counter').addEventListener('input', _seqUpdatePreview);
+
+    // Close on backdrop click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) window.closeNewInvoiceModal();
+    });
+
+    // Esc key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+            window.closeNewInvoiceModal();
+        }
+    });
+}
+
+/**
+ * Deschide modal-ul "Factură Nouă" cu valorile curente din secvență.
+ */
+window.openNewInvoiceModal = function() {
+    _ensureNewInvoiceModal();
+    const seq = _seqRead();
+
+    const serieEl   = document.getElementById('seq-serie');
+    const yearEl    = document.getElementById('seq-year');
+    const counterEl = document.getElementById('seq-counter');
+
+    if (serieEl)   serieEl.value   = seq.serie || 'RFT';
+    if (yearEl)    yearEl.value    = new Date().getFullYear();
+    if (counterEl) counterEl.value = seq.contor || 1;
+
+    _seqUpdatePreview();
+
+    const modal = document.getElementById('modal-new-invoice');
+    modal.classList.add('is-open');
+    serieEl?.focus();
+};
+
+/** Închide modal-ul "Factură Nouă". */
+window.closeNewInvoiceModal = function() {
+    document.getElementById('modal-new-invoice')?.classList.remove('is-open');
+};
+
+/**
+ * Generează o factură nouă cu numărul din secvență, incrementează contorul.
+ */
+window.generateNewInvoice = function() {
+    const serieEl   = document.getElementById('seq-serie');
+    const counterEl = document.getElementById('seq-counter');
+
+    const serie   = (serieEl?.value   || 'RFT').trim().toUpperCase();
+    const contor  = Math.max(1, parseInt(counterEl?.value) || 1);
+    const year    = new Date().getFullYear();
+
+    const seq = { serie, an: year, contor };
+    const invoiceNumber = _seqFormat(seq);
+
+    // Salvează secvența cu contorul incrementat
+    _seqWrite({ ...seq, contor: contor + 1 });
+
+    // Creează o factură goală și populează formularul
+    currentInvoice = createEmptyInvoice();
+    const serializer = new XMLSerializer();
+    const xmlString = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(currentInvoice);
+    parseXML(xmlString);
+
+    // Setează numărul de factură generat
+    const numEl = document.querySelector('[name="invoiceNumber"]');
+    if (numEl) numEl.value = invoiceNumber;
+
+    // Setează data emiterii la azi
+    const today = new Date();
+    const pad   = n => String(n).padStart(2, '0');
+    const dateStr = `${pad(today.getDate())}.${pad(today.getMonth() + 1)}.${today.getFullYear()}`;
+    const dateEl = document.querySelector('[name="issueDate"]');
+    if (dateEl) dateEl.value = dateStr;
+
+    // Populează furnizorul din profil dacă există
+    const profil = getJSON('efactura.profil.v1', null);
+    if (profil) {
+        SUPPLIER_FIELDS.forEach(f => {
+            const el = document.querySelector(`[name="${f}"]`);
+            if (el && profil[f] !== undefined) el.value = profil[f];
+        });
+    }
+
+    window.closeNewInvoiceModal();
+    _updateBRPanel();
+    showToast(`Factură nouă creată: ${invoiceNumber}`, 'success', 'Contorul a fost incrementat automat.');
+};
+
+/**
+ * Banner an nou (D24) — resetează contorul la 1 pentru noul an.
+ */
+window.yearRolloverReset = function() {
+    const seq = _seqRead();
+    const newYear = new Date().getFullYear();
+    _seqWrite({ ...seq, an: newYear, contor: 1 });
+    document.getElementById('year-rollover-banner')?.remove();
+    showToast(`Seria ${seq.serie}: contor resetat la 1 pentru ${newYear}.`, 'success');
+};
+
+/**
+ * Banner an nou (D24) — continuă cu contorul existent pentru noul an.
+ */
+window.yearRolloverContinue = function() {
+    const seq = _seqRead();
+    const newYear = new Date().getFullYear();
+    _seqWrite({ ...seq, an: newYear });
+    document.getElementById('year-rollover-banner')?.remove();
+    showToast(`Seria ${seq.serie}: continuă cu nr. ${seq.contor} pentru ${newYear}.`, 'info');
+};
+
+/** Verifică dacă secvența aparține unui an anterior → injectează banner D24. */
+function _checkYearRollover() {
+    const seq  = _seqRead();
+    const year = new Date().getFullYear();
+    if (!seq.an || seq.an >= year) return; // nicio problemă
+
+    // Evită duplicat
+    if (document.getElementById('year-rollover-banner')) return;
+
+    const banner = document.createElement('div');
+    banner.id        = 'year-rollover-banner';
+    banner.className = 'year-rollover-banner';
+    banner.innerHTML = `
+<p>
+    <strong>An nou ${year} detectat.</strong>
+    Seria <em>${_escapeHtml(seq.serie)}</em> are contorul la ${seq.contor} (an ${seq.an}).
+    Alegeți cum să continuați numerotarea în ${year}.
+</p>
+<div class="banner-actions">
+    <button type="button" class="button button-small button-secondary" onclick="window.yearRolloverContinue()">
+        Continuă cu ${seq.contor}
+    </button>
+    <button type="button" class="button button-small" onclick="window.yearRolloverReset()">
+        Resetează la 1
+    </button>
+</div>`;
+
+    // Injectează sub header (primul copil al .container)
+    const container = document.querySelector('.container');
+    const header    = container?.querySelector('.header');
+    if (header?.nextSibling) {
+        container.insertBefore(banner, header.nextSibling);
+    } else if (container) {
+        container.appendChild(banner);
+    }
+}
+
+// Verifică rollover la DOMContentLoaded (după ce restul UI este inițializat)
+document.addEventListener('DOMContentLoaded', _checkYearRollover);
+
 // Export for testing if needed
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {

@@ -20,6 +20,7 @@
             <div class="button-group">
                 <input type="file" id="fileInput" class="file-input" accept=".xml,.zip,application/zip,application/x-zip-compressed">
                 <button onclick="document.getElementById('fileInput').click()" class="button">Alege Fișier XML / ZIP</button>
+                <button onclick="window.openNewInvoiceModal()" class="button" title="Factură nouă cu numerotare automată">Factură Nouă</button>
                 <button id="btnDownloadPDF" onclick="window.downloadPDF()" class="button button-secondary" title="Descarcă factură în format PDF (client-side)">Descarcă PDF</button>
                 <button id="btnValidateAnaf" onclick="window.validateAnaf()" class="button button-success" style="display:none" title="Validare prin API ANAF (necesită receiver.php)">Validare ANAF</button>
                 <button onclick="handleStorno()" class="button button-danger">Stornează</button>
@@ -280,7 +281,7 @@
         </form>
 
         <footer class="app-footer">
-            <span id="app-version">v0.9-beta-7</span>
+            <span id="app-version">v0.9-beta-8</span>
             <a href="https://www.romfast.ro">www.romfast.ro</a>
         </footer>        
     </div>
