@@ -266,9 +266,44 @@
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        /* Toolbar PDF — ascuns la print */
+        .pdf-toolbar {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-bottom: 12px;
+        }
+        .pdf-toolbar button {
+            padding: 6px 14px;
+            font-size: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid;
+        }
+        .pdf-toolbar .btn-pdf {
+            background: #1e40af;
+            color: #fff;
+            border-color: #1e40af;
+        }
+        .pdf-toolbar .btn-pdf:hover { background: #1e3a8a; }
+        .pdf-toolbar .btn-pdf:disabled { opacity: 0.6; cursor: not-allowed; }
+        .pdf-toolbar .btn-print {
+            background: transparent;
+            color: #57534e;
+            border-color: #d6d3d1;
+        }
+        .pdf-toolbar .btn-print:hover { background: #f5f5f4; }
+        @media print { .pdf-toolbar { display: none !important; } }
+    </style>
 </head>
 <body>
-    <div class="invoice-container">
+    <div class="pdf-toolbar no-print">
+        <button class="btn-print" onclick="window.print()">Printează</button>
+        <button id="btnSavePdf" class="btn-pdf" onclick="savePdf()">Descarcă PDF</button>
+    </div>
+    <div class="invoice-container" id="invoice-content">
         <div class="invoice-header">
             <div class="invoice-title-section">
                 <h1 class="invoice-title">FACTURĂ</h1>
@@ -374,5 +409,38 @@
 
         </div>
     </div>
+
+    <script>
+        // Descarcă PDF via html2pdf.js (bundle local)
+        async function savePdf() {
+            const btn = document.getElementById('btnSavePdf');
+            if (btn) { btn.disabled = true; btn.textContent = 'Generare…'; }
+            try {
+                // Încarcă bundle-ul UMD html2pdf.js (dacă nu e deja)
+                if (!window.html2pdf) {
+                    await new Promise((resolve, reject) => {
+                        const s = document.createElement('script');
+                        s.src = '../js/vendor/html2pdf.bundle.min.js';
+                        s.onload = resolve;
+                        s.onerror = () => reject(new Error('Bundle html2pdf indisponibil'));
+                        document.head.appendChild(s);
+                    });
+                }
+                const element = document.getElementById('invoice-content');
+                const invoiceNumber = document.getElementById('print-invoice-number')?.textContent || 'factura';
+                await window.html2pdf().set({
+                    margin: [10, 10, 10, 10],
+                    filename: 'factura_' + invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, '_') + '.pdf',
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                }).from(element).save();
+            } catch (err) {
+                alert('Eroare la generarea PDF: ' + err.message);
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Descarcă PDF'; }
+            }
+        }
+    </script>
 </body>
 </html>

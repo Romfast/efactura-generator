@@ -4348,6 +4348,135 @@ window.lookupCif = async function(party) {
     }
 })();
 
+// ============================================================================
+// PR-PDF (A8): Descarcă PDF — client-side via html2pdf.js
+// Deschide template-ul de print și generează PDF fără dialog de imprimare.
+// ============================================================================
+import getHtml2pdf from './vendor/html2pdf.mjs';
+
+/**
+ * Generează și descarcă PDF-ul facturii curente.
+ * Deschide template-ul de print, îl populează via InvoicePrintHandler,
+ * apoi html2pdf capturează .invoice-container ca PDF.
+ */
+window.downloadPDF = async function() {
+    if (!currentInvoice) {
+        showToast('Nicio factură încărcată. Deschideți un XML eFactura mai întâi.', 'warning');
+        return;
+    }
+    const btn = document.getElementById('btnDownloadPDF');
+    if (btn) _btnLoading(btn, 'Generare PDF...');
+
+    try {
+        // Pasul 1: pre-încarcă html2pdf bundle (lazy, ~900KB)
+        const html2pdf = await getHtml2pdf();
+
+        // Pasul 2: colectează datele facturii
+        const invoiceData = printHandler.collectInvoiceData();
+        const invoiceNumber = invoiceData.invoiceNumber || 'factura';
+
+        // Pasul 3: randează HTML-ul facturii într-un container detașat (off-screen)
+        const container = document.createElement('div');
+        container.style.cssText = 'position:absolute;left:-9999px;top:0;width:210mm;background:#fff;';
+        container.id = 'pdf-render-container';
+        document.body.appendChild(container);
+
+        // Stiluri inline de bază pentru randarea off-screen
+        container.innerHTML = `
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, div { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    #pdf-content { padding: 16mm; font-size: 10px; line-height: 1.4; color: #1e293b; }
+    .pdf-header { display: flex; justify-content: space-between; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #2563eb; }
+    .pdf-title { font-size: 20px; font-weight: 700; color: #2563eb; }
+    .pdf-meta { font-size: 9px; color: #64748b; }
+    .pdf-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+    .pdf-party-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+    .pdf-party p { margin: 1px 0; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9px; }
+    th { background: #f8fafc; text-align: left; padding: 5px 6px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #64748b; text-transform: uppercase; font-size: 8px; letter-spacing: 0.04em; }
+    td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .pdf-totals { margin-left: auto; width: 240px; font-size: 9px; }
+    .pdf-total-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #f1f5f9; }
+    .pdf-total-final { font-weight: 700; font-size: 11px; border-top: 2px solid #1e293b; padding-top: 4px; margin-top: 4px; }
+</style>
+<div id="pdf-content">
+    <div class="pdf-header">
+        <div>
+            <div class="pdf-title">FACTURĂ</div>
+            <div class="pdf-meta">Nr. ${_escapeHtml(invoiceData.invoiceNumber)} | Data: ${_escapeHtml(invoiceData.issueDate)} | Scadent: ${_escapeHtml(invoiceData.dueDate)}</div>
+        </div>
+        <div class="pdf-meta" style="text-align:right">Monedă: ${_escapeHtml(invoiceData.documentCurrencyCode)}</div>
+    </div>
+    <div class="pdf-parties">
+        <div>
+            <div class="pdf-party-label">Furnizor</div>
+            <p><strong>${_escapeHtml(invoiceData.supplier.name)}</strong></p>
+            ${invoiceData.supplier.vat ? `<p>CUI: ${_escapeHtml(invoiceData.supplier.vat)}</p>` : ''}
+            ${invoiceData.supplier.companyId ? `<p>Nr. reg.: ${_escapeHtml(invoiceData.supplier.companyId)}</p>` : ''}
+            ${invoiceData.supplier.address ? `<p>${_escapeHtml(invoiceData.supplier.address)}, ${_escapeHtml(invoiceData.supplier.city)}</p>` : ''}
+            ${invoiceData.supplier.country ? `<p>${_escapeHtml(invoiceData.supplier.country)}</p>` : ''}
+        </div>
+        <div>
+            <div class="pdf-party-label">Client</div>
+            <p><strong>${_escapeHtml(invoiceData.customer.name)}</strong></p>
+            ${invoiceData.customer.vat ? `<p>CUI: ${_escapeHtml(invoiceData.customer.vat)}</p>` : ''}
+            ${invoiceData.customer.companyId ? `<p>Nr. reg.: ${_escapeHtml(invoiceData.customer.companyId)}</p>` : ''}
+            ${invoiceData.customer.address ? `<p>${_escapeHtml(invoiceData.customer.address)}, ${_escapeHtml(invoiceData.customer.city)}</p>` : ''}
+            ${invoiceData.customer.country ? `<p>${_escapeHtml(invoiceData.customer.country)}</p>` : ''}
+        </div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th><th>Descriere</th><th>UM</th>
+                <th class="num">Cant.</th><th class="num">Preț unit.</th>
+                <th class="num">TVA%</th><th class="num">Total net</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${invoiceData.items.map(it => `<tr>
+                <td>${it.number}</td>
+                <td>${_escapeHtml(it.description)}</td>
+                <td>${_escapeHtml(it.unit)}</td>
+                <td class="num">${_escapeHtml(it.quantity)}</td>
+                <td class="num">${_escapeHtml(it.price)}</td>
+                <td class="num">${_escapeHtml(String(it.vatRate))}%</td>
+                <td class="num">${_escapeHtml(it.totalAmount)}</td>
+            </tr>`).join('')}
+        </tbody>
+    </table>
+    ${invoiceData.note ? `<p style="font-size:9px;color:#64748b;margin-bottom:8px;"><em>Notă: ${_escapeHtml(invoiceData.note)}</em></p>` : ''}
+    <div style="display:flex;justify-content:flex-end;">
+        <div class="pdf-totals">
+            <div class="pdf-total-row"><span>Subtotal:</span><span>${_escapeHtml(invoiceData.totals.subtotal)}</span></div>
+            ${invoiceData.totals.allowances ? `<div class="pdf-total-row"><span>Reduceri:</span><span>-${_escapeHtml(invoiceData.totals.allowances)}</span></div>` : ''}
+            ${invoiceData.totals.charges ? `<div class="pdf-total-row"><span>Taxe:</span><span>${_escapeHtml(invoiceData.totals.charges)}</span></div>` : ''}
+            <div class="pdf-total-row"><span>TVA total:</span><span>${_escapeHtml(invoiceData.totals.vat)}</span></div>
+            <div class="pdf-total-row pdf-total-final"><span>TOTAL:</span><span>${_escapeHtml(invoiceData.totals.total)}</span></div>
+        </div>
+    </div>
+</div>`;
+
+        await html2pdf().set({
+            margin: [0, 0, 0, 0],
+            filename: 'factura_' + invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, '_') + '.pdf',
+            image: { type: 'jpeg', quality: 0.97 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).from(container.querySelector('#pdf-content')).save();
+
+        showToast('PDF generat și descărcat.', 'success');
+    } catch (err) {
+        showToast('Eroare la generarea PDF: ' + err.message, 'error',
+                  'Verificați că js/vendor/html2pdf.bundle.min.js este prezent.');
+    } finally {
+        document.getElementById('pdf-render-container')?.remove();
+        if (btn) _btnDone(btn);
+    }
+};
+
 // Export for testing if needed
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {

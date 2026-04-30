@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9-beta-7 - 30.04.2026
+
+### New Features
+- Added: Descărcare PDF client-side (PR-PDF / A8). Vânturare `js/vendor/html2pdf.bundle.min.js` (html2pdf.js 0.10.2, ~900KB, include html2canvas + jsPDF — lazy loaded la primul click). ESM wrapper `js/vendor/html2pdf.mjs` cu `getHtml2pdf()` (singleton promise, retry safe). Buton "Descarcă PDF" în header index.html (`.button-secondary`, mereu vizibil). Funcție `window.downloadPDF()` în script.js: colectează date factură via InvoicePrintHandler.collectInvoiceData(), randează HTML invoice off-screen (div detașat position:absolute left:-9999px), cheamă html2pdf cu scale=2 JPEG 0.97, filename `factura_<nr>.pdf`, cleanup div după save. Toast: `success` / `error`. Buton "Descarcă PDF" adăugat și în template-urile de print (`templates/print.html`, `templates/print-compact.html`) — `@media print { display: none }` pe toolbar; scriptul din template încarcă bundlul relativ (`../js/vendor/html2pdf.bundle.min.js`) și preia `#invoice-content` ca sursă. `js/server.js` și `.htaccess.template` vor necesita MIME `.mjs` (deja configurat din PR-E + PR-ZIP).
+
 ## 0.9-beta-6 - 30.04.2026
 
 ### New Features
