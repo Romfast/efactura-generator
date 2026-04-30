@@ -18,7 +18,7 @@
                 <div class="app-author">Romfast SRL</div>
             </div>
             <div class="button-group">
-                <input type="file" id="fileInput" class="file-input" accept=".xml,.zip,application/zip,application/x-zip-compressed">
+                <input type="file" id="fileInput" class="file-input" accept=".xml,.zip,application/zip,application/x-zip-compressed" multiple>
                 <button onclick="document.getElementById('fileInput').click()" class="button">Alege Fișier XML / ZIP</button>
                 <button onclick="window.openNewInvoiceModal()" class="button" title="Factură nouă cu numerotare automată">Factură Nouă</button>
                 <button id="btnDownloadPDF" onclick="window.downloadPDF()" class="button button-secondary" title="Descarcă factură în format PDF (client-side)">Descarcă PDF</button>
@@ -281,7 +281,7 @@
         </form>
 
         <footer class="app-footer">
-            <span id="app-version">v0.9-beta-9</span>
+            <span id="app-version">v0.9-beta-10</span>
             <a href="https://www.romfast.ro">www.romfast.ro</a>
         </footer>        
     </div>

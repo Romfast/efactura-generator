@@ -194,6 +194,11 @@ let originalTotals = null;
 let vatRates = new Map();
 let manuallyEditedVatRows = new Set();
 
+// PR-A14: Multi-XML bulk state
+let _multiXmlFiles = [];   // [{name, content, dirty}]
+let _activeFileIdx = -1;   // index în _multiXmlFiles (-1 = single-file mode)
+let _loadingFile = false;  // suprimă dirty events cât timp parseXML populează formularul
+
 // Initialize event listeners
 document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('fileInput').addEventListener('change', handleFileSelect);
@@ -459,9 +464,238 @@ async function loadInvoiceFile(file) {
 }
 
 function handleFileSelect(event) {
-    const file = event.target.files && event.target.files[0];
-    if (file) loadInvoiceFile(file);
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    if (files.length === 1) {
+        loadInvoiceFile(files[0]);
+    } else {
+        loadMultipleFiles(Array.from(files));
+    }
+    // Reset input so same file(s) can be re-selected
+    event.target.value = '';
 }
+
+// ─────────────────────────────────────────────────────────
+// PR-A14: Multi-XML bulk mode
+// ─────────────────────────────────────────────────────────
+
+/**
+ * Citește conținutul text al unui fișier XML sau al primului XML dintr-un ZIP.
+ * @param {File} file
+ * @returns {Promise<string|null>} conținut XML sau null la eroare
+ */
+async function _readFileContent(file) {
+    try {
+        if (await isZipFile(file)) {
+            const buf = await file.arrayBuffer();
+            const zip = await JSZip.loadAsync(buf);
+            const xmlEntries = Object.values(zip.files)
+                .filter(f => !f.dir && f.name.toLowerCase().endsWith('.xml'));
+            if (xmlEntries.length === 0) return null;
+            xmlEntries.sort((a, b) => a.name.localeCompare(b.name));
+            return await xmlEntries[0].async('string');
+        } else {
+            return await file.text();
+        }
+    } catch (err) {
+        console.error('_readFileContent:', file.name, err);
+        return null;
+    }
+}
+
+/**
+ * Încarcă mai multe fișiere XML/ZIP în modul bulk.
+ * - Citește fișierele async cu yield între ele (responsivitate UI).
+ * - Aplică limitarea la 50 de fișiere, cu toast de avertizare.
+ * - Afișează sidebar-ul și încarcă primul fișier în formular.
+ * @param {File[]} files
+ */
+async function loadMultipleFiles(files) {
+    const MAX = 50;
+    const existing = _multiXmlFiles.length;
+    const available = Math.max(0, MAX - existing);
+    let dropped = 0;
+
+    if (files.length > available) {
+        dropped = files.length - available;
+        files = files.slice(0, available);
+    }
+
+    if (files.length === 0) {
+        if (dropped > 0) {
+            showToast(`Limita de ${MAX} fișiere atinsă — ${dropped} fișier(e) ignorat(e).`, 'warning');
+        }
+        return;
+    }
+
+    // Citire async cu yield între iterații
+    const newEntries = [];
+    for (const file of files) {
+        const content = await _readFileContent(file);
+        if (content !== null) {
+            newEntries.push({ name: file.name, content, dirty: false });
+        }
+        // yield pentru ca UI să rămână responsiv
+        await new Promise(r => setTimeout(r, 0));
+    }
+
+    if (newEntries.length === 0) {
+        showToast('Niciun fișier XML valid găsit.', 'error');
+        return;
+    }
+
+    const wasEmpty = _multiXmlFiles.length === 0;
+    _multiXmlFiles.push(...newEntries);
+
+    if (dropped > 0) {
+        showToast(`Limita de ${MAX} fișiere: ${dropped} fișier(e) ignorat(e).`, 'warning');
+    }
+
+    // Prima activare: dacă nu era niciun fișier activ sau era single-file mode
+    if (wasEmpty) {
+        _activeFileIdx = 0;
+    }
+    // Altfel păstrăm indexul activ curent
+
+    _renderXmlSidebar();
+    _activateFile(_activeFileIdx, false /* nu salva — tocmai am intrat în bulk mode */);
+}
+
+/**
+ * Salvează starea curentă a formularului înapoi în _multiXmlFiles[idx].content.
+ * Apelat înaintea switch-ului de fișier.
+ */
+function _saveCurrentFileState() {
+    if (_activeFileIdx < 0 || _activeFileIdx >= _multiXmlFiles.length) return;
+    const xml = _currentXMLString();
+    if (xml) {
+        _multiXmlFiles[_activeFileIdx].content = xml;
+    }
+}
+
+/**
+ * Activează fișierul la indexul dat: parsează XML-ul în formular.
+ * @param {number} idx
+ * @param {boolean} [saveFirst=true] dacă să salveze starea fișierului activ înainte de switch
+ */
+function _activateFile(idx, saveFirst = true) {
+    if (idx < 0 || idx >= _multiXmlFiles.length) return;
+
+    if (saveFirst && _activeFileIdx >= 0 && _activeFileIdx !== idx) {
+        _saveCurrentFileState();
+    }
+
+    _activeFileIdx = idx;
+    const entry = _multiXmlFiles[idx];
+
+    _loadingFile = true;
+    parseXML(entry.content);
+    // Suprimă dirty events generate de popularea formularului
+    queueMicrotask(() => { _loadingFile = false; });
+
+    _renderXmlSidebar();
+}
+
+/**
+ * Marchează fișierul activ ca dirty (modificat).
+ * Apelat din event delegation pe formularul de editare.
+ */
+function _markActiveDirty() {
+    if (_loadingFile) return;
+    if (_activeFileIdx < 0 || _activeFileIdx >= _multiXmlFiles.length) return;
+    if (_multiXmlFiles[_activeFileIdx].dirty) return; // deja marcat
+    _multiXmlFiles[_activeFileIdx].dirty = true;
+    _updateSidebarItem(_activeFileIdx);
+}
+
+/** Redă întregul sidebar cu lista de fișiere. */
+function _renderXmlSidebar() {
+    const hasBulk = _multiXmlFiles.length >= 2;
+    document.body.classList.toggle('has-xml-sidebar', hasBulk);
+
+    if (!hasBulk) {
+        const old = document.getElementById('xml-sidebar');
+        if (old) old.remove();
+        return;
+    }
+
+    let sidebar = document.getElementById('xml-sidebar');
+    if (!sidebar) {
+        sidebar = document.createElement('div');
+        sidebar.id = 'xml-sidebar';
+        sidebar.setAttribute('role', 'navigation');
+        sidebar.setAttribute('aria-label', 'Fișiere XML');
+        document.body.insertBefore(sidebar, document.body.firstChild);
+    }
+
+    sidebar.innerHTML = '';
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'xml-sidebar-header';
+    hdr.textContent = `Fișiere (${_multiXmlFiles.length})`;
+    sidebar.appendChild(hdr);
+
+    // Items
+    const list = document.createElement('ul');
+    list.className = 'xml-sidebar-list';
+    _multiXmlFiles.forEach((entry, idx) => {
+        const li = _buildSidebarItem(entry, idx);
+        list.appendChild(li);
+    });
+    sidebar.appendChild(list);
+}
+
+/** Construiește un <li> pentru un fișier din sidebar. */
+function _buildSidebarItem(entry, idx) {
+    const li = document.createElement('li');
+    li.className = 'xml-sidebar-item' + (idx === _activeFileIdx ? ' is-active' : '');
+    li.dataset.idx = idx;
+    li.title = entry.name;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'xml-sidebar-item-name';
+    nameSpan.textContent = entry.name;
+
+    const dirtyDot = document.createElement('span');
+    dirtyDot.className = 'xml-sidebar-dirty' + (entry.dirty ? ' is-dirty' : '');
+    dirtyDot.title = entry.dirty ? 'Modificat (nesalvat)' : '';
+    dirtyDot.setAttribute('aria-hidden', 'true');
+
+    li.appendChild(nameSpan);
+    li.appendChild(dirtyDot);
+
+    li.addEventListener('click', () => {
+        if (idx === _activeFileIdx) return;
+        _activateFile(idx, true);
+    });
+
+    return li;
+}
+
+/** Actualizează doar un item din sidebar (fără re-render complet). */
+function _updateSidebarItem(idx) {
+    const sidebar = document.getElementById('xml-sidebar');
+    if (!sidebar) return;
+    const list = sidebar.querySelector('.xml-sidebar-list');
+    if (!list) return;
+    const items = list.querySelectorAll('.xml-sidebar-item');
+    if (!items[idx]) return;
+    const entry = _multiXmlFiles[idx];
+    const old = items[idx];
+    const replacement = _buildSidebarItem(entry, idx);
+    list.replaceChild(replacement, old);
+}
+
+// Expune pe window pentru butonul "Salvează XML" în bulk mode
+window.saveCurrentFileAndMark = function() {
+    if (_activeFileIdx < 0) return;
+    _saveCurrentFileState();
+    _multiXmlFiles[_activeFileIdx].dirty = false;
+    _updateSidebarItem(_activeFileIdx);
+};
+
+// ─────────────────────────────────────────────────────────
 
 // Drag-and-drop: acceptă XML sau ZIP la drop pe oriunde în pagină.
 function setupDragAndDrop() {
@@ -485,8 +719,12 @@ function setupDragAndDrop() {
         if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
         prevent(e);
         target.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        loadInvoiceFile(file);
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length === 1) {
+            loadInvoiceFile(files[0]);
+        } else {
+            loadMultipleFiles(files);
+        }
     });
 }
 
@@ -1353,6 +1591,13 @@ function initializeUI() {
             if (!input || !input.name || !input.name.startsWith('paymentMeansIBAN')) return;
             _clearFieldError(input, input.name + '-error');
         });
+    }
+
+    // PR-A14: dirty tracking — marcăm fișierul activ la orice editare a formularului
+    const invoiceForm = document.getElementById('invoiceForm');
+    if (invoiceForm) {
+        invoiceForm.addEventListener('input', () => _markActiveDirty());
+        invoiceForm.addEventListener('change', () => _markActiveDirty());
     }
 }
 

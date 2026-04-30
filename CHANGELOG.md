@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9-beta-10 - 30.04.2026
+
+### New Features
+- Added: Import bulk multi-XML (PR-A14 / A14 / D3). Atribut `multiple` pe `#fileInput` — permite selecție multiplă din file picker. Drag-and-drop acceptă acum și mai multe fișiere simultan. `loadMultipleFiles(files)`: citire async cu yield `setTimeout(0)` între iterații (responsivitate UI la 50 fișiere), limită 50 fișiere cu toast warning dacă se depășește, suport ZIP (primul XML din arhivă per fișier). Stare modul bulk: `_multiXmlFiles = [{name, content, dirty}]`, `_activeFileIdx`. Sidebar `#xml-sidebar` (D3): 240px fixed stânga, `background: --surface-muted`, `border-right: --border`, vizibil doar când `_multiXmlFiles.length >= 2` (toggle `body.has-xml-sidebar`; la ≤1 fișiere nu se activează sidebar, layout normal). Fiecare item sidebar: denumire trunchiată, punct portocaliu `--warning` dacă dirty. Click pe item: salvează starea curentă (`_currentXMLString()`) în `_multiXmlFiles[old].content`, parsează și afișează noul fișier. `_loadingFile` flag suprimă dirty events declanșate de `parseXML()` la popularea formularului. Dirty tracking: event delegation `input`+`change` pe `#invoiceForm`. Mobile ≤720px: sidebar devin rail orizontal fix în sus (overflow-x scroll, max-height 160px, no padding-left pe container). CSS: `#xml-sidebar`, `.xml-sidebar-header`, `.xml-sidebar-list`, `.xml-sidebar-item`, `.xml-sidebar-item.is-active` (`--primary-soft`), `.xml-sidebar-item-name`, `.xml-sidebar-dirty`, `.xml-sidebar-dirty.is-dirty`, `body.has-xml-sidebar .container { padding-left: 256px }`.
+
 ## 0.9-beta-9 - 30.04.2026
 
 ### New Features
