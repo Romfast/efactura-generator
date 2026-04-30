@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:qdt="urn:oasis:names:specification:ubl:schema:xsd:QualifiedDataTypes-2" xmlns:ccts="urn:un:unece:uncefact:documentation:2" xmlns:udt="urn:oasis:names:specification:ubl:schema:xsd:UnqualifiedDataTypes-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+    <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+    <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:efactura.mfinante.ro:CIUS-RO:1.0.1</cbc:CustomizationID>
+    <cbc:ID>MM nr. 92784</cbc:ID><!--BT-1-->
+    <cbc:IssueDate>2024-01-08</cbc:IssueDate><!--BT-2-->
+    <cbc:DueDate>2024-01-08</cbc:DueDate><!--BT-9-->
+    <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode><!--BT-3-->
+    <cbc:Note>Proforma recurenta emisa pentru abonamentul nr. cafeabunaro.gomag.ro_increment</cbc:Note><!--BT-22-->
+    <cbc:TaxPointDate>2024-01-08</cbc:TaxPointDate><!--BT-7-->
+    <cbc:DocumentCurrencyCode>RON</cbc:DocumentCurrencyCode><!--BT-5-->
+    <cac:AccountingSupplierParty><!--BG-4-->
+        <cac:Party>
+            <cac:PostalAddress><!--BG-5-->
+                <cbc:StreetName>str. George Cosbuc, nr. 25A, ap. 50</cbc:StreetName><!--BT-35-->
+                <cbc:CityName>Baia Mare</cbc:CityName><!--BT-37-->
+                <cbc:CountrySubentity>RO-MM</cbc:CountrySubentity><!--BT-39-->
+                <cac:Country>
+                    <cbc:IdentificationCode>RO</cbc:IdentificationCode><!--BT-40-->
+                </cac:Country>
+            </cac:PostalAddress>
+            <cac:PartyTaxScheme>
+                <cbc:CompanyID>RO18067119</cbc:CompanyID><!--BT-31-->
+                <cac:TaxScheme>
+                    <cbc:ID>VAT</cbc:ID>
+                </cac:TaxScheme>
+            </cac:PartyTaxScheme>
+            <cac:PartyLegalEntity>
+                <cbc:RegistrationName>SC SILKWEB SA</cbc:RegistrationName><!--BT-27-->
+                <cbc:CompanyID>J24/1748/2005</cbc:CompanyID><!--BT-30-->
+                <cbc:CompanyLegalForm>Capital social: 90000 lei</cbc:CompanyLegalForm><!--BT-33-->
+            </cac:PartyLegalEntity>
+            <cac:Contact><!--BG-6-->
+                <cbc:Name>Gomag  2</cbc:Name><!--BT-41-->
+                <cbc:Telephone>0721334992</cbc:Telephone><!--BT-42-->
+            </cac:Contact>
+        </cac:Party>
+    </cac:AccountingSupplierParty>
+    <cac:AccountingCustomerParty><!--BG-7-->
+        <cac:Party>
+            <cbc:EndpointID schemeID="EM">office@romfast.ro</cbc:EndpointID><!--BT-49-->
+            <cac:PostalAddress><!--BG-8-->
+                <cbc:StreetName>Bd. Mamaia 17</cbc:StreetName><!--BT-50-->
+                <cbc:CityName>Constatna</cbc:CityName><!--BT-52-->
+                <cbc:CountrySubentity>RO-CT</cbc:CountrySubentity><!--BT-54-->
+                <cac:Country>
+                    <cbc:IdentificationCode>RO</cbc:IdentificationCode><!--BT-55-->
+                </cac:Country>
+            </cac:PostalAddress>
+            <cac:PartyTaxScheme>
+                <cbc:CompanyID>RO1879855</cbc:CompanyID><!--BT-48-->
+                <cac:TaxScheme>
+                    <cbc:ID>VAT</cbc:ID>
+                </cac:TaxScheme>
+            </cac:PartyTaxScheme>
+            <cac:PartyLegalEntity>
+                <cbc:RegistrationName>ROMFAST SRL</cbc:RegistrationName><!--BT-44-->
+            </cac:PartyLegalEntity>
+            <cac:Contact><!--BG-9-->
+                <cbc:ElectronicMail>office@romfast.ro</cbc:ElectronicMail><!--BT-58-->
+            </cac:Contact>
+        </cac:Party>
+    </cac:AccountingCustomerParty>
+    <cac:PaymentMeans><!--BG-16-->
+        <cbc:PaymentMeansCode>42</cbc:PaymentMeansCode><!--BT-81-->
+        <cbc:PaymentID>MM nr. 92784</cbc:PaymentID><!--BT-83-->
+        <cac:PayeeFinancialAccount><!--BG-17-->
+            <cbc:ID>RO32BTRLRONCRT123456789</cbc:ID><!--BT-84-->
+            <cbc:Name>CONT BANCA TRANSILVANIA IN RON</cbc:Name><!--BT-85-->
+            <cac:FinancialInstitutionBranch>
+                <cbc:ID>BTRLRO22</cbc:ID><!--BT-86-->
+            </cac:FinancialInstitutionBranch>
+        </cac:PayeeFinancialAccount>
+    </cac:PaymentMeans>
+    <cac:PaymentMeans><!--BG-16-->
+        <cbc:PaymentMeansCode>42</cbc:PaymentMeansCode><!--BT-81-->
+        <cbc:PaymentID>MM nr. 92784</cbc:PaymentID><!--BT-83-->
+        <cac:PayeeFinancialAccount><!--BG-17-->
+            <cbc:ID>RO79BTRLEURCRT0656782201</cbc:ID><!--BT-84-->
+            <cbc:Name>CONT BANCA TRANSILVANIA IN EUR</cbc:Name><!--BT-85-->
+            <cac:FinancialInstitutionBranch>
+                <cbc:ID>BTRLRO22</cbc:ID><!--BT-86-->
+            </cac:FinancialInstitutionBranch>
+        </cac:PayeeFinancialAccount>
+    </cac:PaymentMeans>
+    <cac:TaxTotal>
+        <cbc:TaxAmount currencyID="RON">271.87</cbc:TaxAmount><!--BT-110-->
+        <cac:TaxSubtotal><!--BG-23-->
+            <cbc:TaxableAmount currencyID="RON">1430.88</cbc:TaxableAmount><!--BT-116-->
+            <cbc:TaxAmount currencyID="RON">271.87</cbc:TaxAmount><!--BT-117-->
+            <cac:TaxCategory>
+                <cbc:ID>S</cbc:ID><!--BT-118-->
+                <cbc:Percent>19.00</cbc:Percent><!--BT-119-->
+                <cac:TaxScheme>
+                    <cbc:ID>VAT</cbc:ID>
+                </cac:TaxScheme>
+            </cac:TaxCategory>
+        </cac:TaxSubtotal>
+    </cac:TaxTotal>
+    <cac:LegalMonetaryTotal><!--BG-22-->
+        <cbc:LineExtensionAmount currencyID="RON">1430.88</cbc:LineExtensionAmount><!--BT-106-->
+        <cbc:TaxExclusiveAmount currencyID="RON">1430.88</cbc:TaxExclusiveAmount><!--BT-109-->
+        <cbc:TaxInclusiveAmount currencyID="RON">1702.75</cbc:TaxInclusiveAmount><!--BT-112-->
+        <cbc:AllowanceTotalAmount currencyID="RON">0.00</cbc:AllowanceTotalAmount><!--BT-107-->
+        <cbc:ChargeTotalAmount currencyID="RON">0</cbc:ChargeTotalAmount><!--BT-108-->
+        <cbc:PrepaidAmount currencyID="RON">0</cbc:PrepaidAmount><!--BT-113-->
+        <cbc:PayableRoundingAmount currencyID="RON">0.00</cbc:PayableRoundingAmount><!--BT-114-->
+        <cbc:PayableAmount currencyID="RON">1702.75</cbc:PayableAmount><!--BT-115-->
+    </cac:LegalMonetaryTotal>
+    <cac:InvoiceLine>
+        <cbc:ID>1</cbc:ID><!--BT-126-->
+        <cbc:InvoicedQuantity unitCode="H87">4.0000</cbc:InvoicedQuantity><!--BT-129 BT-130-->
+        <cbc:LineExtensionAmount currencyID="RON">1359.84</cbc:LineExtensionAmount><!--BT-131-->
+        <cac:Item><!--BG-31-->
+            <cbc:Description>4 x increment resurse
+- conform https://www.gomag.ro/termeni-si-conditii pct. 4.3</cbc:Description><!--BT-154-->
+            <cbc:Name>Abonament Platforma Gomag - increment</cbc:Name><!--BT-153-->
+            <cac:SellersItemIdentification>
+                <cbc:ID>22</cbc:ID><!--BT-155-->
+            </cac:SellersItemIdentification>
+            <cac:ClassifiedTaxCategory>
+                <cbc:ID>S</cbc:ID><!--BT-151-->
+                <cbc:Percent>19.00</cbc:Percent><!--BT-152-->
+                <cac:TaxScheme>
+                    <cbc:ID>VAT</cbc:ID>
+                </cac:TaxScheme>
+            </cac:ClassifiedTaxCategory>
+        </cac:Item>
+        <cac:Price><!--BG-29-->
+            <cbc:PriceAmount currencyID="RON">339.96</cbc:PriceAmount><!--BT-146-->
+            <cbc:BaseQuantity unitCode="H87">4.0000</cbc:BaseQuantity><!--BT-149 BT-150-->
+        </cac:Price>
+    </cac:InvoiceLine>
+    <cac:InvoiceLine>
+        <cbc:ID>2</cbc:ID><!--BT-126-->
+        <cbc:InvoicedQuantity unitCode="H87">1.0000</cbc:InvoicedQuantity><!--BT-129 BT-130-->
+        <cbc:LineExtensionAmount currencyID="RON">71.04</cbc:LineExtensionAmount><!--BT-131-->
+        <cac:Item><!--BG-31-->
+            <cbc:Description>SEO avansat</cbc:Description><!--BT-154-->
+            <cbc:Name>Aplicatii</cbc:Name><!--BT-153-->
+            <cac:SellersItemIdentification>
+                <cbc:ID>24</cbc:ID><!--BT-155-->
+            </cac:SellersItemIdentification>
+            <cac:ClassifiedTaxCategory>
+                <cbc:ID>S</cbc:ID><!--BT-151-->
+                <cbc:Percent>19.00</cbc:Percent><!--BT-152-->
+                <cac:TaxScheme>
+                    <cbc:ID>VAT</cbc:ID>
+                </cac:TaxScheme>
+            </cac:ClassifiedTaxCategory>
+        </cac:Item>
+        <cac:Price><!--BG-29-->
+            <cbc:PriceAmount currencyID="RON">71.04</cbc:PriceAmount><!--BT-146-->
+            <cbc:BaseQuantity unitCode="H87">1.0000</cbc:BaseQuantity><!--BT-149 BT-150-->
+        </cac:Price>
+    </cac:InvoiceLine>
+</Invoice>

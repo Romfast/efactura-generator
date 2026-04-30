@@ -1,0 +1,548 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns:cec="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2" xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+	<cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:efactura.mfinante.ro:CIUS-RO:1.0.1</cbc:CustomizationID>
+	<cbc:ID>SLG593338005691</cbc:ID>
+	<cbc:IssueDate>2023-12-04</cbc:IssueDate>
+	<cbc:DueDate>2023-12-04</cbc:DueDate>
+	<cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+	<cbc:DocumentCurrencyCode>RON</cbc:DocumentCurrencyCode>
+	<cbc:TaxCurrencyCode>RON</cbc:TaxCurrencyCode>
+	<cac:AccountingSupplierParty>
+		<cac:Party>
+			<cac:PartyIdentification>
+				<cbc:ID schemeID="0088">5948556999995</cbc:ID>
+			</cac:PartyIdentification>
+			<cac:PartyName>
+				<cbc:Name>SELGROS CASH &amp; CARRY SRL</cbc:Name>
+			</cac:PartyName>
+			<cac:PostalAddress>
+				<cbc:StreetName>Calea Bucuresti, nr. 231</cbc:StreetName>
+				<cbc:CityName>Brasov</cbc:CityName>
+				<cbc:PostalZone>500299</cbc:PostalZone>
+				<cbc:CountrySubentity>RO-BV</cbc:CountrySubentity>
+				<cac:Country>
+					<cbc:IdentificationCode>RO</cbc:IdentificationCode>
+				</cac:Country>
+			</cac:PostalAddress>
+			<cac:PartyTaxScheme>
+				<cbc:CompanyID>RO11805367</cbc:CompanyID>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:PartyTaxScheme>
+			<cac:PartyLegalEntity>
+				<cbc:RegistrationName>SELGROS CASH &amp; CARRY SRL</cbc:RegistrationName>
+				<cbc:CompanyID>J08/464/2001</cbc:CompanyID>
+			</cac:PartyLegalEntity>
+		</cac:Party>
+	</cac:AccountingSupplierParty>
+	<cac:AccountingCustomerParty>
+		<cac:Party>
+			<cac:PartyIdentification>
+				<cbc:ID schemeID="0088">5940005199932</cbc:ID>
+			</cac:PartyIdentification>
+			<cac:PartyName>
+				<cbc:Name>EDUARD PUBLISHING SRL</cbc:Name>
+			</cac:PartyName>
+			<cac:PostalAddress>
+				<cbc:StreetName>STR DACILOR NR 9 ET P</cbc:StreetName>
+				<cbc:CityName>LUMINA</cbc:CityName>
+				<cbc:PostalZone>907175</cbc:PostalZone>
+				<cbc:CountrySubentity>RO-CT</cbc:CountrySubentity>
+				<cac:Country>
+					<cbc:IdentificationCode>RO</cbc:IdentificationCode>
+				</cac:Country>
+			</cac:PostalAddress>
+			<cac:PartyTaxScheme>
+				<cbc:CompanyID>RO25629015</cbc:CompanyID>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:PartyTaxScheme>
+			<cac:PartyLegalEntity>
+				<cbc:RegistrationName>EDUARD PUBLISHING SRL</cbc:RegistrationName>
+				<cbc:CompanyID>J13/1356/2009</cbc:CompanyID>
+			</cac:PartyLegalEntity>
+		</cac:Party>
+	</cac:AccountingCustomerParty>
+	<cac:Delivery>
+		<cac:DeliveryLocation>
+			<cbc:ID schemeID="0088">5948556999803</cbc:ID>
+			<cac:Address>
+				<cbc:StreetName>STR DACILOR NR 9 ET P</cbc:StreetName>
+				<cbc:CityName>LUMINA</cbc:CityName>
+				<cbc:PostalZone>907175</cbc:PostalZone>
+				<cbc:CountrySubentity>RO-CT</cbc:CountrySubentity>
+				<cac:Country>
+					<cbc:IdentificationCode>RO</cbc:IdentificationCode>
+				</cac:Country>
+			</cac:Address>
+		</cac:DeliveryLocation>
+	</cac:Delivery>
+	<cac:PaymentMeans>
+		<cbc:PaymentMeansCode>10</cbc:PaymentMeansCode>
+	</cac:PaymentMeans>
+	<cac:TaxTotal>
+		<cbc:TaxAmount currencyID="RON">60.99</cbc:TaxAmount>
+		<cac:TaxSubtotal>
+			<cbc:TaxableAmount currencyID="RON">311.58</cbc:TaxableAmount>
+			<cbc:TaxAmount currencyID="RON">59.21</cbc:TaxAmount>
+			<cac:TaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:TaxCategory>
+		</cac:TaxSubtotal>
+		<cac:TaxSubtotal>
+			<cbc:TaxableAmount currencyID="RON">19.80</cbc:TaxableAmount>
+			<cbc:TaxAmount currencyID="RON">1.78</cbc:TaxAmount>
+			<cac:TaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>9.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:TaxCategory>
+		</cac:TaxSubtotal>
+	</cac:TaxTotal>
+	<cac:LegalMonetaryTotal>
+		<cbc:LineExtensionAmount currencyID="RON">331.38</cbc:LineExtensionAmount>
+		<cbc:TaxExclusiveAmount currencyID="RON">331.38</cbc:TaxExclusiveAmount>
+		<cbc:TaxInclusiveAmount currencyID="RON">392.37</cbc:TaxInclusiveAmount>
+		<cbc:PayableAmount currencyID="RON">392.37</cbc:PayableAmount>
+	</cac:LegalMonetaryTotal>
+	<cac:InvoiceLine>
+		<cbc:ID>1</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="XPA">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">5.90</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>B.DOVE SAPUN CREMA 90G/100G</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>8720182264664</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">8720182264664</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">34011100</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">5.900</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>2</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="XPA">2</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">27.56</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>ALUFIX PROF.SACI MEN.280L 5BUC</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>4823071655162</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">4823071655162</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">39232100</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">13.780</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>3</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="XPA">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">23.57</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>ALUFIX SACI MENAJ 240L 10BUC</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>4823071655148</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">4823071655148</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">39232100</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">23.570</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>4</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="XPA">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">1.15</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>SACOSA SARBATORI ECOTAXA 0.15</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>2040078636006</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">2040078636006</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">39232100</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">1.150</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>5</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="XPA">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">18.49</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>REGINA PROS.HAR.XXL 2ROL.2STR.</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>8004260487696</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">8004260487696</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">48182091</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">18.490</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>6</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="XPA">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">5.90</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>DOVE SAPUN CREMA PINK 90G</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>8720182259813</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">8720182259813</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">34011100</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">5.900</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>7</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="H87">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">19.80</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>PERLA MOL.APA PH8,8PLATA1,0</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>6422797000133</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">6422797000133</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">22019000</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>9.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">19.800</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>8</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="H87">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">25.20</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>ENERGIZER MAX ALKALINE LR14</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>7638900426809</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">7638900426809</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">85061011</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">25.200</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>9</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="H87">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">15.06</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>VARTA ALC.LLE BELT R6 X6</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>4008496661978</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">4008496661978</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">85061011</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">15.060</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>10</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="XPA">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">3.35</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>RTC INDEX AUTOAD HARTIE 4 CUL</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>5948511330368</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">5948511330368</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">48201030</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">3.350</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>11</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="H87">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">25.10</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>ICO CAPSE METAL 24/6</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>5997072190119</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">5997072190119</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">83052000</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">25.100</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>12</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="H87">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">71.40</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>TRAFFIC H.COP A4 80 GR/CUTIE</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>5948906000029</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">5948906000029</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">48025620</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">71.400</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>13</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="H87">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">15.09</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>ICO MARKER NEGRU 1-1,5 LIA</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>5997072148530</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">5997072148530</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">96085000</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">15.090</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>14</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="H87">2</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">33.52</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>SCH MARKER 1_3MM/NEGRU</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>6524898741660</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">6524898741660</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">96082000</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">16.760</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>15</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="XPA">3</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">25.17</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>PGN BIBL UNIBLACK RADO/7,5CM</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>6420387005711</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">6420387005711</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">48203000</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">8.390</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+	<cac:InvoiceLine>
+		<cbc:ID>16</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="XPA">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">15.12</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>NUSA FILE PROTECTIE 50 MCR/100</cbc:Name>
+			<cac:SellersItemIdentification>
+				<cbc:ID>5901503615430</cbc:ID>
+			</cac:SellersItemIdentification>
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">5901503615430</cbc:ID>
+			</cac:StandardItemIdentification>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">39261000</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>19.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">15.120</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
+</Invoice>

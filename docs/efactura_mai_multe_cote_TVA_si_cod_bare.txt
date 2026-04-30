@@ -1,0 +1,34 @@
+	<cac:InvoiceLine>
+		<cbc:ID>7</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="H87">1</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="RON">19.80</cbc:LineExtensionAmount>
+		<cac:Item>
+			<cbc:Name>PERLA MOL.APA PH8,8PLATA1,0</cbc:Name>
+			
+			* Cod identificare articol al vanzatorului (optional)
+			<cac:SellersItemIdentification>
+				<cbc:ID>6422797000133</cbc:ID>
+			</cac:SellersItemIdentification>
+			
+			* Cod standard de identificare (cod bare) (optional)
+			<cac:StandardItemIdentification>
+				<cbc:ID schemeID="0160">6422797000133</cbc:ID>
+			</cac:StandardItemIdentification>
+			
+			* Cod identificare CPV (optional, pentru articolele din contractele de achizitii publice)
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="TSP">22019000</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+			
+			<cac:ClassifiedTaxCategory>
+				<cbc:ID>S</cbc:ID>
+				<cbc:Percent>9.00</cbc:Percent>
+				<cac:TaxScheme>
+					<cbc:ID>VAT</cbc:ID>
+				</cac:TaxScheme>
+			</cac:ClassifiedTaxCategory>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="RON">19.800</cbc:PriceAmount>
+		</cac:Price>
+	</cac:InvoiceLine>
