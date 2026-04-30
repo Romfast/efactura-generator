@@ -3,6 +3,7 @@ import {
     Big, parseStrict, parseStrictOr, formatRaw, format2,
     setRaw, getRaw, markDirty, lineTotal as numericLineTotal, wireDatasetRaw, withinTolerance
 } from './numeric.js';
+import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js';
 
 // Constants
 const XML_NAMESPACES = {
@@ -1161,7 +1162,70 @@ function initializeUI() {
     window.updateTotals = updateTotals;
     window.saveXML = saveXML;
     window.refreshTotals = refreshTotals;
-    window.displayVATBreakdown = displayVATBreakdown;    
+    window.displayVATBreakdown = displayVATBreakdown;
+
+    // A12: expune butoane profil furnizor și inițializează starea.
+    window.saveSupplierProfile = saveSupplierProfile;
+    window.useSupplierProfile = useSupplierProfile;
+    window.deleteSupplierProfile = deleteSupplierProfile;
+    _updateProfileButtons();
+}
+
+// ============================================================================
+// A12: Profil furnizor (PR-PROFIL)
+// Salvează / aplică / șterge datele furnizorului în localStorage.
+// Cheia: efactura.profil.v1  (prefix enforced de storage.js).
+// ============================================================================
+
+const SUPPLIER_PROFILE_KEY = 'efactura.profil.v1';
+
+const SUPPLIER_FIELDS = [
+    'supplierName', 'supplierVAT', 'supplierCompanyId',
+    'supplierAddress', 'supplierCity', 'supplierCountrySubentity',
+    'supplierCountry', 'supplierPhone', 'supplierContactName', 'supplierEmail'
+];
+
+/** Actualizează vizibilitatea butoanelor "Folosește / Șterge profil". */
+function _updateProfileButtons() {
+    const profile = getJSON(SUPPLIER_PROFILE_KEY);
+    const hasProfile = profile !== null;
+    const btnUse    = document.getElementById('btnUseProfile');
+    const btnDelete = document.getElementById('btnDeleteProfile');
+    if (btnUse)    btnUse.style.display    = hasProfile ? '' : 'none';
+    if (btnDelete) btnDelete.style.display = hasProfile ? '' : 'none';
+}
+
+/** Salvează câmpurile furnizorului în localStorage. */
+function saveSupplierProfile() {
+    const profile = {};
+    SUPPLIER_FIELDS.forEach(f => {
+        const el = document.querySelector(`[name="${f}"]`);
+        if (el) profile[f] = el.value;
+    });
+    setJSON(SUPPLIER_PROFILE_KEY, profile);
+    _updateProfileButtons();
+    showToast('Profil furnizor salvat.', 'success');
+}
+
+/** Populează câmpurile furnizorului din profilul salvat. */
+function useSupplierProfile() {
+    const profile = getJSON(SUPPLIER_PROFILE_KEY);
+    if (!profile) {
+        showToast('Nu există profil salvat.', 'info');
+        return;
+    }
+    SUPPLIER_FIELDS.forEach(f => {
+        const el = document.querySelector(`[name="${f}"]`);
+        if (el && profile[f] !== undefined) el.value = profile[f];
+    });
+    showToast('Profil furnizor aplicat.', 'success');
+}
+
+/** Șterge profilul furnizorului din localStorage. */
+function deleteSupplierProfile() {
+    localStorage.removeItem(SUPPLIER_PROFILE_KEY);
+    _updateProfileButtons();
+    showToast('Profil furnizor șters.', 'info');
 }
 
 // Handling VAT type changes

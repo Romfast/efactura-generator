@@ -936,6 +936,35 @@ button.button {
 }
 
 /* ----------------------------------------------------------------------------
+   Card-actions (D6 — butoane acțiuni pe cardul unei secțiuni, ex. profil)
+   Variante:
+     - ca div standalone (sub compact-grid): cu border-top separator
+     - ca span inline în .section-title: fără border-top (moștenit via flex)
+   ---------------------------------------------------------------------------- */
+
+.card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* Standalone (nu în h2): adaugă separator top. */
+div.card-actions {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+}
+
+/* Inline pe section-title: fără border-top / padding-top / margin-top
+   (DESIGN.md D6 — card-actions pe partea dreaptă a card-head Furnizor). */
+.section-title .card-actions {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}
+
+/* ----------------------------------------------------------------------------
    PaymentMeans row grid (A5)
    ---------------------------------------------------------------------------- */
 
