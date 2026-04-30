@@ -1,4 +1,5 @@
 import { InvoiceFormatter } from './formatter.js';
+import JSZip from './vendor/jszip.mjs';
 
 // Constants
 const XML_NAMESPACES = {
@@ -162,6 +163,7 @@ let manuallyEditedVatRows = new Set();
 // Initialize event listeners
 document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+    setupDragAndDrop();
     initializeUI();
     
     if (!currentInvoice) {
@@ -386,16 +388,72 @@ document.addEventListener('click', function(event) {
 });
 
 // File handling functions
-function handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const xmlContent = e.target.result;
+
+// ZIP magic bytes: "PK\x03\x04" — local file header signature.
+async function isZipFile(file) {
+    if (!file || file.size < 4) return false;
+    const head = await file.slice(0, 4).arrayBuffer();
+    const b = new Uint8Array(head);
+    return b[0] === 0x50 && b[1] === 0x4B && b[2] === 0x03 && b[3] === 0x04;
+}
+
+// Încarcă un fișier (XML simplu sau ZIP cu un XML eFactura înăuntru).
+// Detectează ZIP pe magic bytes (PK\x03\x04). Fallback la text() pentru XML.
+async function loadInvoiceFile(file) {
+    if (!file) return;
+    try {
+        if (await isZipFile(file)) {
+            const buf = await file.arrayBuffer();
+            const zip = await JSZip.loadAsync(buf);
+            const xmlEntries = Object.values(zip.files).filter(f => !f.dir && f.name.toLowerCase().endsWith('.xml'));
+            if (xmlEntries.length === 0) {
+                alert('Arhiva ZIP nu conține niciun fișier .xml.');
+                return;
+            }
+            // Primul .xml din arhivă (sortat după nume pentru determinism).
+            xmlEntries.sort((a, b) => a.name.localeCompare(b.name));
+            const xmlContent = await xmlEntries[0].async('string');
             parseXML(xmlContent);
-        };
-        reader.readAsText(file);
+        } else {
+            const xmlContent = await file.text();
+            parseXML(xmlContent);
+        }
+    } catch (err) {
+        console.error('Eroare la încărcarea fișierului:', err);
+        alert('Nu s-a putut încărca fișierul: ' + (err && err.message ? err.message : err));
     }
+}
+
+function handleFileSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (file) loadInvoiceFile(file);
+}
+
+// Drag-and-drop: acceptă XML sau ZIP la drop pe oriunde în pagină.
+function setupDragAndDrop() {
+    const target = document.body;
+    const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+    ['dragenter', 'dragover'].forEach(ev => {
+        target.addEventListener(ev, (e) => {
+            if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+                prevent(e);
+                e.dataTransfer.dropEffect = 'copy';
+                target.classList.add('drag-over');
+            }
+        });
+    });
+    ['dragleave', 'dragend'].forEach(ev => {
+        target.addEventListener(ev, (e) => {
+            if (e.target === target) target.classList.remove('drag-over');
+        });
+    });
+    target.addEventListener('drop', (e) => {
+        if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+        prevent(e);
+        target.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        loadInvoiceFile(file);
+    });
 }
 
 function parseXML(xmlContent) {
@@ -464,12 +522,12 @@ function createAllowanceChargeHTML(index, charge) {
                 </div>
                 <div class="form-group">
                     <label class="form-label">Valoare</label>
-                    <input type="number" step="0.01" class="form-input" name="chargeAmount${index}" 
+                    <input type="number" step="0.01" class="form-input num" name="chargeAmount${index}"
                            value="${charge.amount}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Bază de calcul</label>
-                    <input type="number" step="0.01" class="form-input" name="chargeBaseAmount${index}" 
+                    <input type="number" step="0.01" class="form-input num" name="chargeBaseAmount${index}"
                            value="${charge.baseAmount}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
@@ -482,7 +540,7 @@ function createAllowanceChargeHTML(index, charge) {
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cotă TVA (%)</label>
-                    <input type="number" step="0.1" class="form-input" name="chargeVatRate${index}" 
+                    <input type="number" step="0.1" class="form-input num" name="chargeVatRate${index}"
                            value="${charge.vatRate}" ${charge.vatTypeId !== 'S' ? 'disabled' : ''}>
                 </div>
             </div>
@@ -528,7 +586,7 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cantitate</label>
-                    <input type="number" step="0.001" class="form-input" name="quantity${index}" 
+                    <input type="number" step="0.001" class="form-input num" name="quantity${index}"
                         value="${quantity}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
@@ -539,12 +597,12 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
                 </div>
                 <div class="form-group">
                     <label class="form-label">Preț</label>
-                    <input type="number" step="0.01" class="form-input" name="price${index}" 
+                    <input type="number" step="0.01" class="form-input num" name="price${index}"
                         value="${price}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Discount</label>
-                    <input type="number" step="0.01" class="form-input" name="lineDiscount${index}" 
+                    <input type="number" step="0.01" class="form-input num" name="lineDiscount${index}"
                         value="${lineDiscount}" onchange="updateTotals()">
                 </div>
                 <div class="form-group">
@@ -563,7 +621,7 @@ function createLineItemHTML(index, description = '', quantity = '1', price = '0'
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cotă TVA (%)</label>
-                    <input type="number" step="1" class="form-input" name="vatRate${index}" 
+                    <input type="number" step="1" class="form-input num" name="vatRate${index}"
                         value="${vatRate}" onchange="updateTotals()">
                 </div>
             </div>
@@ -628,13 +686,13 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
                         ).join('')}
                     </select>
                     <label>Cotă:</label>
-                    <input type="text" class="form-input vat-rate" value="${rate}"
+                    <input type="text" class="form-input vat-rate num" value="${rate}"
                            onchange="window.updateVATRow('${rowId}', 'manual')">%
                     <label>Bază Impozabilă:</label>
-                    <input type="text" class="form-input vat-base" value="${baseAmount}"
+                    <input type="text" class="form-input vat-base num" value="${baseAmount}"
                            onchange="window.updateVATRow('${rowId}', 'manual')">
                     <label>Valoare TVA:</label>
-                    <input type="text" class="form-input vat-amount" value="${vatAmount}"
+                    <input type="text" class="form-input vat-amount num" value="${vatAmount}"
                            onchange="window.updateVATRowFromAmount('${rowId}')">
                 </div>
                 <div class="vat-exemption ${['E', 'K', 'O', 'AE'].includes(vatType) ? '' : 'hidden'}">

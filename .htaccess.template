@@ -1,4 +1,7 @@
-<FilesMatch "\.(html|php|css|js|ico|xml)$">
+<FilesMatch "\.(html|php|css|js|mjs|ico|xml)$">
     Order Allow,Deny
     Allow from all
 </FilesMatch>
+<IfModule mod_mime.c>
+    AddType text/javascript .mjs
+</IfModule>
