@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9-beta-9 - 30.04.2026
+
+### New Features
+- Added: Catalog produse IndexedDB cu autocomplete (PR-A13 / D15). Modul nou `js/catalog.js` cu funcții: `catalogAdd(product)` (put în IDB store `products`, UUID auto-generat), `catalogSearch(prefix, limit=8)` (prefix match case-insensitive pe index `name`, cursor scan client-side), `catalogDelete(id)`, `catalogList()`. Schema produs: `{id, name, unit, price, vatType, vatRate, description, sellerItemID, cpvCode}` — aliniată cu schema IDB din `openCatalog()` deja în storage.js. Autocomplete pe câmpul "Denumire" din fiecare linie factură: event delegation pe `#lineItems` pentru `input` events (debounce 200ms, min 2 caractere), dropdown custom `.catalog-dropdown` (absolute la wrapper, z-index 500, max-h 240px), per item: Denumire + meta `{UM · preț RON · TVA type rate%}`. Click pe item populează: Denumire, UM, Preț (cu `dataset.raw`), Tip TVA, Cotă TVA, Descriere. Blur+delay → close, Esc → close. Buton "Salvează în catalog" (Detalii Suplimentare per linie) → `window.saveLineToLocalCatalog(index)`. IDB indisponibil (private browsing) → erori ignorate silențios (autocomplete) sau toast error (save explicit). CSS D15: `.catalog-dropdown`, `.catalog-dropdown-item`, `.catalog-item-name`, `.catalog-item-meta`, `.catalog-item-empty`, `.description-wrapper`. DESIGN.md actualizat D15.
+
 ## 0.9-beta-8 - 30.04.2026
 
 ### New Features
