@@ -19,6 +19,18 @@ const VAT_TYPES = {
     "E": "Neimpozabil"
 };
 
+// PR-TIPURI (A4): UN/CEFACT 1001 InvoiceTypeCode — subset folosit în RO.
+//   380 = Factură comercială (default)
+//   381 = Notă de credit (storno)
+//   384 = Factură corectată (rectificare)
+//   389 = Autofactură (self-billed)
+const INVOICE_TYPES = {
+    '380': 'Factură comercială',
+    '381': 'Notă de credit',
+    '384': 'Factură corectată',
+    '389': 'Autofactură'
+};
+
 // PR-TODO (A5): cod-uri UN/CEFACT 4461 PaymentMeansCode folosite frecvent în RO.
 const PAYMENT_MEANS_CODES = {
     '30': 'Transfer bancar',
@@ -1397,6 +1409,14 @@ function splitNoteIntoChunks(text, maxLength) {
 function populateBasicDetails(xmlDoc) {
     document.querySelector('[name="invoiceNumber"]').value = getXMLValue(xmlDoc, 'cbc\\:ID, ID');
 
+    // PR-TIPURI (A4): citește cbc:InvoiceTypeCode (default 380 dacă absent).
+    const invoiceTypeCode = getXMLValue(xmlDoc, 'cbc\\:InvoiceTypeCode, InvoiceTypeCode', '380');
+    const typeSelect = document.querySelector('[name="invoiceTypeCode"]');
+    if (typeSelect) {
+        // Dacă XML conține un cod necunoscut, păstrează default-ul 380.
+        typeSelect.value = INVOICE_TYPES[invoiceTypeCode] ? invoiceTypeCode : '380';
+    }
+
     // Get and combine all Note elements
     const notes = xmlDoc.querySelectorAll('cbc\\:Note, Note');
     const combinedNotes = Array.from(notes).map(note => note.textContent).join('\n');
@@ -1568,19 +1588,8 @@ function updateBillingReference(xmlDoc) {
 // ============================================================================
 // A5: PaymentMeans (cac:PaymentMeans multiple)
 // UI: secțiune "Modalități de Plată" cu rânduri dinamice (cod + IBAN).
+// PAYMENT_MEANS_CODES definit la top lângă VAT_TYPES (nu duplicat).
 // ============================================================================
-
-const PAYMENT_MEANS_CODES = {
-    '10': 'Numerar',
-    '30': 'Transfer bancar (virament)',
-    '42': 'Transfer cont bancar',
-    '48': 'Card bancar',
-    '49': 'Debit direct',
-    '57': 'Transfer online',
-    '58': 'SEPA credit transfer',
-    '59': 'SEPA direct debit',
-    'ZZZ': 'Alt mod',
-};
 
 let _paymentMeansCount = 0;
 
@@ -2035,6 +2044,11 @@ function handleStorno() {
     if (billingRefDateInput && !billingRefDateInput.value && currentIssueDate) {
         billingRefDateInput.value = currentIssueDate;
     }
+
+    // PR-TIPURI (A4): la storno setăm cbc:InvoiceTypeCode = 381 (Notă de
+    // credit). User poate suprascrie din dropdown dacă vrea alt cod.
+    const typeSelect = document.querySelector('[name="invoiceTypeCode"]');
+    if (typeSelect) typeSelect.value = '381';
 
     // PR-A11: folosim getRaw/setRaw/markDirty în loc de parseFloat
     // pentru a păstra dataset.raw consistent cu input.value după negare.
@@ -2681,7 +2695,26 @@ function saveXML() {
 
 function updateBasicDetails(xmlDoc) {
     setXMLValue(xmlDoc, 'cbc\\:ID, ID', document.querySelector('[name="invoiceNumber"]').value);
-    
+
+    // PR-TIPURI (A4): scrie cbc:InvoiceTypeCode din dropdown. Dacă elementul
+    // lipsește (factură creată cu createEmptyInvoice care îl include deja, sau
+    // XML legacy fără el), îl creăm și inserăm imediat după cbc:DueDate.
+    const typeSelect = document.querySelector('[name="invoiceTypeCode"]');
+    const typeCode = (typeSelect && INVOICE_TYPES[typeSelect.value]) ? typeSelect.value : '380';
+    let typeEl = xmlDoc.querySelector('cbc\\:InvoiceTypeCode, InvoiceTypeCode');
+    if (typeEl) {
+        typeEl.textContent = typeCode;
+    } else {
+        typeEl = createXMLElement(xmlDoc, XML_NAMESPACES.cbc, 'cbc:InvoiceTypeCode', typeCode);
+        const after = xmlDoc.querySelector('cbc\\:DueDate, DueDate') ||
+                      xmlDoc.querySelector('cbc\\:IssueDate, IssueDate');
+        if (after && after.parentNode) {
+            after.parentNode.insertBefore(typeEl, after.nextSibling);
+        } else {
+            xmlDoc.documentElement.appendChild(typeEl);
+        }
+    }
+
     // Remove existing Note elements
     const existingNotes = xmlDoc.querySelectorAll('cbc\\:Note, Note');
     existingNotes.forEach(note => note.remove());
