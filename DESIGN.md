@@ -149,6 +149,70 @@ Headings: `text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; c
 
 `background: --surface-muted; border-right: 1px solid --border; padding: 16px 14px; width: 240px;`. Items: 8px 10px padding, `--radius-sm`, hover `--bg`, active `--primary-soft` (text `--primary`).
 
+### Toast (notificări sistem)
+
+Container fixed bottom-right (`bottom: 16px; right: 16px`), stack vertical cu `gap: 8px`, `z-index: 1000`.
+
+Toast individual:
+- `background: --surface; border: 1px solid --border; border-left: 3px solid <semantic>;`
+- `border-radius: --radius-sm; padding: 12px 16px; max-width: 360px;`
+- `box-shadow: --shadow-card; font-size: 13px; color: --text;`
+- Optional sub-text: 11px `--text-muted` pe linia 2.
+- Buton dismiss `[×]` ghost mic la dreapta (`--text-muted` → `--text` la hover).
+
+Variante (border-left color):
+- `.toast-success` → `--success`
+- `.toast-info` → `--primary`
+- `.toast-warning` → `--warning`
+- `.toast-error` → `--danger`
+
+Auto-dismiss: success 4s, info 6s, warning 6s, error persistent (manual dismiss).
+
+Animation: `slide-in 150ms ease-out` (translateX 16px → 0). NO icon, NO emoji.
+
+ARIA: container `aria-live="polite"`. Toast = `role="status"` (info/success), `role="alert"` (warning/error).
+
+### Drop-zone (empty state pentru încărcare XML)
+
+Pentru `index.html` fresh-load (no XML loaded) și pentru bulk drop A14.
+
+```
+border: 2px dashed --border-strong;
+border-radius: --radius-md;
+background: --surface;
+padding: 64px 24px;
+text-align: center;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 12px;
+```
+
+Conținut:
+- Linia 1 (`.drop-zone-title`): 14px Geist 500 `--text` — "Trage XML eFactura aici sau încarcă fișier".
+- Linia 2 (`.drop-zone-sub`): 11px `--text-muted` — "sau" + buton secondary "Începe factură nouă" (deschide modal A19).
+
+Hover / drag-active state: `border-color: --primary; background: --primary-soft;` (transition 150ms ease-out pe ambele).
+
+### Spinner Mono cycle
+
+Indicator de loading inline pentru ANAF call states (validate / PDF / CIF lookup) și orice operație async vizibilă.
+
+Renderează un singur caracter braille care ciclează prin `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` la 80ms/frame (durata totală 800ms, repeat infinite).
+
+```css
+.spinner-mono {
+  display: inline-block;
+  width: 1ch;
+  font-family: 'Geist Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  color: --text-muted;
+  /* keyframes pe content property — vezi styles/main.css */
+}
+```
+
+Folosit inline în butoane ("Se validează… ⠹") și în badges/labels async. NICIODATĂ ca element decorativ.
+
 ## Responsive
 
 - **Breakpoint principal:** 720px.
@@ -206,3 +270,4 @@ Headings: `text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; c
 | 2026-04-30 | bg #fafaf9 warm paper over #f0f2f5 cool gray | Vibrație contabilitate paper-based RO. Warm stone-50 = mai uman, mai aproape de hârtie de imprimată. Subtil dar perceptibil. |
 | 2026-04-30 | Border + subtle shadow over heavy box-shadow | Modernă convenție 2025+. Heavy shadow = SaaS 2010s. Border = clean editorial. Shadow rezidual `0 1px 2px rgba(0,0,0,0.03)` doar pentru lift sutil. |
 | 2026-04-30 | Bunny Fonts over Google Fonts CDN | Privacy-first (GDPR-friendly pentru audiența RO). Aceeași API ca Google Fonts. Fallback: system-ui dacă CDN cade. |
+| 2026-04-30 | PR-CSS: Toast + Drop-zone + Spinner Mono adăugate la Components | D17: PR-CSS introduce primele 3 componente noi (din lista plan/2026-04-30): Toast pentru notificări sistem (D14), Drop-zone pentru empty state (D13), Spinner Mono cycle pentru ANAF call states (D8). Toate compatibile cu posture industrial / utilitarian — text-only, semantic-soft backgrounds, zero icons. |

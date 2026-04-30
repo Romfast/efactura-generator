@@ -1,9 +1,61 @@
+/* ============================================================================
+   Editor eFactura — sistem de design DESIGN.md
+   Industrial / utilitarian, Geist + Geist Mono, paletă warm-paper + slate-900.
+   ============================================================================ */
+
 :root {
-    --primary-color: #0056b3;
-    --danger-color: #dc3545;
-    --border-color: #ced4da;
-    --bg-color: #f8f9fa;
+    /* Color tokens */
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-muted: #f5f5f4;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+    --text: #1c1917;
+    --text-muted: #57534e;
+    --text-faint: #a8a29e;
+    --header-bg: #0f172a;
+    --header-text: #f8fafc;
+    --header-sub: #94a3b8;
+    --primary: #1e40af;
+    --primary-hover: #1e3a8a;
+    --primary-soft: #dbeafe;
+    --success: #15803d;
+    --success-soft: #dcfce7;
+    --warning: #d97706;
+    --warning-soft: #fef3c7;
+    --danger: #b91c1c;
+    --danger-soft: #fee2e2;
+
+    /* Spacing scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* Border radius hierarchy */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+
+    /* Box shadow */
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+    /* Motion */
+    --duration-micro: 100ms;
+    --duration-short: 150ms;
+    --duration-medium: 250ms;
+    --easing-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ----------------------------------------------------------------------------
+   Reset + base
+   ---------------------------------------------------------------------------- */
 
 * {
     box-sizing: border-box;
@@ -11,93 +63,243 @@
     padding: 0;
 }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    line-height: 1.5;
-    color: #333;
-    background-color: #f0f2f5;
+html {
+    color-scheme: light;
 }
+
+body {
+    font-family: 'Geist', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--text);
+    background-color: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tabular numerics + monospace — aplicat pe orice valoare numerică editabilă
+   (Price, Quantity, Amount, Total, CIF, IBAN, dates). */
+.mono,
+.num,
+input.num,
+input.mono {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+}
+
+input.num,
+input.mono {
+    text-align: right;
+}
+
+/* Date inputs — mono dar text aliniat stânga (sunt formă dd.mm.yyyy, nu valoare). */
+.date-input.num,
+.date-input.mono,
+input.date-input {
+    text-align: left;
+}
+
+/* ----------------------------------------------------------------------------
+   Layout
+   ---------------------------------------------------------------------------- */
 
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 1rem;
+    padding: var(--space-4);
 }
+
+/* ----------------------------------------------------------------------------
+   Header (slate-900)
+   ---------------------------------------------------------------------------- */
 
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+    padding: 14px var(--space-6);
+    background-color: var(--header-bg);
+    color: var(--header-text);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+}
+
+.header h1 {
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--header-text);
+    line-height: 1.2;
 }
 
 .app-author {
-    font-size: 0.9rem;
-    color: #666;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--header-sub);
+    letter-spacing: 0.04em;
+    margin-top: 2px;
 }
 
 .button-group {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
     align-items: center;
+    flex-wrap: wrap;
 }
 
-.form-section {
-    background-color: white;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* ----------------------------------------------------------------------------
+   Cards / form sections
+   ---------------------------------------------------------------------------- */
+
+.form-section,
+.allowance-charges,
+.line-items,
+.totals {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 18px var(--space-5);
+    margin-bottom: var(--space-4);
+    box-shadow: var(--shadow-card);
+}
+
+.totals {
+    padding: var(--space-5) var(--space-5);
 }
 
 .section-title {
-    font-size: 1.25rem;
-    margin-bottom: 0.75rem;
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    color: var(--text);
+    margin-bottom: var(--space-3);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--space-2);
 }
 
+/* ----------------------------------------------------------------------------
+   Form fields
+   ---------------------------------------------------------------------------- */
+
 .form-group {
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-2);
 }
 
 .form-label {
     display: block;
-    margin-bottom: 0.25rem;
+    margin-bottom: 4px;
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 12px;
     font-weight: 500;
+    color: var(--text-muted);
 }
 
-.form-input {
+.form-input,
+input.form-input,
+select.form-input,
+textarea.form-input {
     width: 100%;
-    padding: 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 1rem;
+    padding: 7px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background-color: var(--surface);
+    transition: border-color var(--duration-short) var(--easing-out),
+                box-shadow var(--duration-short) var(--easing-out);
 }
 
-.form-input:focus {
+textarea.form-input {
+    line-height: 1.5;
+}
+
+.form-input::placeholder {
+    color: var(--text-faint);
+}
+
+.form-input:hover {
+    border-color: var(--text-muted);
+}
+
+.form-input:focus,
+.form-input:focus-visible {
     outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(0,86,179,0.25);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.15);
 }
 
-.form-input.invalid {
-    border-color: var(--danger-color);
+.form-input.invalid,
+input[aria-invalid="true"].form-input {
+    border-color: var(--danger);
+    background-color: var(--danger-soft);
 }
+
+.form-input.invalid:focus {
+    box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.15);
+}
+
+.form-input:disabled {
+    background-color: var(--surface-muted);
+    color: var(--text-faint);
+    cursor: not-allowed;
+}
+
+/* Helper text / error message */
+.form-helper {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+
+.form-helper.is-error {
+    color: var(--danger);
+}
+
+/* Numeric inputs — mono + right align. Aplicate prin clasa .num/.mono. */
+.form-input.num,
+.form-input.mono {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    text-align: right;
+}
+
+.form-input.date-input.num,
+.form-input.date-input.mono {
+    text-align: left;
+}
+
+/* ----------------------------------------------------------------------------
+   Grids
+   ---------------------------------------------------------------------------- */
 
 .details-grid {
     display: grid;
-    grid-template-areas: 
+    grid-template-areas:
         "invoice"
         "supplier"
         "customer";
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+@media (min-width: 720px) {
+    .details-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-areas:
+            "invoice invoice"
+            "supplier customer";
+    }
 }
 
 .invoice-details {
@@ -107,76 +309,193 @@ body {
 .compact-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 0.5rem;
+    gap: var(--space-3);
 }
 
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0.5rem;
+    gap: var(--space-3);
 }
 
-.button {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
+@media (max-width: 720px) {
+    .compact-grid,
+    .grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-2);
+    }
+}
+
+/* ----------------------------------------------------------------------------
+   Buttons
+   ---------------------------------------------------------------------------- */
+
+.button,
+button.button {
+    padding: 7px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
     cursor: pointer;
-    background-color: var(--primary-color);
-    color: white;
+    background-color: var(--primary);
+    color: #ffffff;
     min-width: fit-content;
+    transition: background-color var(--duration-micro) var(--easing-out),
+                border-color var(--duration-micro) var(--easing-out),
+                color var(--duration-micro) var(--easing-out);
 }
 
 .button:hover {
-    opacity: 0.9;
+    background-color: var(--primary-hover);
 }
 
-.button-secondary {
-    background-color: #6c757d;
+.button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
-.button-danger {
-    background-color: var(--danger-color);
+.button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.button-small {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
+/* Secondary — header & inline secondary action */
+.button.button-secondary {
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
 }
 
-.line-item, 
+.button.button-secondary:hover {
+    background-color: var(--surface-muted);
+    border-color: var(--text-muted);
+}
+
+/* Header ghost variant — pe slate-900 background. */
+.header .button.button-secondary {
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #f1f5f9;
+}
+
+.header .button.button-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.32);
+}
+
+/* Danger — primary mode */
+.button.button-danger {
+    background-color: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+}
+
+.button.button-danger:hover {
+    background-color: var(--danger);
+    color: #ffffff;
+}
+
+/* Header danger ghost */
+.header .button.button-danger {
+    border: 1px solid rgba(252, 165, 165, 0.35);
+    color: #fca5a5;
+    background-color: transparent;
+}
+
+.header .button.button-danger:hover {
+    background-color: rgba(252, 165, 165, 0.12);
+    border-color: rgba(252, 165, 165, 0.6);
+    color: #fecaca;
+}
+
+/* Header primary (Salvează XML) on slate */
+.header .button:not(.button-secondary):not(.button-danger) {
+    background-color: var(--primary);
+    color: #ffffff;
+    border: 1px solid var(--primary);
+}
+
+.header .button:not(.button-secondary):not(.button-danger):hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+/* Small size */
+.button.button-small {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+/* Add button — dashed border */
+.button.button-add,
+.button-add {
+    background-color: transparent;
+    border: 1px dashed var(--border-strong);
+    color: var(--text-muted);
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.button-add:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.file-input {
+    display: none;
+}
+
+/* ----------------------------------------------------------------------------
+   Line items / allowance-charge cards
+   ---------------------------------------------------------------------------- */
+
+.line-item,
 .allowance-charge {
-    background-color: white;
-    padding: 1rem 2.5rem 1rem 1rem;
-    border-radius: 4px;
-    margin-bottom: 0.5rem;
-    border: 1px solid var(--border-color);
+    background-color: var(--surface);
+    padding: var(--space-3) var(--space-8) var(--space-3) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
     position: relative;
+    box-shadow: var(--shadow-card);
+}
+
+.line-item:hover,
+.allowance-charge:hover {
+    border-color: var(--border-strong);
 }
 
 .vat-row,
 .identification-row {
-    background-color: white;
-    padding: 0.25rem;
-    border-radius: 4px;
-    margin-bottom: 0.25rem;
-    border: 1px solid var(--border-color);
+    background-color: var(--surface);
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
     position: relative;
 }
 
 .delete-line-item,
 .delete-allowance-charge,
-.delete-identification {
+.delete-identification,
+.remove-line-item {
     position: absolute;
-    right: 0.5rem;
+    right: var(--space-2);
     top: 50%;
     transform: translateY(-50%);
-    width: 20px !important;
-    height: 20px !important;
+    width: 24px !important;
+    height: 24px !important;
     padding: 0 !important;
     font-size: 12px !important;
     line-height: 1 !important;
-    min-width: auto !important;
+    min-width: 0 !important;
     flex: 0 0 auto !important;
     display: flex !important;
     align-items: center;
@@ -185,16 +504,20 @@ body {
 }
 
 .optional-details {
-    margin-top: 0.5rem;
-    padding: 0.75rem;
-    background-color: var(--bg-color);
-    border-radius: 4px;
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    background-color: var(--surface-muted);
+    border-radius: var(--radius-sm);
 }
 
 .optional-details-content {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--space-3);
+}
+
+.optional-details-toggle {
+    margin-top: var(--space-2);
 }
 
 .identifications-container {
@@ -205,35 +528,41 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.25rem;
+    margin-bottom: var(--space-2);
+    flex-wrap: wrap;
+    gap: var(--space-2);
 }
 
 .identifications-header h4 {
     margin: 0;
-    font-size: 0.9rem;
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
 }
 
 .identification-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
+    gap: 4px;
 }
 
 .identifications-list {
     display: flex;
     flex-direction: column;
     margin-top: 0;
+    gap: 4px;
 }
 
 .identification-row {
     margin: 0;
-    padding: 0.25rem;
+    padding: var(--space-2);
 }
 
 .identification-content {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    gap: 0.25rem;
+    gap: var(--space-2);
     align-items: center;
 }
 
@@ -247,33 +576,62 @@ body {
     min-width: 0;
 }
 
+/* ----------------------------------------------------------------------------
+   Date input
+   ---------------------------------------------------------------------------- */
+
 .date-input-container {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
+    align-items: stretch;
 }
 
 .calendar-button {
-    padding: 0.5rem;
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+    padding: 0 10px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
     cursor: pointer;
+    font-size: 14px;
+    color: var(--text-muted);
+    transition: border-color var(--duration-short) var(--easing-out);
 }
 
-.totals {
-    background-color: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin-top: 1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.calendar-button:hover {
+    border-color: var(--primary);
+    color: var(--primary);
 }
+
+.calendar-button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------------------
+   Totals
+   ---------------------------------------------------------------------------- */
 
 .total-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-color);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+}
+
+.total-row > span:first-child {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.total-row > span:last-child,
+.editable-total {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    color: var(--text);
+    text-align: right;
 }
 
 .total-row:last-child {
@@ -281,37 +639,86 @@ body {
 }
 
 .total-row-final {
-    font-weight: bold;
-    font-size: 1.2rem;
-    margin-top: 1rem;
-    border-top: 2px solid var(--border-color);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 2px solid var(--border-strong);
+    border-bottom: none;
+}
+
+.total-row-final > span:first-child {
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.total-row-final > span:last-child {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
 }
 
 .editable-total {
     cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+    transition: background-color var(--duration-micro) var(--easing-out);
 }
 
-/* Updated VAT breakdown layout */
+.editable-total:hover {
+    background-color: var(--surface-muted);
+}
+
+.editable-total:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------------------
+   VAT breakdown
+   ---------------------------------------------------------------------------- */
+
+#vatBreakdown {
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+}
+
+#vatBreakdown .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: var(--space-2);
+}
+
 .vat-row .total-row {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.5rem;
+    gap: var(--space-2);
+    padding: var(--space-2);
     position: relative;
+    border-bottom: none;
 }
 
 .vat-inputs {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 1rem;
+    gap: var(--space-2) var(--space-4);
     width: 100%;
-    padding-right: 30px;
+    padding-right: var(--space-8);
+    align-items: center;
 }
 
 .vat-inputs > label {
-    min-width: 100px;
+    min-width: 80px;
     text-align: left;
     margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
 }
 
 .vat-inputs > input,
@@ -321,103 +728,401 @@ body {
     margin: 0;
 }
 
-.vat-inputs > input[type="text"] {
-    min-width: 100px;
+.vat-inputs > input.vat-rate,
+.vat-inputs > input.vat-base,
+.vat-inputs > input.vat-amount {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
 }
 
 .vat-exemption {
     display: flex;
-    gap: 1rem;
+    gap: var(--space-3);
     width: 100%;
+    flex-wrap: wrap;
 }
 
 .vat-exemption .form-group {
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
     margin: 0;
+    min-width: 240px;
 }
 
 .vat-exemption label {
     white-space: nowrap;
     margin: 0;
     min-width: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
 }
 
 .vat-exemption .form-input {
     flex: 1;
 }
 
+.vat-total-group {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+}
+
+/* ----------------------------------------------------------------------------
+   Note / textarea
+   ---------------------------------------------------------------------------- */
+
 .note-input {
     resize: vertical;
     min-height: 100px;
+    line-height: 1.5;
 }
 
 .note-counter {
     text-align: right;
-    font-size: 0.8rem;
-    color: #666;
-    margin-top: 0.25rem;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    margin-top: 3px;
 }
 
+/* ----------------------------------------------------------------------------
+   Footer
+   ---------------------------------------------------------------------------- */
+
 .app-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
     text-align: center;
-    margin-top: 2rem;
-    padding: 1rem;
+    margin-top: var(--space-8);
+    padding: var(--space-3) var(--space-4);
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.app-footer #app-version {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-weight: 500;
+    color: var(--text-muted);
 }
 
 .app-footer a {
-    color: var(--primary-color);
+    color: var(--text-muted);
     text-decoration: none;
+    border-bottom: 1px dotted var(--border-strong);
+    padding-bottom: 1px;
+    transition: color var(--duration-short) var(--easing-out),
+                border-color var(--duration-short) var(--easing-out);
 }
+
+.app-footer a:hover {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.app-footer a:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------------------
+   Utility
+   ---------------------------------------------------------------------------- */
 
 .hidden {
     display: none !important;
 }
 
-.file-input {
-    display: none;
+/* Eyebrow / section labels */
+.eyebrow {
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
 }
+
+/* ----------------------------------------------------------------------------
+   Badges (validare matematică A11 — DESIGN.md spec)
+   ---------------------------------------------------------------------------- */
+
+.badge,
+.badge-ok,
+.badge-warn,
+.badge-error {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    margin-left: var(--space-2);
+}
+
+.badge-ok {
+    background-color: var(--success-soft);
+    color: var(--success);
+}
+
+.badge-warn {
+    background-color: var(--warning-soft);
+    color: var(--warning);
+}
+
+.badge-error {
+    background-color: var(--danger-soft);
+    color: var(--danger);
+}
+
+/* ----------------------------------------------------------------------------
+   Alerts (BR validation, system messages)
+   ---------------------------------------------------------------------------- */
+
+.alert {
+    border-left: 3px solid var(--text-muted);
+    background-color: var(--surface-muted);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text);
+    margin: var(--space-2) 0;
+}
+
+.alert-info {
+    border-left-color: var(--primary);
+    background-color: var(--primary-soft);
+}
+
+.alert-success {
+    border-left-color: var(--success);
+    background-color: var(--success-soft);
+}
+
+.alert-warn {
+    border-left-color: var(--warning);
+    background-color: var(--warning-soft);
+}
+
+.alert-error {
+    border-left-color: var(--danger);
+    background-color: var(--danger-soft);
+}
+
+.alert strong {
+    font-weight: 600;
+}
+
+.alert em {
+    font-style: normal;
+    color: var(--text-muted);
+}
+
+/* ----------------------------------------------------------------------------
+   Toast component (DESIGN.md D14)
+   Container fixed bottom-right, stack vertical 8px gap.
+   ---------------------------------------------------------------------------- */
+
+.toast-container {
+    position: fixed;
+    bottom: var(--space-4);
+    right: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    z-index: 1000;
+    max-width: 360px;
+    pointer-events: none;
+}
+
+.toast {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--text-muted);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4);
+    max-width: 360px;
+    box-shadow: var(--shadow-card);
+    font-size: 13px;
+    color: var(--text);
+    pointer-events: auto;
+    animation: toast-slide-in var(--duration-short) var(--easing-out);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+}
+
+.toast-success { border-left-color: var(--success); }
+.toast-info    { border-left-color: var(--primary); }
+.toast-warning { border-left-color: var(--warning); }
+.toast-error   { border-left-color: var(--danger); }
+
+.toast-message {
+    flex: 1;
+}
+
+.toast-sub {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.toast-dismiss {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 var(--space-1);
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1;
+}
+
+.toast-dismiss:hover {
+    color: var(--text);
+}
+
+@keyframes toast-slide-in {
+    from {
+        transform: translateX(16px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ----------------------------------------------------------------------------
+   Drop-zone empty state (DESIGN.md D13)
+   ---------------------------------------------------------------------------- */
+
+.drop-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-16) var(--space-6);
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    color: var(--text-muted);
+    text-align: center;
+    transition: border-color var(--duration-short) var(--easing-out),
+                background-color var(--duration-short) var(--easing-out);
+}
+
+.drop-zone.is-active,
+.drop-zone:hover {
+    border-color: var(--primary);
+    background-color: var(--primary-soft);
+}
+
+.drop-zone-title {
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.drop-zone-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* ----------------------------------------------------------------------------
+   Spinner — Geist Mono braille cycle (DESIGN.md D8 / PR-CSS)
+   80ms cycle pe ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏.
+   ---------------------------------------------------------------------------- */
+
+.spinner-mono {
+    display: inline-block;
+    width: 1ch;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+}
+
+.spinner-mono::before {
+    content: "⠋";
+    animation: spinner-mono-cycle 800ms steps(1, end) infinite;
+}
+
+@keyframes spinner-mono-cycle {
+    0%   { content: "⠋"; }
+    10%  { content: "⠙"; }
+    20%  { content: "⠹"; }
+    30%  { content: "⠸"; }
+    40%  { content: "⠼"; }
+    50%  { content: "⠴"; }
+    60%  { content: "⠦"; }
+    70%  { content: "⠧"; }
+    80%  { content: "⠇"; }
+    90%  { content: "⠏"; }
+    100% { content: "⠋"; }
+}
+
+/* ----------------------------------------------------------------------------
+   Responsive: ≤720px (DESIGN.md breakpoint)
+   ---------------------------------------------------------------------------- */
 
 @media (max-width: 1200px) {
     .vat-inputs {
         flex-wrap: wrap;
     }
-    
+
     .vat-exemption {
         flex-direction: column;
     }
-    
+
     .vat-exemption .form-group {
         width: 100%;
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 720px) {
+    .container {
+        padding: var(--space-3);
+    }
+
     .header {
         flex-direction: column;
-        gap: 1rem;
+        gap: var(--space-3);
         text-align: center;
+        align-items: stretch;
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .header > div:first-child {
+        text-align: left;
     }
 
     .button-group {
         flex-wrap: wrap;
-        justify-content: center;
+        justify-content: flex-start;
     }
 
     .vat-inputs {
-        gap: 0.5rem;
+        gap: var(--space-2);
     }
 
     .vat-inputs > label {
-        min-width: 100px;
+        min-width: 80px;
         text-align: left;
     }
 
     .vat-inputs > input,
     .vat-inputs > select {
-        width: calc(100% - 110px);
+        width: calc(100% - 90px);
     }
 
     .vat-exemption {
@@ -425,11 +1130,40 @@ body {
         width: 100%;
     }
 
+    .vat-exemption .form-group {
+        min-width: 0;
+    }
+
     .identification-content {
         grid-template-columns: 1fr auto;
     }
-    
+
     .scheme-select {
         grid-column: 1 / -1;
     }
+
+    .app-footer {
+        flex-direction: column;
+        gap: var(--space-2);
+    }
+
+    .total-row-final > span:last-child {
+        font-size: 16px;
+    }
+
+    /* Touch targets minim 44×44 pe primary/danger CTA */
+    .button:not(.button-small):not(.button-add) {
+        min-height: 40px;
+    }
+}
+
+/* ----------------------------------------------------------------------------
+   Pikaday override (datepicker — keep functional, restyle to tokens)
+   ---------------------------------------------------------------------------- */
+
+.pika-single {
+    font-family: 'Geist', system-ui, sans-serif !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-modal) !important;
 }
