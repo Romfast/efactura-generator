@@ -2,6 +2,9 @@
 
 ## 0.9-beta-5 (în pregătire) - 30.04.2026
 
+### New Features
+- Added: Încărcare ZIP cu XML eFactura prin drag-and-drop sau prin câmpul de fișier (PR-ZIP / A1). Detecție pe magic bytes `PK\x03\x04` în primele 4 octeți; primul `.xml` din arhivă (sortat alfabetic) este extras și pasat către `parseXML`. Fallback la încărcarea XML simplu rămâne intact. Vendored `js/vendor/jszip.mjs` (JSZip 3.10.1, build ESM jsdelivr, ~117KB raw / ~35KB gzipped) — import nativ ESM fără bundler. Drag-and-drop wireuit pe `document.body` cu clasa `.drag-over` disponibilă pentru styling. Mesajele de eroare (alert) în română. Atributul `accept` pe `#fileInput` extins cu `.zip,application/zip,application/x-zip-compressed`. `.htaccess.template` extins cu MIME `text/javascript` pentru `.mjs` și `js/server.js` ditto, pentru import ESM corect peste Apache și dev server.
+
 ### Modifications
 - Added: `DESIGN.md` — sistem de design formal pentru editor (industrial/utilitarian, Geist + Geist Mono, paletă warm-paper + slate-900 header, border-radius hierarchic, anti-SaaS-chrome posture). Decizii bazate pe research competitive (SmartBill, Oblio, B2BRouter, e-invoice.be) și principiul "respectă timpul contabilului".
 - Modified: `CLAUDE.md` — adăugată secțiunea "Design System" care indică DESIGN.md ca sursă autoritativă pentru orice decizie UI înainte de implementarea Track 1 + Track 2 D.
