@@ -37,6 +37,15 @@
                             <input type="text" class="form-input mono" name="invoiceNumber" style="text-align:left">
                         </div>
                         <div class="form-group">
+                            <label class="form-label">Tip Factură</label>
+                            <select class="form-input" name="invoiceTypeCode">
+                                <option value="380">380 — Factură comercială</option>
+                                <option value="381">381 — Notă de credit</option>
+                                <option value="384">384 — Factură corectată</option>
+                                <option value="389">389 — Autofactură</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Data Emiterii</label>
                             <div class="date-input-container">
                                 <input type="text" class="form-input date-input num" name="issueDate" placeholder="dd.mm.yyyy" maxlength="10" pattern="\d{2}.\d{2}.\d{4}">
