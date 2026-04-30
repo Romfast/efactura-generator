@@ -17,8 +17,12 @@
 - Modified: `CLAUDE.md` — adăugată secțiunea "Design System" care indică DESIGN.md ca sursă autoritativă pentru orice decizie UI înainte de implementarea Track 1 + Track 2 D.
 - Modified: `js/server.js` și `.htaccess.template` — adăugată extensia `.mjs` la lista de fișiere servite cu MIME `text/javascript` (necesar pentru `import` ESM nativ pe browsere; altfel browser refuză cu MIME mismatch). PR-E necesar; PR-ZIP avea aceeași schimbare deja landed pe feat branch.
 
+- Added: Validare matematică inline (PR-A11). Badge per-rând linie `[data-line-badge-index]` și badge per-rând TVA `.vat-amount-badge`: verde ✓ sau roșu cu diferență `±X.XX RON`. Badge footer `#total-badge`: verde ✓ sau orange `diferență X.XX RON`. Tolerance switching: dacă orice input din rând are `dataset.dirty='1'` → toleranță zero (recalculat de user); dacă toate `dirty='0'` → ±0.01 RON (reconciliere legacy XML). Save NU blochează — toast warning orange dacă diff > toleranță. Badge-urile se actualizează la orice `updateTotals()`/`refreshTotals()` și după `parseXML()` + `restoreOriginalTotals()`. Funcții noi în `js/script.js`: `validateMath()`, `showToast()`, `_a11RowDirty()`, `_a11Tolerance()`, `_a11SetBadge()`. CSS nou în `styles/main.css`: `.line-total-row`, `.line-total-value`, `.total-with-badge`, `.badge:empty { display:none }`. HTML nou în `index.html`: `#total-badge` lângă `#total`; rândul `line-total-row` generat în `createLineItemHTML`; `.vat-amount-badge` în `addVATBreakdownRow`. `markDirty` adăugat la importurile `numeric.js` din `script.js`.
+- Fixed: `handleStorno()` (PR-A11) — înlocuit `parseFloat(input.value)` cu `getRaw(input).times(-1)` + `setRaw()` + `markDirty()` pentru a menține `dataset.raw` consistent cu `input.value` după negare (bug existent din PR-E — storno lăsa `dataset.raw` cu valoarea pozitivă originală).
+
 ### Notes (PR-E sweep status)
 - Sweep parseFloat în PR-E: au fost migrate funcțiile critice de calcul totaluri (line items, charges, VAT breakdown, VAT row update, totalVAT, updateVATRowFromAmount). Restul ~25 call sites parseFloat (validation, exchange rate, storno handling, identification parsing) rămân pe pipeline-ul vechi (Number) — vor fi migrate în PR-A11 când contextul math validation cere oricum re-vizitarea acelor zone. Documentat ca follow-up.
+- Sweep parseFloat în PR-A11: `handleStorno()` migrat la Big.js pipeline.
 
 ## 0.9-beta-4 - 07.02.2025
 
