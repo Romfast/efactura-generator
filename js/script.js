@@ -5,6 +5,8 @@ import {
 } from './numeric.js';
 import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js';
 import JSZip from './vendor/jszip.mjs';
+import { validateCIF } from './validation/cif.js';
+import { validateIBAN } from './validation/iban.js';
 
 // Constants
 const XML_NAMESPACES = {
@@ -1156,6 +1158,90 @@ function setupPartyLocationHandlers(party) {
     handleLocationChange();
 }
 
+// ============================================================================
+// PR-VALID-IDS (A9 + A10): Helpers validare CIF și IBAN pe blur.
+// Afișează eroare inline sub câmp: border --danger + bg --danger-soft +
+// mesaj 11px. Curăță eroarea la re-focus sau la câmp valid.
+// ============================================================================
+
+/**
+ * Afișează sau actualizează mesajul de eroare sub un câmp de input.
+ * @param {HTMLInputElement} input
+ * @param {string} errorId — ID-ul elementului helper text (ex: "supplierVAT-error")
+ * @param {string} message — mesajul de afișat
+ */
+function _setFieldError(input, errorId, message) {
+    input.style.borderColor = 'var(--danger)';
+    input.style.backgroundColor = 'var(--danger-soft)';
+    input.setAttribute('aria-invalid', 'true');
+    input.setAttribute('aria-describedby', errorId);
+
+    let helper = document.getElementById(errorId);
+    if (!helper) {
+        helper = document.createElement('span');
+        helper.id = errorId;
+        helper.style.cssText = 'display:block;font-size:11px;color:var(--danger);margin-top:3px;';
+        input.parentNode.appendChild(helper);
+    }
+    helper.textContent = message;
+}
+
+/**
+ * Curăță eroarea de validare de pe un câmp.
+ * @param {HTMLInputElement} input
+ * @param {string} errorId
+ */
+function _clearFieldError(input, errorId) {
+    input.style.borderColor = '';
+    input.style.backgroundColor = '';
+    input.removeAttribute('aria-invalid');
+    input.removeAttribute('aria-describedby');
+
+    const helper = document.getElementById(errorId);
+    if (helper) helper.remove();
+}
+
+/**
+ * Wire blur + validare CIF pe un câmp dat.
+ * @param {HTMLInputElement} input
+ * @param {string} errorId
+ */
+function _wireCIFValidation(input, errorId) {
+    if (!input) return;
+    input.addEventListener('blur', function() {
+        const result = validateCIF(this.value);
+        if (!result.valid) {
+            _setFieldError(this, errorId, result.message);
+        } else {
+            _clearFieldError(this, errorId);
+        }
+    });
+    // Curăță eroarea la tastare (nu re-validează — doar curăță indicatorul vizual)
+    input.addEventListener('input', function() {
+        _clearFieldError(this, errorId);
+    });
+}
+
+/**
+ * Wire blur + validare IBAN pe un câmp dat.
+ * @param {HTMLInputElement} input
+ * @param {string} errorId
+ */
+function _wireIBANValidation(input, errorId) {
+    if (!input) return;
+    input.addEventListener('blur', function() {
+        const result = validateIBAN(this.value);
+        if (!result.valid) {
+            _setFieldError(this, errorId, result.message);
+        } else {
+            _clearFieldError(this, errorId);
+        }
+    });
+    input.addEventListener('input', function() {
+        _clearFieldError(this, errorId);
+    });
+}
+
 function initializeUI() {
     document.querySelectorAll('.form-input').forEach(input => {
         input.addEventListener('input', function() {
@@ -1227,6 +1313,31 @@ function initializeUI() {
     window.useSupplierProfile = useSupplierProfile;
     window.deleteSupplierProfile = deleteSupplierProfile;
     _updateProfileButtons();
+
+    // PR-VALID-IDS (A9 + A10): wire CIF și IBAN pe blur.
+    _wireCIFValidation(document.querySelector('[name="supplierVAT"]'), 'supplierVAT-error');
+    _wireCIFValidation(document.querySelector('[name="customerVAT"]'), 'customerVAT-error');
+
+    // IBAN: delegare pe containerul de Payment Means (câmpuri dinamice).
+    const pmContainer = document.getElementById('paymentMeansRows');
+    if (pmContainer) {
+        pmContainer.addEventListener('blur', function(e) {
+            const input = e.target;
+            if (!input || !input.name || !input.name.startsWith('paymentMeansIBAN')) return;
+            const errorId = input.name + '-error';
+            const result = validateIBAN(input.value);
+            if (!result.valid) {
+                _setFieldError(input, errorId, result.message);
+            } else {
+                _clearFieldError(input, errorId);
+            }
+        }, true); // capture=true pentru blur care nu bubblează
+        pmContainer.addEventListener('input', function(e) {
+            const input = e.target;
+            if (!input || !input.name || !input.name.startsWith('paymentMeansIBAN')) return;
+            _clearFieldError(input, input.name + '-error');
+        });
+    }
 }
 
 // ============================================================================
