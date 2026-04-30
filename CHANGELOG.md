@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9-beta-8 - 30.04.2026
+
+### New Features
+- Added: Numerotare automată facturi (PR-A19 / Track 2 D). Cheia localStorage `efactura.sequence.v1` (via `js/storage.js`) stochează `{ serie, an, contor }`. Format generat: `{serie}{an}-{contor:4}` (ex. `RFT2026-0042`). Buton "Factură Nouă" în header — deschide modal (D24) cu câmpuri: Serie, An (readonly = an curent), Nr. următor, Previzualizare live (actualizată la input). La "Generează Factură": creează factură goală via `createEmptyInvoice()` + `parseXML()`, setează numărul generat + data azi, populează automat furnizorul din profilul salvat (`efactura.profil.v1`), incrementează contorul +1. Banner an nou (D24): dacă `sequence.an < currentYear`, banner `alert-warn` injectat sub header cu butoane "Continuă cu N" / "Resetează la 1" — actualizează an în sequence fără a modifica sau reseta contorul (dupa alegere). CSS adăugat: `.modal-overlay`, `.modal-box`, `.modal-title`, `.modal-sub`, `.modal-actions`, `.modal-preview`, `.year-rollover-banner`.
+
 ## 0.9-beta-7 - 30.04.2026
 
 ### New Features

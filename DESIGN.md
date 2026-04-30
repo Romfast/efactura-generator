@@ -158,6 +158,14 @@ Headings: `text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; c
 
 `background: --surface; border-radius: --radius-lg; padding: 24px; max-width: 480px; box-shadow: 0 8px 24px rgba(0,0,0,0.08);`. Title 16px / 600. Sub 13px / `--text-muted`. Actions justify-end, gap 8px.
 
+Overlay: `position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 950`. Deschis cu clasa `.is-open` (display: flex). Animație `modal-in 150ms ease-out` (opacity 0→1 + translateY 8px→0). Esc + click pe backdrop = close.
+
+Previzualizare număr factură (`.modal-preview`): `font-family: Geist Mono; font-size: 16px; font-weight: 600; background: --surface-muted; border: 1px solid --border; border-radius: --radius-sm; padding: 12px 16px; text-align: center;`
+
+### Bannere inline (D24 — an nou / avertismente sistem)
+
+`.year-rollover-banner`: `background: --warning-soft; border-left: 3px solid --warning; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px 16px; font-size: 13px;`. Banner injectat dinamic sub header. Text stânga + `div.banner-actions` cu butoane dreapta. Dispare după acțiunea utilizatorului (remove din DOM).
+
 ### Sidebar (A14 bulk only)
 
 `background: --surface-muted; border-right: 1px solid --border; padding: 16px 14px; width: 240px;`. Items: 8px 10px padding, `--radius-sm`, hover `--bg`, active `--primary-soft` (text `--primary`).
