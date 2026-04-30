@@ -63,3 +63,8 @@ out/
 # Optional test coverage directory
 coverage/
 .gstack/
+
+# Playwright
+.playwright-mcp/
+playwright-report/
+playwright/.cache/
