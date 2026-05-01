@@ -1,5 +1,12 @@
 # TODO
 
+## Backlog
+
+- [ ] Fix 403 receiver.php — aplică Opt A revizuită: `$publicActions = ['ping', 'cif']` (elimină IP gate pentru aceste acțiuni, Bearer ANAF neexpus)
+- [ ] Defense-in-depth Opt B — X-Forwarded-For via `trusted_proxies` în config.json (alternativă la Opt A)
+- [ ] Investigați rsync delete pe prod-romfast care lasă receiver.php afară din deploy
+- [ ] Tests E2E iter 2: acoperire PR-A13 (catalog IndexedDB), PR-A14 (bulk import), PR-A19 (numerotare automată serie)
+
 ## Prioritare
 - [x] Inițializare și editare discount linie factură
 

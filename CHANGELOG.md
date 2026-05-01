@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9-beta-11 - 01.05.2026
+
+### New Features
+- Suite E2E Playwright pe 3 environments (local, prod-roa, prod-romfast): smoke, ui-flow, storno, regression-corpus, receiver, prod-romfast-deploy, prod-romfast-flow
+- Regression test documentat pentru bug 403 `?action=cif` pe prod-roa (receiver.php IP gate blochează proxy Traefik)
+- TODO.md creat cu backlog fix 403 + defense-in-depth + investigație rsync
+
 ## 0.9-beta-10 - 30.04.2026
 
 ### New Features

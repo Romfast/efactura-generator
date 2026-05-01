@@ -1,0 +1,15 @@
+{
+  "name": "efactura-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:local": "playwright test --project=local",
+    "test:prod-roa": "playwright test --project=prod-roa",
+    "test:prod-romfast": "playwright test --project=prod-romfast",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}
