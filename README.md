@@ -79,7 +79,38 @@ Apoi deschideți http://localhost:3000
 
 Serverul Node este minimal (fără dependințe) și servește doar fișierele statice.
 
-### Opțiunea 3: Integrare cu sistem extern (PHP)
+### Opțiunea 3: Docker (local sau CI)
+
+Imaginea include Apache + PHP 8.2 cu `mod_rewrite` și `mod_headers`, identic cu un hosting de producție.
+
+**Build și run:**
+```bash
+docker build -t efactura-generator .
+docker run --rm -p 8080:80 efactura-generator
+```
+Apoi deschideți http://localhost:8080
+
+**Cu PHP receiver activ** (opțional — doar dacă integrați cu un sistem extern):
+```bash
+# Copiați și editați config.json înainte de build
+cp config.json config.local.json
+# Editați config.local.json: api_key, allowed_ips
+
+docker build -t efactura-generator .
+docker run --rm -p 8080:80 \
+  -v "$(pwd)/config.local.json:/var/www/html/config.json:ro" \
+  efactura-generator
+```
+
+**Testare rapidă (fără PHP):**
+```bash
+# Nici o dependință — server Node minimal, doar fișiere statice
+node js/server.js        # http://localhost:3000
+```
+
+> **Notă:** Directorul `temp/` din container este volatil — se șterge la `docker run --rm`. Dacă vreți persistență, montați un volum: `-v "$(pwd)/temp:/var/www/html/temp"`.
+
+### Opțiunea 4: Integrare cu sistem extern (PHP)
 Pentru a primi un XML dintr-o aplicație externă și a-l deschide direct în editor:
 1. Configurați `config.json` (cheie API, IP-uri permise, durată de viață fișiere temporare).
 2. Sistemul extern face POST cu conținutul XML către `receiver.php`, transmițând antetul `X-Api-Key`.
