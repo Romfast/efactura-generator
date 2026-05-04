@@ -79,7 +79,23 @@ Apoi deschideți http://localhost:3000
 
 Serverul Node este minimal (fără dependințe) și servește doar fișierele statice.
 
-### Opțiunea 3: Docker (local sau CI)
+### Opțiunea 3: Script `start.sh` (Node + PHP simultan)
+
+Pentru testare vizuală manuală cu receiver-ul PHP activ:
+
+```bash
+./start.sh
+```
+
+Pornește în paralel:
+- Node static server pe `http://localhost:3000` (frontend, fără PHP — simulează GitHub Pages)
+- PHP built-in server pe `http://localhost:8000` (servește atât frontend cât și `receiver.php`, `test-config.php`)
+
+**Pentru testarea funcționalităților ANAF (lookup CIF, validare, PDF) deschideți `http://localhost:8000/` — frontend-ul apelează `./receiver.php` pe același origin, deci pe `:3000` (Node nu execută PHP) veți primi 404.** Folosiți `:3000` doar pentru a verifica comportamentul fără PHP.
+
+Dacă porturile sunt deja ocupate, scriptul oprește procesele existente înainte de pornire. `Ctrl+C` oprește ambele servere. Loguri în `logs/dev-node.log` și `logs/dev-php.log`. Override porturi: `NODE_PORT=4000 PHP_PORT=9000 ./start.sh`.
+
+### Opțiunea 4: Docker (local sau CI)
 
 Imaginea include Apache + PHP 8.2 cu `mod_rewrite` și `mod_headers`, identic cu un hosting de producție.
 
@@ -110,7 +126,7 @@ node js/server.js        # http://localhost:3000
 
 > **Notă:** Directorul `temp/` din container este volatil — se șterge la `docker run --rm`. Dacă vreți persistență, montați un volum: `-v "$(pwd)/temp:/var/www/html/temp"`.
 
-### Opțiunea 4: Integrare cu sistem extern (PHP)
+### Opțiunea 5: Integrare cu sistem extern (PHP)
 Pentru a primi un XML dintr-o aplicație externă și a-l deschide direct în editor:
 1. Configurați `config.json` (cheie API, IP-uri permise, durată de viață fișiere temporare).
 2. Sistemul extern face POST cu conținutul XML către `receiver.php`, transmițând antetul `X-Api-Key`.
