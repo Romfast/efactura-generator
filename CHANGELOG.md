@@ -7,6 +7,7 @@
 
 ### Modifications
 - Added: Documentație rulare locală și Docker în README.
+- Added: Script `start.sh` pentru pornire dev (Node :3000 + PHP :8000) cu auto-stop al proceselor existente pe aceste porturi. Banner-ul indică explicit `:8000` pentru testare cu ANAF/receiver, `:3000` pentru testare statică.
 
 ## 0.9-beta-10 - 30.04.2026
 
