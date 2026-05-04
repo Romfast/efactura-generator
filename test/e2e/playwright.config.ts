@@ -19,7 +19,7 @@ export default defineConfig({
       cwd: '../..',
     },
     {
-      command: 'php -S localhost:8000 -t ../..',
+      command: 'php -S localhost:8000',
       url: 'http://localhost:8000/receiver.php?action=ping',
       reuseExistingServer: true,
       cwd: '../..',

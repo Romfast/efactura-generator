@@ -17,6 +17,11 @@ test.describe('receiver.php', () => {
       test.skip();
       return;
     }
+    if (testInfo.project.name === 'local') {
+      // ANAF API (webservicesp.anaf.ro) inaccesibil din mediul de dev local → skip
+      test.skip();
+      return;
+    }
     if (testInfo.project.name === 'prod-roa') {
       test.fail(true, 'Bug 403: receiver.php IP gate (linia 106) blochează proxy requests via Traefik. REMOTE_ADDR = IP intern proxy, nu user. Fix: $publicActions = [\'ping\', \'cif\']');
     }

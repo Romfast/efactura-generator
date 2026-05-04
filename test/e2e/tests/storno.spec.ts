@@ -11,13 +11,13 @@ test('storno flips quantities and totals', async ({ page }, testInfo) => {
 
   await page.goto('/');
   await page.locator('#fileInput').setInputFiles(FIXTURE);
-  await page.locator('#basicDetails').waitFor({ state: 'visible', timeout: 15000 });
+  await page.locator('#lineItems .line-item').first().waitFor({ state: 'visible', timeout: 15000 });
 
   // Click Stornează
   await page.getByText('Stornează', { exact: false }).click();
 
   // Assert quantities are negative
-  const qtyInputs = page.locator('input[name*="cantitate"], input[id*="cantitate"]');
+  const qtyInputs = page.locator('input[name^="quantity"]');
   const count = await qtyInputs.count();
   for (let i = 0; i < count; i++) {
     const val = await qtyInputs.nth(i).inputValue();
@@ -37,9 +37,9 @@ test('storno flips quantities and totals', async ({ page }, testInfo) => {
 
   // Reload and verify negative preserved
   await page.locator('#fileInput').setInputFiles(savedPath!);
-  await page.locator('#basicDetails').waitFor({ state: 'visible', timeout: 15000 });
+  await page.locator('#lineItems .line-item').first().waitFor({ state: 'visible', timeout: 15000 });
 
-  const reloadedQty = page.locator('input[name*="cantitate"], input[id*="cantitate"]');
+  const reloadedQty = page.locator('input[name^="quantity"]');
   const reloadCount = await reloadedQty.count();
   for (let i = 0; i < reloadCount; i++) {
     const val = await reloadedQty.nth(i).inputValue();
