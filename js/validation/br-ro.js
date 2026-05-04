@@ -33,10 +33,11 @@ const EU_COUNTRY_CODES = new Set([
  */
 function parseNum(val) {
     if (val === null || val === undefined || val === '') return NaN;
-    // Acceptă format canonical decimal-dot (dataset.raw) sau display ro-RO (1.234,56)
     const s = String(val).trim().replace(/\s/g, '');
-    // Dacă e format RO (virgulă = separator zecimal): 1.234,56 → 1234.56
-    if (/^\d{1,3}(\.\d{3})*(,\d+)?$/.test(s)) {
+    // Format ro-RO are virgulă ca separator zecimal ("1.234,56" sau "1,5").
+    // Doar când există virgulă tratăm punctele drept separator de mii.
+    // Altfel: parse canonical decimal-dot (dataset.raw, XML) — "1.000" = 1, NU 1000.
+    if (s.includes(',')) {
         return parseFloat(s.replace(/\./g, '').replace(',', '.'));
     }
     return parseFloat(s);

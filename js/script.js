@@ -270,7 +270,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (error) {
             console.error('Eroare la încărcarea XML:', error);
         }
-    }    
+    }
+
+    // Pre-populare număr factură din secvență dacă câmpul e gol
+    const numEl = document.querySelector('[name="invoiceNumber"]');
+    if (numEl && !numEl.value) {
+        const seq = _seqRead();
+        numEl.value = _seqFormat(seq);
+    }
 });
 
 // Initialize event listeners for existing line items
@@ -967,9 +974,14 @@ function createLineDiscountReasonOptions(selectedCode = '') {
 }
 
 // Add VAT breakdown row
+let _vatRowCounter = 0;
 function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existingRowId = null, exemptionCode = '', exemptionReason = '') {
     const container = document.getElementById('vatBreakdownRows');
-    const rowId = existingRowId || `vat-row-${Date.now()}`;
+    // ID unic chiar dacă mai multe rânduri sunt create în același ms (Date.now()
+    // singur cauza coliziuni → querySelector(#id) pică pe primul match și
+    // dataset.raw al rândurilor noi era fie suprascris, fie nesetat → BR-CO-15
+    // false positive după Recalculează Totaluri.
+    const rowId = existingRowId || `vat-row-${Date.now()}-${++_vatRowCounter}`;
 
     const rowHtml = `
         <div class="vat-row" id="${rowId}">
@@ -1247,25 +1259,29 @@ function createDatePicker(input, button) {
 
 function validateDateInput(input) {
     const value = input.value;
+
+    // Câmp gol = valid (regula "required" e tratată separat în validateForm).
+    if (value === '') {
+        input.classList.remove('invalid');
+        return true;
+    }
+
     const regex = /^(\d{2})\.(\d{2})\.(\d{4})$/;
     const match = value.match(regex);
-    
+
     if (match) {
         const day = parseInt(match[1]);
         const month = parseInt(match[2]);
         const year = parseInt(match[3]);
-        
-        // Create date object and verify if it's valid
+
         const date = new Date(year, month - 1, day);
         if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
             input.classList.remove('invalid');
             return true;
         }
     }
-    
-    if (value !== '') {
-        input.classList.add('invalid');
-    }
+
+    input.classList.add('invalid');
     return false;
 }
 
@@ -4580,13 +4596,34 @@ window.lookupCif = async function(party) {
         set('Name',      result.denumire);
         set('CompanyId', result.nrRegCom);
 
-        // Parsare adresă simplă: ANAF returnează o singură string cu tot
-        if (result.adresa) {
-            set('Address', result.adresa);
+        // CIF cu prefix RO dacă plătitor TVA
+        if (result.cui) {
+            const cifFinal = result.tvaActiv ? `RO${result.cui}` : String(result.cui);
+            const vatEl = document.querySelector(`[name="${prefix}VAT"]`);
+            if (vatEl) vatEl.value = cifFinal;
         }
 
-        const msg = result.tvaActiv ? 'Platitor TVA activ' : 'Neplatitor TVA';
-        showToast(`Date ANAF importate: ${result.denumire || cif}`, 'success', msg);
+        // Adresă structurată cu fallback la string brut
+        set('Address', result.strada || result.adresa);
+        set('City',    result.oras);
+        // CountrySubentity este SELECT cu valori RO-XX
+        if (result.judetCod) {
+            const countyEl = document.querySelector(`[name="${prefix}CountrySubentity"]`);
+            if (countyEl && [...countyEl.options].some(o => o.value === result.judetCod)) {
+                countyEl.value = result.judetCod;
+            }
+        }
+        // Country SELECT
+        const countryEl = document.querySelector(`[name="${prefix}Country"]`);
+        if (countryEl) countryEl.value = 'RO';
+        set('Phone',   result.telefon);
+
+        // Toast cu status TVA + eFactura
+        const statuses = [
+            result.tvaActiv ? 'Plătitor TVA' : 'Neplătitor TVA',
+            result.statusEFactura ? 'Înregistrat eFactura' : null
+        ].filter(Boolean).join(' · ');
+        showToast(`Date ANAF importate: ${result.denumire || cif}`, 'success', statuses);
     } catch (err) {
         showToast('Eroare lookup CIF ANAF: ' + err.message, 'error',
                   'Verificați că receiver.php este disponibil pe server.');
@@ -4741,11 +4778,12 @@ window.downloadPDF = async function() {
 // ============================================================================
 
 const SEQ_KEY = 'efactura.sequence.v1';
-const SEQ_DEFAULT = { serie: 'RFT', an: new Date().getFullYear(), contor: 1 };
+const SEQ_DEFAULT = { serie: 'RFT', an: new Date().getFullYear(), contor: 1, includeAn: true, cifre: 4 };
 
 /** Citește secvența curentă din localStorage. */
 function _seqRead() {
-    return getJSON(SEQ_KEY, { ...SEQ_DEFAULT });
+    const stored = getJSON(SEQ_KEY, null);
+    return { ...SEQ_DEFAULT, ...stored };
 }
 
 /** Salvează secvența în localStorage. */
@@ -4755,22 +4793,32 @@ function _seqWrite(seq) {
 
 /**
  * Formatează un număr de factură din secvență.
- * Pattern: {serie}{an}-{contor:4} → ex. "RFT2026-0042"
+ * Cu includeAn=true:  "{serie} {an}{pad}"  → ex. "RFT 20260042"
+ * Cu includeAn=false: "{serie} {pad}"      → ex. "RFT 0042"
  */
 function _seqFormat(seq) {
-    const pad = String(seq.contor).padStart(4, '0');
-    return `${seq.serie || 'RFT'}${seq.an || new Date().getFullYear()}-${pad}`;
+    const cifre  = Math.max(1, Math.min(8, parseInt(seq.cifre) || 4));
+    const pad    = String(seq.contor).padStart(cifre, '0');
+    const serie  = (seq.serie || 'RFT').trim();
+    const an     = seq.an || new Date().getFullYear();
+    return seq.includeAn
+        ? `${serie} ${an}${pad}`
+        : `${serie} ${pad}`;
 }
 
 /** Actualizează previzualizarea din modal cu valorile curente. */
 function _seqUpdatePreview() {
-    const serie   = (document.getElementById('seq-serie')?.value   || '').trim().toUpperCase();
-    const year    = parseInt(document.getElementById('seq-year')?.value)  || new Date().getFullYear();
-    const contor  = parseInt(document.getElementById('seq-counter')?.value) || 1;
-    const preview = document.getElementById('seq-preview');
+    const serie      = (document.getElementById('seq-serie')?.value     || '').trim().toUpperCase();
+    const year       = parseInt(document.getElementById('seq-year')?.value)    || new Date().getFullYear();
+    const contor     = parseInt(document.getElementById('seq-counter')?.value) || 1;
+    const includeAn  = document.getElementById('seq-include-an')?.checked ?? true;
+    const cifre      = Math.max(1, Math.min(8, parseInt(document.getElementById('seq-cifre')?.value) || 4));
+    const preview    = document.getElementById('seq-preview');
     if (preview) {
-        const pad = String(Math.max(1, contor)).padStart(4, '0');
-        preview.textContent = `${serie || 'RFT'}${year}-${pad}`;
+        const pad = String(Math.max(1, contor)).padStart(cifre, '0');
+        preview.textContent = includeAn
+            ? `${serie || 'RFT'} ${year}${pad}`
+            : `${serie || 'RFT'} ${pad}`;
     }
 }
 
@@ -4801,9 +4849,19 @@ function _ensureNewInvoiceModal() {
             <input id="seq-counter" class="form-input mono" type="number" min="1" max="99999" step="1">
         </div>
     </div>
+    <div class="compact-grid" style="grid-template-columns:1fr 1fr;gap:8px">
+        <div class="form-group">
+            <label class="form-label" for="seq-cifre">Cifre contor</label>
+            <input id="seq-cifre" class="form-input mono" type="number" min="1" max="8" step="1" value="4">
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:22px">
+            <input id="seq-include-an" type="checkbox" checked>
+            <label for="seq-include-an" class="form-label" style="margin:0">Include an în număr</label>
+        </div>
+    </div>
     <div class="form-group">
         <label class="form-label">Previzualizare număr factură</label>
-        <div id="seq-preview" class="modal-preview">RFT${new Date().getFullYear()}-0001</div>
+        <div id="seq-preview" class="modal-preview">RFT ${new Date().getFullYear()}0001</div>
     </div>
     <div class="modal-actions">
         <button type="button" class="button button-secondary" id="btnCloseNewInvoice">Anulare</button>
@@ -4817,6 +4875,8 @@ function _ensureNewInvoiceModal() {
     document.getElementById('btnGenerateInvoice').addEventListener('click', window.generateNewInvoice);
     document.getElementById('seq-serie').addEventListener('input', _seqUpdatePreview);
     document.getElementById('seq-counter').addEventListener('input', _seqUpdatePreview);
+    document.getElementById('seq-include-an').addEventListener('change', _seqUpdatePreview);
+    document.getElementById('seq-cifre').addEventListener('input', _seqUpdatePreview);
 
     // Close on backdrop click
     modal.addEventListener('click', function(e) {
@@ -4838,13 +4898,17 @@ window.openNewInvoiceModal = function() {
     _ensureNewInvoiceModal();
     const seq = _seqRead();
 
-    const serieEl   = document.getElementById('seq-serie');
-    const yearEl    = document.getElementById('seq-year');
-    const counterEl = document.getElementById('seq-counter');
+    const serieEl      = document.getElementById('seq-serie');
+    const yearEl       = document.getElementById('seq-year');
+    const counterEl    = document.getElementById('seq-counter');
+    const includeAnEl  = document.getElementById('seq-include-an');
+    const cifreEl      = document.getElementById('seq-cifre');
 
-    if (serieEl)   serieEl.value   = seq.serie || 'RFT';
-    if (yearEl)    yearEl.value    = new Date().getFullYear();
-    if (counterEl) counterEl.value = seq.contor || 1;
+    if (serieEl)      serieEl.value     = seq.serie || 'RFT';
+    if (yearEl)       yearEl.value      = new Date().getFullYear();
+    if (counterEl)    counterEl.value   = seq.contor || 1;
+    if (includeAnEl)  includeAnEl.checked = seq.includeAn !== false;
+    if (cifreEl)      cifreEl.value     = seq.cifre || 4;
 
     _seqUpdatePreview();
 
@@ -4862,14 +4926,18 @@ window.closeNewInvoiceModal = function() {
  * Generează o factură nouă cu numărul din secvență, incrementează contorul.
  */
 window.generateNewInvoice = function() {
-    const serieEl   = document.getElementById('seq-serie');
-    const counterEl = document.getElementById('seq-counter');
+    const serieEl      = document.getElementById('seq-serie');
+    const counterEl    = document.getElementById('seq-counter');
+    const includeAnEl  = document.getElementById('seq-include-an');
+    const cifreEl      = document.getElementById('seq-cifre');
 
-    const serie   = (serieEl?.value   || 'RFT').trim().toUpperCase();
-    const contor  = Math.max(1, parseInt(counterEl?.value) || 1);
-    const year    = new Date().getFullYear();
+    const serie     = (serieEl?.value   || 'RFT').trim().toUpperCase();
+    const contor    = Math.max(1, parseInt(counterEl?.value) || 1);
+    const year      = new Date().getFullYear();
+    const includeAn = includeAnEl ? includeAnEl.checked : true;
+    const cifre     = Math.max(1, Math.min(8, parseInt(cifreEl?.value) || 4));
 
-    const seq = { serie, an: year, contor };
+    const seq = { serie, an: year, contor, includeAn, cifre };
     const invoiceNumber = _seqFormat(seq);
 
     // Salvează secvența cu contorul incrementat
@@ -4878,7 +4946,8 @@ window.generateNewInvoice = function() {
     // Creează o factură goală și populează formularul
     currentInvoice = createEmptyInvoice();
     const serializer = new XMLSerializer();
-    const xmlString = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(currentInvoice);
+    const serialized = serializer.serializeToString(currentInvoice).replace(/^<\?xml[^?]*\?>\s*/, '');
+    const xmlString = '<?xml version="1.0" encoding="UTF-8"?>\n' + serialized;
     parseXML(xmlString);
 
     // Setează numărul de factură generat

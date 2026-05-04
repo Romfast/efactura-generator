@@ -99,8 +99,20 @@ export async function anafPdf(xmlContent) {
  *   adresa?: string,
  *   nrRegCom?: string,
  *   cui?: number,
- *   tvaActiv?: boolean
+ *   tvaActiv?: boolean,
+ *   strada?: string,
+ *   oras?: string,
+ *   judetCod?: string,
+ *   codPostal?: string,
+ *   telefon?: string,
+ *   statusEFactura?: boolean
  * }>}
+ * @property {string}  strada        - Strada + număr din adresa_sediu_social ANAF
+ * @property {string}  oras          - Localitatea (fără prefix MUN./ORS./COM.)
+ * @property {string}  judetCod      - Cod județ ISO format RO-XX (ex: RO-B, RO-CJ)
+ * @property {string}  codPostal     - Cod poștal
+ * @property {string}  telefon       - Număr telefon din date_generale ANAF
+ * @property {boolean} statusEFactura - Înregistrat în sistemul eFactura
  */
 export async function anafCifLookup(cif) {
     const cifNum = String(cif).replace(/^RO\s*/i, '').trim();
