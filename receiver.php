@@ -11,8 +11,24 @@
 // ============================================================================
 
 // === 1. Configurație ========================================================
-$config = json_decode(file_get_contents(dirname(__FILE__) . '/config.json'), true);
-if (!$config) {
+// Citește config.json (fallback) și suprascrie cu variabile de mediu dacă sunt prezente.
+// Util pentru deploy în container (Docker/Dokploy): nu trebuie rebuild la schimbare config.
+//   ANAF_API_KEY        — suprascrie api_key
+//   ANAF_ALLOWED_IPS    — listă IP-uri separate prin virgulă; "*" sau gol = check dezactivat
+//   ANAF_TOKEN          — Bearer token OAuth ANAF (opțional, doar pentru viitoare extensii)
+//   ANAF_TEMP_LIFETIME  — ore păstrare fișiere temp (default 1)
+$configPath = dirname(__FILE__) . '/config.json';
+$config = file_exists($configPath) ? json_decode(file_get_contents($configPath), true) : [];
+if (!is_array($config)) $config = [];
+
+if (($v = getenv('ANAF_API_KEY')) !== false && $v !== '')        $config['api_key'] = $v;
+if (($v = getenv('ANAF_TOKEN'))   !== false && $v !== '')        $config['anaf_token'] = $v;
+if (($v = getenv('ANAF_TEMP_LIFETIME')) !== false && $v !== '')  $config['temp_file_lifetime'] = intval($v);
+if (($v = getenv('ANAF_ALLOWED_IPS')) !== false) {
+    $config['allowed_ips'] = array_values(array_filter(array_map('trim', explode(',', $v))));
+}
+
+if (empty($config['api_key'])) {
     header('HTTP/1.1 500 Internal Server Error');
     header('Content-Type: application/json');
     die(json_encode(['success' => false, 'error' => 'Eroare la încărcarea configurației']));
@@ -51,10 +67,16 @@ function validateXML($xmlContent) {
     return ['valid' => true, 'errors' => []];
 }
 
-/** Verifică IP-ul clientului față de lista allowed_ips din config.json. */
+/**
+ * Verifică IP-ul clientului față de allowed_ips.
+ * Returnează true dacă lista e goală sau conține "*" (check dezactivat — util în
+ * container behind reverse proxy, unde REMOTE_ADDR e IP-ul intern Traefik/nginx).
+ */
 function checkIP() {
     global $config;
-    return in_array($_SERVER['REMOTE_ADDR'], $config['allowed_ips']);
+    $allowed = $config['allowed_ips'] ?? [];
+    if (empty($allowed) || in_array('*', $allowed, true)) return true;
+    return in_array($_SERVER['REMOTE_ADDR'], $allowed, true);
 }
 
 /** Verifică header-ul X-Api-Key față de api_key din config.json. */
@@ -101,9 +123,8 @@ if ($action === 'ping') {
 }
 
 // === 4. Auth ================================================================
-// Notă: IP check-ul are false || pentru backward compat — în prod, setați
-// allowed_ips corect și eliminați `false ||` din această linie.
-if (false || !checkIP()) {
+// IP check: dacă allowed_ips e gol sau conține "*", se sare peste (vezi checkIP()).
+if (!checkIP()) {
     header('HTTP/1.1 403 Forbidden');
     header('Content-Type: application/json');
     error_log("Acces interzis pentru IP: " . $_SERVER['REMOTE_ADDR']);

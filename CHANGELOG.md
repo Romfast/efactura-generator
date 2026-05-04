@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9-beta-13 - 04.05.2026
+
+### Bugfixes
+- Fixed: deploy în Docker/Dokploy returna „Acces interzis" la căutare CIF și validare ANAF, deoarece request-urile veneau prin reverse proxy și apăreau ca venind dintr-un IP intern, nu de la utilizator. Lista de IP-uri permise se poate dezactiva acum (gol sau `*`).
+
+### Modifications
+- Configurare receiver prin variabile de mediu (`ANAF_API_KEY`, `ANAF_ALLOWED_IPS`, `ANAF_TOKEN`, `ANAF_TEMP_LIFETIME`) — suprascriu valorile din `config.json`. Util pentru deploy în container fără rebuild la schimbare configurație.
+- Dockerfile: setează implicit `ANAF_ALLOWED_IPS=*` (verificare IP dezactivată), potrivit pentru deploy behind reverse proxy unde same-origin asigură deja protecția.
+
 ## 0.9-beta-12 - 04.05.2026
 
 ### Bugfixes
