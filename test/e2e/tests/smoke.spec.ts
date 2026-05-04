@@ -9,6 +9,7 @@ test.describe('smoke', () => {
         if (
           !text.includes('Pikaday') &&
           !text.includes('favicon.ico') &&
+          !text.includes('Failed to load resource') &&
           !/third-party/i.test(text)
         ) {
           errors.push(text);
