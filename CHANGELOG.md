@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9-beta-12 - 04.05.2026
+
+### Bugfixes
+- Fixed: eroare BR-CO-15 falsă după click pe „Recalculează Totaluri" — defalcarea TVA părea să nu corespundă cu Total TVA, deși matematica era corectă.
+- Fixed: eroare BR-16 falsă pe linii cu cantitate fracționară (ex. 1,000 buc) — totalul liniei era marcat greșit ca incorect.
+- Fixed: la salvare apărea „completați toate câmpurile obligatorii" chiar când nu se referențiază altă factură. Câmpul „Data factură referită" e opțional și nu mai blochează salvarea când e gol.
+- Fixed: „Factură Nouă" — eroare XML declaration duplicată la parsare (`XMLSerializer` include deja `<?xml?>`, codul o prefixa din nou). Strip declaration înainte de concatenare.
+
+### Modifications
+- ANAF lookup CIF: completare automată oraș, județ, telefon și prefix `RO` la CIF-ul plătitorilor TVA. Toast indică acum statusul `Plătitor/Neplătitor TVA · Înregistrat eFactura`. Câmpurile `CountrySubentity` (SELECT RO-XX) și `Country` se populează automat.
+- Număr factură: pre-populare din secvența localStorage la deschiderea aplicației (fără incrementare contor).
+- Număr factură: format configurabil — serie + spațiu + an opțional + contor cu N cifre (1–8). Exemple: `RFT 20260001` (cu an) sau `RFT 0001` (fără an). Modal „Factură Nouă" extins cu checkbox „Include an în număr" și input „Cifre contor".
+
 ## 0.9-beta-11 - 04.05.2026
 
 ### Bugfixes

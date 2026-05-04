@@ -243,15 +243,22 @@ function _normalizeCifResponse($data, $cif) {
         return ['found' => false];
     }
     $c  = $found[0];
-    $dg = $c['date_generale'] ?? [];
+    $dg = $c['date_generale']      ?? [];
+    $as = $c['adresa_sediu_social'] ?? [];
     $tv = $c['inregistrare_scop_Tva'] ?? [];
     return [
-        'found'     => true,
-        'denumire'  => $dg['denumire'] ?? '',
-        'adresa'    => $dg['adresa']   ?? '',
-        'nrRegCom'  => $dg['nrRegCom'] ?? '',
-        'cui'       => $dg['cui']      ?? $cif,
-        'tvaActiv'  => !empty($tv['scpTVA']),
+        'found'         => true,
+        'denumire'      => $dg['denumire'] ?? '',
+        'adresa'        => $dg['adresa']   ?? '',
+        'nrRegCom'      => $dg['nrRegCom'] ?? '',
+        'cui'           => $dg['cui']      ?? $cif,
+        'tvaActiv'      => !empty($tv['scpTVA']),
+        'strada'        => trim(($as['sdenumire_Strada'] ?? '') . ' ' . ($as['snumar_Strada'] ?? '')),
+        'oras'          => trim(preg_replace('/^(MUN\.|ORS\.|COM\.)\s+/iu', '', $as['sdenumire_Localitate'] ?? '')),
+        'judetCod'      => 'RO-' . strtoupper($as['scod_JudetAuto'] ?? ''),
+        'codPostal'     => $as['scod_Postal'] ?? '',
+        'telefon'       => $dg['telefon'] ?? '',
+        'statusEFactura'=> !empty($dg['statusRO_e_Factura']),
     ];
 }
 
