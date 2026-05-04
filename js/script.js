@@ -1980,12 +1980,27 @@ function populatePartyDetails(xmlDoc) {
             getXMLValue(postalAddress, 'cbc\\:CountrySubentity, CountrySubentity') : '';
      
         // Set inputs
-        document.querySelector(`[name="${prefix}Name"]`).value = 
+        document.querySelector(`[name="${prefix}Name"]`).value =
             getXMLValue(party, 'cac\\:PartyLegalEntity cbc\\:RegistrationName, PartyLegalEntity RegistrationName');
-        document.querySelector(`[name="${prefix}VAT"]`).value = 
-            getXMLValue(party, 'cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID');
-        document.querySelector(`[name="${prefix}CompanyId"]`).value = 
-            getXMLValue(party, 'cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID');
+
+        // Cod TVA / Nr. înregistrare — derivă în funcție de prezența PartyTaxScheme.
+        // Plătitor TVA: PartyTaxScheme/CompanyID e codul TVA, PartyLegalEntity/CompanyID e nr. registru.
+        // Neplătitor TVA: PartyTaxScheme lipsește; CIF-ul stă în PartyLegalEntity/CompanyID,
+        // iar nr. registru în PartyIdentification/ID. Trebuie inversate la încărcare ca să apară
+        // în câmpurile corecte din formular (simetric cu createPartyElement la salvare).
+        const taxSchemeCompanyId = getXMLValue(party, 'cac\\:PartyTaxScheme cbc\\:CompanyID, PartyTaxScheme CompanyID');
+        const legalEntityCompanyId = getXMLValue(party, 'cac\\:PartyLegalEntity cbc\\:CompanyID, PartyLegalEntity CompanyID');
+        const partyIdentificationId = getXMLValue(party, 'cac\\:PartyIdentification cbc\\:ID, PartyIdentification ID');
+        let vatValue, companyIdValue;
+        if (taxSchemeCompanyId) {
+            vatValue = taxSchemeCompanyId;
+            companyIdValue = legalEntityCompanyId || partyIdentificationId;
+        } else {
+            vatValue = legalEntityCompanyId;
+            companyIdValue = partyIdentificationId;
+        }
+        document.querySelector(`[name="${prefix}VAT"]`).value = vatValue;
+        document.querySelector(`[name="${prefix}CompanyId"]`).value = companyIdValue;
         document.querySelector(`[name="${prefix}Address"]`).value = streetName;
         document.querySelector(`[name="${prefix}City"]`).value = cityName;
         document.querySelector(`[name="${prefix}Phone"]`).value = phone;
