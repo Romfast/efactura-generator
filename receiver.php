@@ -182,10 +182,22 @@ function handleAnafPdf() {
 }
 
 /**
- * Proxy lookup contribuabil după CIF prin ANAF (PlatitorTvaRest v9).
+ * Proxy lookup contribuabil după CIF prin ANAF.
  * Nu necesită token OAuth — API public ANAF.
- * Endpoint: POST https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva
- * API-ul v9 este sincron — returnează found/notFound direct în același răspuns.
+ *
+ * API utilizat: PlatitorTvaRest v9 (sincron)
+ *   POST https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva
+ *   Body: [{"cui": <int>, "data": "YYYY-MM-DD"}]
+ *   Răspuns direct: {found: [...], notFound: [...]}
+ *   Doc: https://static.anaf.ro/static/10/Anaf/Informatii_R/Servicii_web/doc_WS_V9.txt
+ *
+ * Alternativă disponibilă: AsynchWebService v8 (async, batch până la 100 CUI-uri)
+ *   Submit : POST https://webservicesp.anaf.ro/AsynchWebService/api/v8/ws/tva → correlationId
+ *   Result : GET  https://webservicesp.anaf.ro/AsynchWebService/api/v7/ws/tva?id={correlationId}
+ *            (după min. 2s; rezultat disponibil max. 3 zile)
+ *   Doc: https://static.anaf.ro/static/10/Anaf/Informatii_R/Servicii_web/doc_WS_Async_V8.txt
+ *   Potrivit pentru bulk lookup (ex. import multiplu CIF-uri); pentru single CIF la click
+ *   user, v9 sincron e preferabil (un singur request, fără polling).
  */
 function handleAnafCif() {
     $cif = intval($_GET['cif'] ?? '0');
