@@ -3,6 +3,7 @@
 ## 0.9-beta-13 - 04.05.2026
 
 ### Bugfixes
+- Fixed: la încărcarea unui XML cu furnizor sau client neplătitor de TVA, codul fiscal apărea în câmpul „Nr. înregistrare" iar „Cod TVA" rămânea gol. Acum, dacă firma nu e plătitoare TVA, CIF-ul se completează în „Cod TVA" și numărul de la Registrul Comerțului în „Nr. înregistrare" (simetric cu modul în care se salvează XML-ul).
 - Fixed: deploy în Docker/Dokploy returna „Acces interzis" la căutare CIF și validare ANAF, deoarece request-urile veneau prin reverse proxy și apăreau ca venind dintr-un IP intern, nu de la utilizator. Lista de IP-uri permise se poate dezactiva acum (gol sau `*`).
 
 ### Modifications
