@@ -7,6 +7,9 @@
 - Regression test documentat pentru bug 403 `?action=cif` pe prod-roa (receiver.php IP gate blochează proxy Traefik)
 - TODO.md creat cu backlog fix 403 + defense-in-depth + investigație rsync
 
+### Bugfixes
+- receiver.php `?action=cif`: migrat de la ANAF AsynchWebService v8 (async, correlationId) la PlatitorTvaRest v9 (sincron, răspuns direct). Normalizare răspuns actualizată pentru structura nested v9 (`date_generale`, `inregistrare_scop_Tva`)
+
 ## 0.9-beta-10 - 30.04.2026
 
 ### New Features

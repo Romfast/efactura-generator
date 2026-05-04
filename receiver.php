@@ -182,16 +182,10 @@ function handleAnafPdf() {
 }
 
 /**
- * Proxy lookup contribuabil după CIF prin ANAF (AsynchWebService v8).
+ * Proxy lookup contribuabil după CIF prin ANAF (PlatitorTvaRest v9).
  * Nu necesită token OAuth — API public ANAF.
- * Endpoint: POST https://webservicesp.anaf.ro/AsynchWebService/api/v8/ws/tva
- * Notă: API-ul este asynchron (returnează correlationId). Implementarea
- *       PHP face retry server-side (max 5s) și returnează best-effort.
- *
- * Endpoint verificat: 2026-04-30 — v8 returnează HTTP 200 cu correlationId.
- * Rezultatul este disponibil via polling pe un endpoint nedocumentat public;
- * implementarea curentă face 5 retry-uri × 1s; dacă datele nu sunt
- * disponibile, returnează {found: false, async: true}.
+ * Endpoint: POST https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva
+ * API-ul v9 este sincron — returnează found/notFound direct în același răspuns.
  */
 function handleAnafCif() {
     $cif = intval($_GET['cif'] ?? '0');
@@ -206,59 +200,46 @@ function handleAnafCif() {
     $payload = json_encode([['cui' => $cif, 'data' => $today]]);
     $headers = ['Content-Type: application/json', 'Accept: application/json'];
 
-    // Trimite cererea și obținem correlationId
-    $submit = curlPost(
-        'https://webservicesp.anaf.ro/AsynchWebService/api/v8/ws/tva',
+    $result = curlPost(
+        'https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva',
         $payload, $headers
     );
 
     header('Content-Type: application/json');
 
-    if ($submit['error']) {
+    if ($result['error']) {
         http_response_code(502);
-        echo json_encode(['error' => 'ANAF indisponibil: ' . $submit['error']]);
+        echo json_encode(['error' => 'ANAF indisponibil: ' . $result['error']]);
         exit;
     }
 
-    $init = json_decode($submit['body'], true);
-    if (!$init || ($init['cod'] ?? 0) !== 200) {
+    $data = json_decode($result['body'], true);
+    if (!$data || !array_key_exists('found', $data)) {
         http_response_code(502);
-        echo json_encode(['error' => 'Răspuns neașteptat ANAF', 'raw' => $submit['body']]);
+        echo json_encode(['error' => 'Răspuns neașteptat ANAF', 'raw' => $result['body']]);
         exit;
     }
 
-    // API-ul v8 este async — dacă found/notFound sunt prezente în răspunsul
-    // inițial (unele versiuni le includ), le folosim direct.
-    if (isset($init['found']) || isset($init['notFound'])) {
-        echo json_encode(_normalizeCifResponse($init, $cif));
-        exit;
-    }
-
-    // Altfel, returnăm {found: false, async: true} — operatorul poate extinde
-    // implementarea cu un webhook callback dacă ANAF furnizează rezultatele async.
-    echo json_encode([
-        'found'         => false,
-        'async'         => true,
-        'correlationId' => $init['correlationId'] ?? null,
-        'note'          => 'API ANAF async v8 — rezultat indisponibil fără callback webhook'
-    ]);
+    echo json_encode(_normalizeCifResponse($data, $cif));
     exit;
 }
 
-/** Normalizează răspunsul ANAF TVA în formatul js/anaf.js. */
+/** Normalizează răspunsul ANAF TVA v9 în formatul js/anaf.js. */
 function _normalizeCifResponse($data, $cif) {
     $found = $data['found'] ?? [];
     if (empty($found)) {
         return ['found' => false];
     }
-    $c = $found[0];
+    $c  = $found[0];
+    $dg = $c['date_generale'] ?? [];
+    $tv = $c['inregistrare_scop_Tva'] ?? [];
     return [
         'found'     => true,
-        'denumire'  => $c['denumire']  ?? '',
-        'adresa'    => $c['adresa']    ?? '',
-        'nrRegCom'  => $c['nrRegCom']  ?? '',
-        'cui'       => $c['cui']       ?? $cif,
-        'tvaActiv'  => !empty($c['scpTVA'])
+        'denumire'  => $dg['denumire'] ?? '',
+        'adresa'    => $dg['adresa']   ?? '',
+        'nrRegCom'  => $dg['nrRegCom'] ?? '',
+        'cui'       => $dg['cui']      ?? $cif,
+        'tvaActiv'  => !empty($tv['scpTVA']),
     ];
 }
 

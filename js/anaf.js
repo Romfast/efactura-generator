@@ -11,7 +11,7 @@
  * Endpoints ANAF (proxied):
  *   Validate : POST https://api.anaf.ro/prod/FCTEL/rest/validare/FACT1
  *   PDF/HTML : POST https://api.anaf.ro/prod/FCTEL/rest/transformare/FACT1/DA
- *   CIF info : POST https://webservicesp.anaf.ro/AsynchWebService/api/v8/ws/tva
+ *   CIF info : POST https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva
  */
 
 const RECEIVER = './receiver.php';
@@ -90,7 +90,7 @@ export async function anafPdf(xmlContent) {
 
 /**
  * Caută informații contribuabil după CIF prin ANAF.
- * Folosește API-ul async ANAF v8 (webservicesp.anaf.ro).
+ * Folosește API-ul sincron ANAF v9 (webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva).
  * Nu necesită token OAuth.
  * @param {string|number} cif - CIF/CUI (cu sau fără prefix RO)
  * @returns {Promise<{
