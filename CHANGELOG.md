@@ -7,6 +7,7 @@
 
 ### Modifications
 - Adăugat `sync-to-website.sh` — script pentru propagarea modificărilor către sub-directorul `efactura-generator/` din repo-ul `romfast-website` (de unde se face deploy către `https://romfast.ro/efactura-generator/`). Scriptul exclude automat fișierele care nu au ce căuta pe shared hosting (Dockerfile, web.config, docs interne) și `config.json` cu `api_key` (gestionat doar pe server).
+- `sync-to-website.sh` poate face și deploy direct pe găzduirea de producție: `--deploy` (mirror local + deploy a2hosting) și `--deploy-only` (sare peste mirror, deploy direct canonic → server). Funcționează cu `--dry-run` pentru previzualizare și verifică SSH înainte să încerce rsync-ul.
 - Documentate cele trei ținte de deploy în `CLAUDE.md` (GitHub Pages, romfast.ro via romfast-website, Docker/Dokploy) și avertizare PHP 7.3 pentru găzduirea a2hosting.
 
 ## 0.9-beta-13 - 04.05.2026
