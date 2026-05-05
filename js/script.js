@@ -8,7 +8,7 @@ import JSZip from './vendor/jszip.mjs';
 import { validateCIF } from './validation/cif.js';
 import { validateIBAN } from './validation/iban.js';
 import { runBRRules } from './validation/br-ro.js';
-import { probeReceiver, anafValidate, anafCifLookup } from './anaf.js';
+import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js';
 import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js';
 
 // Constants
@@ -4573,6 +4573,63 @@ window.validateAnaf = async function() {
 };
 
 /**
+ * Descarcă PDF-ul oficial generat de ANAF din XML-ul curent.
+ * Apelează endpoint-ul ANAF /transformare/FACT1 (validează implicit).
+ * Dacă XML-ul nu trece validarea ANAF, afișează erorile în loc să descarce.
+ * Necesită receiver.php disponibil pe server (proxy CORS).
+ */
+window.downloadPdfAnaf = async function() {
+    if (!currentInvoice) {
+        showToast('Nicio factură încărcată. Deschideți un XML eFactura mai întâi.', 'warning');
+        return;
+    }
+    const btn = document.getElementById('btnPdfAnaf');
+    if (btn) _btnLoading(btn, 'Generare PDF ANAF...');
+
+    try {
+        const xmlString = _currentXMLString();
+        if (!xmlString) throw new Error('Nu s-a putut genera XML-ul facturii.');
+
+        const result = await anafPdf(xmlString);
+
+        if (result.errors && result.errors.length) {
+            // ANAF a respins XML-ul la validare; afișează primele erori în toast.
+            const errs = result.errors.filter(m => m.severity === 'ERROR' || m.severity === 'FATAL');
+            const sub = result.errors.slice(0, 3).map(m => m.message).join(' | ');
+            showToast(
+                `ANAF a respins XML-ul: ${errs.length || result.errors.length} mesaje`,
+                'error',
+                sub.slice(0, 220)
+            );
+            return;
+        }
+
+        if (!(result.pdf instanceof Blob)) {
+            throw new Error('Răspuns ANAF fără PDF.');
+        }
+
+        // Descarcă blob-ul ca fișier PDF.
+        const inv = printHandler.collectInvoiceData();
+        const safeNum = String(inv.invoiceNumber || 'factura').replace(/[^a-z0-9_-]+/gi, '_');
+        const url = URL.createObjectURL(result.pdf);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeNum}_ANAF.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+        showToast('PDF ANAF descărcat.', 'success');
+    } catch (err) {
+        showToast('Eroare PDF ANAF: ' + err.message, 'error',
+                  'Verificați că receiver.php este disponibil pe server.');
+    } finally {
+        if (btn) _btnDone(btn);
+    }
+};
+
+/**
  * Caută datele firmei după CIF din câmpul supplierVAT / customerVAT.
  * @param {'supplier'|'customer'} party
  */
@@ -4647,11 +4704,12 @@ window.lookupCif = async function(party) {
     }
 };
 
-// Probează receiver.php la startup — dacă e disponibil, afișează butoanele ANAF.
+// Probează receiver.php la startup — dacă e disponibil, afișează item-urile ANAF.
 (async () => {
     const available = await probeReceiver().catch(() => false);
     if (available) {
-        document.getElementById('btnValidateAnaf')?.style?.setProperty('display', '');
+        // Item-urile ANAF din meniul "Acțiuni" sunt grupate într-un wrapper hidden.
+        document.querySelector('.actions-menu-anaf')?.removeAttribute('hidden');
         document.querySelectorAll('.anaf-cif-btn').forEach(b => b.style.removeProperty('display'));
     }
 })();
@@ -5262,38 +5320,66 @@ const printHandler = new InvoicePrintHandler();
 
 // Initialize when the document is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Add print controls to the UI
-    const headerButtonGroup = document.querySelector('.button-group');
-    if (headerButtonGroup) {
-        const printControls = document.createElement('div');
-        printControls.className = 'print-controls';
-        printControls.style.display = 'flex';
-        printControls.style.gap = '8px';
-        printControls.style.alignItems = 'center';
-        
-        // Create template selector
-        const templateSelect = document.createElement('select');
-        templateSelect.className = 'form-input';
-        templateSelect.style.width = 'auto';
-        templateSelect.innerHTML = `
-            <option value="standard">Standard</option>
-            <option value="compact">Compact</option>
-        `;
-        templateSelect.addEventListener('change', (e) => {
-            printHandler.setTemplate(e.target.value);
-        });
-
-        // Create print button
-        const printButton = document.createElement('button');
-        printButton.className = 'button';
-        printButton.onclick = () => printHandler.print();
-        printButton.innerHTML = 'Printează';
-
-        // Add elements to controls
-        printControls.appendChild(templateSelect);
-        printControls.appendChild(printButton);
-        
-        // Add controls to header
-        headerButtonGroup.appendChild(printControls);
-    }
+    setupActionsMenu();
 });
+
+/**
+ * Cablează meniul "Acțiuni ▾" din header: toggle, click-outside, Esc, item handlers.
+ * Înlocuiește vechea injecție DOM pentru print controls — toate output-urile
+ * (Printează Standard/Compact, Descarcă PDF, PDF ANAF, Validare ANAF) sunt în meniu.
+ */
+function setupActionsMenu() {
+    const trigger = document.getElementById('btnActionsMenu');
+    const menu = document.getElementById('actionsMenu');
+    if (!trigger || !menu) return;
+
+    const open = () => {
+        menu.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+    };
+    const close = () => {
+        menu.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+    };
+    const toggle = () => (menu.hidden ? open() : close());
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggle();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!menu.hidden && !menu.contains(e.target) && e.target !== trigger) close();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !menu.hidden) {
+            close();
+            trigger.focus();
+        }
+    });
+
+    // Item dispatch — fiecare buton are data-action (+ data-template pentru print).
+    menu.addEventListener('click', (e) => {
+        const item = e.target.closest('[data-action]');
+        if (!item) return;
+        const action = item.dataset.action;
+        close();
+
+        switch (action) {
+            case 'print':
+                printHandler.setTemplate(item.dataset.template || 'standard');
+                printHandler.print();
+                break;
+            case 'downloadPdf':
+                window.downloadPDF?.();
+                break;
+            case 'pdfAnaf':
+                window.downloadPdfAnaf?.();
+                break;
+            case 'validateAnaf':
+                window.validateAnaf?.();
+                break;
+        }
+    });
+}

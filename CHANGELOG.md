@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9-beta-15 - 05.05.2026
+
+### New Features
+- Buton nou „PDF ANAF" în meniul Acțiuni: descarcă PDF-ul oficial al facturii generat direct de ANAF din XML-ul curent. Înainte de generare, ANAF validează factura — dacă apar erori, sunt afișate în loc să descarce un PDF cu informații greșite. Disponibil când serverul are configurat suport pentru API-ul ANAF.
+
+### Modifications
+- Reorganizat header-ul aplicației: butoanele secundare (Printează, Descarcă PDF, PDF ANAF, Validare ANAF) sunt grupate într-un meniu „Acțiuni ▾" pentru reducerea aglomerării. În header rămân vizibile permanent doar acțiunile principale: Alege Fișier, Factură Nouă, Stornează, Salvează XML.
+- Eliminat selectorul Standard/Compact și butonul „Printează" injectate dinamic în header — opțiunile sunt acum directe în meniul Acțiuni („Printează — Standard" și „Printează — Compact"), un singur click pentru orice variantă.
+- Pe mobil meniul Acțiuni se deschide pe toată lățimea ecranului sub header.
+
+### Bugfixes
+- Fixed: butonul „Validare ANAF" (existent în versiuni anterioare) și endpoint-ul folosit pentru transformarea XML → PDF foloseau ruta cu autentificare OAuth (`api.anaf.ro`) chiar și fără un token configurat — acum, în lipsa token-ului, se folosește ruta publică ANAF (`webservicesp.anaf.ro`) care nu necesită autentificare. Astfel funcționalitățile ANAF merg și pe servere fără token.
+- Fixed: apelul anterior pentru transformarea în PDF folosea forma „skip validare" — în versiuni viitoare, când ar fi fost cablată, ar fi descărcat un PDF chiar și pentru XML-uri cu probleme. Acum validarea e implicită și erorile blochează descărcarea.
+
 ## 0.9-beta-14 - 05.05.2026
 
 ### Bugfixes

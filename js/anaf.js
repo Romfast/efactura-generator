@@ -5,13 +5,14 @@
  * Pe hosting static (GitHub Pages, fără PHP), apelurile vor eșua cu eroare
  * "receiver indisponibil" — verificați cu probeReceiver() la inițializare.
  *
- * Configurare necesară în config.json (server-side):
- *   "anaf_token": "<Bearer token OAuth ANAF>" — necesar pentru validate + pdf
+ * Configurare opțională în config.json (server-side):
+ *   "anaf_token": "<Bearer token OAuth ANAF>" — folosește ruta OAuth (api.anaf.ro)
+ *   Fără token: receiver folosește ruta publică webservicesp.anaf.ro (fără auth).
  *
  * Endpoints ANAF (proxied):
- *   Validate : POST https://api.anaf.ro/prod/FCTEL/rest/validare/FACT1
- *   PDF/HTML : POST https://api.anaf.ro/prod/FCTEL/rest/transformare/FACT1/DA
- *   CIF info : POST https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva
+ *   Validate    : POST /FCTEL/rest/validare/FACT1
+ *   XmlToPdf    : POST /FCTEL/rest/transformare/FACT1   (validează default; întoarce PDF)
+ *   CIF info    : POST https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva
  */
 
 const RECEIVER = './receiver.php';
@@ -65,11 +66,14 @@ export async function anafValidate(xmlContent) {
 }
 
 /**
- * Obține vizualizarea ANAF a facturii (ZIP cu HTML).
- * Notă: ANAF /transformare returnează ZIP+HTML, nu PDF direct.
- *       PDF-ul real este generat client-side prin PR-PDF / html2pdf.js.
+ * Obține PDF-ul oficial ANAF al facturii (transformare XML → PDF).
+ * ANAF /transformare/FACT1 validează XML-ul și întoarce direct PDF binary.
+ * Dacă XML-ul nu trece validarea, ANAF întoarce JSON cu erori (status 400).
+ *
  * @param {string} xmlContent - XML ca string UTF-8
- * @returns {Promise<Blob>} ZIP blob
+ * @returns {Promise<{pdf: Blob}|{errors: Array<{message:string,severity:string}>}>}
+ *   - pdf: Blob `application/pdf` la succes
+ *   - errors: listă mesaje validare la eșec
  */
 export async function anafPdf(xmlContent) {
     let res;
@@ -82,10 +86,29 @@ export async function anafPdf(xmlContent) {
     } catch (e) {
         throw new Error('Receiver.php indisponibil — ' + e.message);
     }
-    if (!res.ok) {
-        throw new Error(`ANAF vizualizare: HTTP ${res.status}`);
+
+    const ct = (res.headers.get('Content-Type') || '').toLowerCase();
+
+    if (res.ok && ct.includes('application/pdf')) {
+        return { pdf: await res.blob() };
     }
-    return res.blob();
+
+    // ANAF validation errors come back as JSON (HTTP 400 or 200 with JSON body)
+    if (ct.includes('application/json')) {
+        const data = await res.json().catch(() => null);
+        const messages = (data?.Messages || data?.messages || []).map(m => ({
+            message: m.message || m.Message || String(m),
+            severity: (m.severity || m.Severity || 'ERROR').toUpperCase()
+        }));
+        if (messages.length) return { errors: messages };
+        if (data?.error) throw new Error(data.error);
+    }
+
+    if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`ANAF transformare: HTTP ${res.status}` + (txt ? ' — ' + txt.slice(0, 200) : ''));
+    }
+    throw new Error(`ANAF transformare: răspuns neașteptat (${ct || 'fără content-type'})`);
 }
 
 /**
