@@ -21,10 +21,21 @@
                 <input type="file" id="fileInput" class="file-input" accept=".xml,.zip,application/zip,application/x-zip-compressed" multiple>
                 <button onclick="document.getElementById('fileInput').click()" class="button">Alege Fișier XML / ZIP</button>
                 <button onclick="window.openNewInvoiceModal()" class="button" title="Factură nouă cu numerotare automată">Factură Nouă</button>
-                <button id="btnDownloadPDF" onclick="window.downloadPDF()" class="button button-secondary" title="Descarcă factură în format PDF (client-side)">Descarcă PDF</button>
-                <button id="btnValidateAnaf" onclick="window.validateAnaf()" class="button button-success" style="display:none" title="Validare prin API ANAF (necesită receiver.php)">Validare ANAF</button>
                 <button onclick="handleStorno()" class="button button-danger">Stornează</button>
                 <button onclick="saveXML()" class="button button-secondary">Salvează XML</button>
+                <div class="actions-menu-wrapper">
+                    <button id="btnActionsMenu" type="button" class="button button-secondary" aria-haspopup="menu" aria-expanded="false" aria-controls="actionsMenu">Acțiuni <span class="actions-menu-chevron" aria-hidden="true">▾</span></button>
+                    <div id="actionsMenu" class="actions-menu" role="menu" aria-labelledby="btnActionsMenu" hidden>
+                        <button type="button" role="menuitem" class="actions-menu-item" data-action="print" data-template="standard">Printează — Standard</button>
+                        <button type="button" role="menuitem" class="actions-menu-item" data-action="print" data-template="compact">Printează — Compact</button>
+                        <div class="actions-menu-divider" role="separator"></div>
+                        <button id="btnDownloadPDF" type="button" role="menuitem" class="actions-menu-item" data-action="downloadPdf">Descarcă PDF</button>
+                        <div class="actions-menu-anaf" hidden>
+                            <button id="btnPdfAnaf" type="button" role="menuitem" class="actions-menu-item is-success" data-action="pdfAnaf" title="PDF oficial generat de ANAF din XML (necesită receiver.php)">PDF ANAF</button>
+                            <button id="btnValidateAnaf" type="button" role="menuitem" class="actions-menu-item is-success" data-action="validateAnaf" title="Validare prin API ANAF (necesită receiver.php)">Validare ANAF</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -281,7 +292,7 @@
         </form>
 
         <footer class="app-footer">
-            <span id="app-version">v0.9-beta-14</span>
+            <span id="app-version">v0.9-beta-15</span>
             <a href="https://www.romfast.ro">www.romfast.ro</a>
         </footer>        
     </div>

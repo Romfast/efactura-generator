@@ -4,8 +4,8 @@
 //   1. Primire XML eFactura (POST fără action) → salvare în temp/
 //   2. Proxy ANAF APIs:
 //      ?action=ping     — health check (no auth)
-//      ?action=validate — proxy validare ANAF (necesită anaf_token în config.json)
-//      ?action=pdf      — proxy transformare ANAF (ZIP+HTML, necesită anaf_token)
+//      ?action=validate — proxy validare ANAF (anaf_token opțional → ruta OAuth; altfel ruta publică)
+//      ?action=pdf      — proxy transformare XmlToPdf ANAF (PDF binary; anaf_token opțional)
 //      ?action=cif      — lookup contribuabil după CIF (nu necesită token OAuth)
 //   3. Curățare fișiere temporare (?cleanup=xml_XXXX.xml)
 // ============================================================================
@@ -175,10 +175,21 @@ function handleAnafValidate() {
 }
 
 /**
- * Proxy transformare ANAF (vizualizare ZIP+HTML).
- * Notă: ANAF returnează ZIP cu fișiere HTML, nu PDF direct.
- * Necesită: "anaf_token": "Bearer XXX" în config.json
- * POST https://api.anaf.ro/prod/FCTEL/rest/transformare/FACT1/DA
+ * Proxy transformare ANAF XmlToPdf — întoarce PDF binary direct.
+ * Doc: https://api.anaf.ro/prod/FCTEL/rest/transformare/{standard}/{novld}
+ *   - standard = FACT1 (UBL Invoice / Credit Note)
+ *   - novld absent → ANAF validează XML-ul; dacă invalid, întoarce JSON cu erori
+ *   - novld = "DA" → skip validare (NEFOLOSIT aici — vrem validare implicită)
+ *
+ * Endpoint:
+ *   - cu anaf_token configurat: api.anaf.ro (OAuth2)
+ *   - fără token: webservicesp.anaf.ro (rută publică, fără auth)
+ *
+ * Răspuns:
+ *   - PDF (application/pdf) la succes — body începe cu "%PDF-"
+ *   - JSON cu erori validare la eșec (HTTP 200 sau 400)
+ *
+ * Frontend (anaf.js) detectează tipul după Content-Type și afișează corespunzător.
  */
 function handleAnafPdf() {
     global $config;
@@ -188,9 +199,12 @@ function handleAnafPdf() {
     $headers = ['Content-Type: text/plain; charset=utf-8'];
     if ($token) {
         $headers[] = "Authorization: Bearer $token";
+        $url = 'https://api.anaf.ro/prod/FCTEL/rest/transformare/FACT1';
+    } else {
+        $url = 'https://webservicesp.anaf.ro/prod/FCTEL/rest/transformare/FACT1';
     }
 
-    $result = curlPost('https://api.anaf.ro/prod/FCTEL/rest/transformare/FACT1/DA', $xmlContent, $headers);
+    $result = curlPost($url, $xmlContent, $headers);
 
     if ($result['error']) {
         header('Content-Type: application/json');
@@ -198,9 +212,30 @@ function handleAnafPdf() {
         echo json_encode(['error' => 'cURL error: ' . $result['error']]);
         exit;
     }
-    header('Content-Type: application/zip');
-    header('Content-Disposition: attachment; filename="vizualizare_anaf.zip"');
-    echo $result['body'];
+
+    $body = $result['body'];
+
+    // Sniff response type — PDF binary începe cu "%PDF-", JSON cu "{".
+    if (substr($body, 0, 5) === '%PDF-') {
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="factura_anaf.pdf"');
+        echo $body;
+        exit;
+    }
+
+    // JSON (erori validare) sau alt răspuns text — pasează către client.
+    $trimmed = ltrim($body);
+    if ($trimmed !== '' && ($trimmed[0] === '{' || $trimmed[0] === '[')) {
+        header('Content-Type: application/json');
+        http_response_code(400);
+        echo $body;
+        exit;
+    }
+
+    // Unknown response (HTML error page, etc.)
+    header('Content-Type: application/json');
+    http_response_code(502);
+    echo json_encode(['error' => 'ANAF răspuns neașteptat', 'preview' => substr($body, 0, 200)]);
     exit;
 }
 
