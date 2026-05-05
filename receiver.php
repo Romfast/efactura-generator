@@ -45,10 +45,12 @@ function validateXML($xmlContent) {
 
     if ($xml === false) {
         $errors = libxml_get_errors();
-        $msgs = array_map(fn($e) => [
-            'level' => $e->level, 'code' => $e->code,
-            'column' => $e->column, 'message' => $e->message, 'line' => $e->line
-        ], $errors);
+        $msgs = array_map(function($e) {
+            return [
+                'level' => $e->level, 'code' => $e->code,
+                'column' => $e->column, 'message' => $e->message, 'line' => $e->line
+            ];
+        }, $errors);
         libxml_clear_errors();
         return ['valid' => false, 'errors' => $msgs];
     }

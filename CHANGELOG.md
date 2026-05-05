@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9-beta-14 - 05.05.2026
+
+### Bugfixes
+- Fixed: pe găzduirea cu PHP 7.3 (a2hosting), `receiver.php` returna 500 Internal Server Error la upload XML din cauza unei sintaxe noi (arrow function `fn() =>`) introduse în beta-13. Înlocuită cu funcție anonimă clasică, compatibilă cu PHP 7.3+.
+
+### Modifications
+- Adăugat `sync-to-website.sh` — script pentru propagarea modificărilor către sub-directorul `efactura-generator/` din repo-ul `romfast-website` (de unde se face deploy către `https://romfast.ro/efactura-generator/`). Scriptul exclude automat fișierele care nu au ce căuta pe shared hosting (Dockerfile, web.config, docs interne) și `config.json` cu `api_key` (gestionat doar pe server).
+- Documentate cele trei ținte de deploy în `CLAUDE.md` (GitHub Pages, romfast.ro via romfast-website, Docker/Dokploy) și avertizare PHP 7.3 pentru găzduirea a2hosting.
+
 ## 0.9-beta-13 - 04.05.2026
 
 ### Bugfixes

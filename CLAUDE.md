@@ -18,6 +18,22 @@ Keeping the app static is a deliberate constraint so it can be hosted as plain f
 
 UI text and most domain code (variable names, comments, validation messages) are in Romanian. Keep new UI strings in Romanian to match.
 
+## Deployment
+
+Trei targeturi de deploy:
+
+1. **GitHub Pages** — `https://romfast.github.io/efactura-generator/`. Deploy automat la push în branch-ul publicat. Static, fără PHP, deci `receiver.php` și fluxul `?xml=<filename>` nu funcționează acolo.
+2. **romfast.ro/efactura-generator/** — găzduit pe a2hosting (PHP 7.3.33, Apache shared hosting). NU se face deploy direct din acest repo; sub-app-ul e oglindit în repo-ul `romfast-website` și ajunge pe server prin rsync-ul de acolo. Pentru a publica modificări:
+   ```bash
+   ./sync-to-website.sh           # propagă în /workspace/romfast-website/efactura-generator/
+   cd /workspace/romfast-website
+   git add -A && git commit -m "sync efactura-generator vX.Y"
+   # apoi rsync de deploy — vezi /workspace/romfast-website/CLAUDE.md
+   ```
+   Scriptul `sync-to-website.sh` exclude `config.json`, Dockerfile, web.config, CLAUDE.md, DESIGN.md, TODO.md, docs interne, logs, temp, test. `config.json` cu `api_key` real e gestionat manual pe server (`~/public_html/efactura-generator/config.json`).
+   **Atenție la PHP 7.3** — evită sintaxă PHP 7.4+ (arrow functions `fn() =>`, null coalescing assignment `??=`, etc.) în `receiver.php` și `test-config.php`.
+3. **Docker / Dokploy** — folosește `Dockerfile` și `start.sh`, configurat prin env vars (`ANAF_API_KEY`, `ANAF_ALLOWED_IPS`, `ANAF_TOKEN`, `ANAF_TEMP_LIFETIME`).
+
 ## Run / serve
 
 No build, no package manager, no tests. Three ways to serve:
