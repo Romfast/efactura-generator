@@ -159,8 +159,8 @@ input.date-input {
 
 .brand-logo {
     display: block;
-    height: 50px;
-    width: auto;
+    width: 99px;
+    height: 60px;
 }
 
 .button-group {
@@ -988,8 +988,8 @@ button.button {
 
 .footer-logo {
     display: block;
-    height: 22px;
-    width: auto;
+    width: 58px;
+    height: 35px;
     opacity: 0.85;
     transition: opacity var(--duration-short) var(--easing-out);
 }

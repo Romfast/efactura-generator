@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9-beta-17 - 26.06.2026
+
+### Modifications
+- Sigla Romfast are acum o dimensiune fixă și unitară: 99×60 px în antet și 58×35 px în subsol. Astfel sigla arată la fel în toate aplicațiile online Romfast, indiferent de browser sau de găzduire.
+
 ## 0.9-beta-16 - 26.06.2026
 
 ### New Features
