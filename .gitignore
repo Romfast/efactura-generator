@@ -74,3 +74,9 @@ playwright/.cache/
 test/e2e/node_modules/
 test/e2e/test-results/
 test/e2e/playwright-report/
+
+# Screenshots / scratch images at repo root (never commit).
+# Logo assets live under assets/ and stay tracked — do NOT blanket-ignore *.png.
+/image.png
+/screenshot*.png
+/Screenshot*.png
