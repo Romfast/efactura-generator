@@ -145,6 +145,24 @@ input.date-input {
     margin-top: 2px;
 }
 
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.brand-logo-link {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.brand-logo {
+    display: block;
+    height: 50px;
+    width: auto;
+}
+
 .button-group {
     display: flex;
     gap: var(--space-2);
@@ -953,6 +971,31 @@ button.button {
     font-family: 'Geist Mono', ui-monospace, monospace;
     font-weight: 500;
     color: var(--text-muted);
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.footer-logo-link {
+    display: inline-flex;
+    align-items: center;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.footer-logo {
+    display: block;
+    height: 22px;
+    width: auto;
+    opacity: 0.85;
+    transition: opacity var(--duration-short) var(--easing-out);
+}
+
+.footer-logo-link:hover .footer-logo {
+    opacity: 1;
 }
 
 .app-footer a {

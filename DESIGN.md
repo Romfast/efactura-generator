@@ -15,7 +15,7 @@ Sistem de design pentru `efactura-generator`, editorul Romfast de facturi UBL 2.
 - **Direction:** Industrial / utilitarian, cu disciplină editorială.
 - **Decoration level:** Minimal. Tipografia face toată treaba. Niciun gradient, niciun blob, niciun icon decorativ, niciun pattern de fundal.
 - **Mood:** Hârtie + cerneală. Materie warm-paper, energie calmă. Aplicația trebuie să arate ca un instrument profesional, nu ca o pagină comercială.
-- **Posture diferențiator:** ZERO SaaS chrome — niciun footer marketing, niciun login, niciun pricing CTA, niciun cookie banner intruziv. Header minim (logo Romfast + butoane operaționale) + workspace + footer minim cu versiune și un singur link `romfast.ro`.
+- **Posture diferențiator:** ZERO SaaS chrome — niciun footer marketing, niciun login, niciun pricing CTA, niciun cookie banner intruziv. Header minim (siglă Romfast cu link `romfast.ro` + titlu + butoane operaționale) + workspace + footer minim cu versiune, siglă Romfast și două linkuri discrete (`romfast.ro` și „Aplicații online"). Branding-ul Romfast (siglă în header/footer) e permis — face parte din identitatea suitei de aplicații; nu se confundă cu „footer marketing" (fără pricing CTA, fără login, fără cookie banner).
 - **Reference sites studiate (research 2026-04-30):** B2BRouter, e-invoice.be (closest in spirit — institutional, dark sidebar, professional), SmartBill, Oblio (counterexamples — full SaaS marketing chrome).
 
 ## Typography

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9-beta-16 - 26.06.2026
+
+### New Features
+- Adăugat siglă Romfast în antetul aplicației, cu legătură către romfast.ro. Astfel se vede clar că editorul face parte din suita de aplicații Romfast.
+- Adăugat siglă Romfast și în subsol, alături de o legătură nouă „Aplicații online" care duce la pagina cu toate aplicațiile online Romfast.
+
 ## 0.9-beta-15 - 05.05.2026
 
 ### New Features
