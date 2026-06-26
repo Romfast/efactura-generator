@@ -6,6 +6,9 @@
 - Adăugat siglă Romfast în antetul aplicației, cu legătură către romfast.ro. Astfel se vede clar că editorul face parte din suita de aplicații Romfast.
 - Adăugat siglă Romfast și în subsol, alături de o legătură nouă „Aplicații online" care duce la pagina cu toate aplicațiile online Romfast.
 
+### Bugfixes
+- Fixed: pe unele găzduiri sigla apărea uriașă pentru că browserul folosea o versiune veche, din cache, a fișierului de stiluri. Acum stilurile sunt încărcate cu marcaj de versiune, așa că noile reguli de afișare a siglei se aplică imediat, fără să fie nevoie de golirea cache-ului.
+
 ## 0.9-beta-15 - 05.05.2026
 
 ### New Features
