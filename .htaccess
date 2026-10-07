@@ -7,3 +7,8 @@
 <IfModule mod_mime.c>
     AddType text/javascript .mjs
 </IfModule>
+
+# Secrete / diagnostic: niciodata servite public (config.json contine api_key)
+<FilesMatch "^(config\.json|test-config\.php)$">
+    Require all denied
+</FilesMatch>
