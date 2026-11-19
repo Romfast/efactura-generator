@@ -2450,9 +2450,9 @@ function addLineItem() {
     const container = document.getElementById('lineItems');
     const index = document.querySelectorAll('.line-item').length;
     
-    // Linie nouă: cota standard 21% (și pentru CUI fără RO, scris ca BT-32)
-    const defaultVatType = 'S';
-    const defaultVatRate = '21';
+    // Linie nouă: 21% la furnizor cu RO; fără RO pornește ca neplătitor (0%), dar categoria se poate schimba
+    const defaultVatType = isVATRegistered() ? 'S' : 'O';
+    const defaultVatRate = isVATRegistered() ? '21' : '0';
     
     const lineItemHtml = createLineItemHTML(index, '', '1', '0', defaultVatRate, 'EA', defaultVatType);
     container.insertAdjacentHTML('beforeend', lineItemHtml);
