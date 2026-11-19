@@ -54,6 +54,11 @@ test.describe('formular', () => {
     await expect(page.locator('#paymentMeansIBAN0-error')).toBeVisible();
     await shot(page.locator('#paymentMeansSection'), 'plata-iban-invalid');
   });
+
+  test('sectiunea Livrare completata (K, adresa DE)', async ({ page, context }) => {
+    await openStableWithFixture(page, context, 'factura-k-livrare.xml');
+    await shot(page.locator('#deliverySection'), 'livrare-completata');
+  });
 });
 
 test.describe('defalcare TVA', () => {

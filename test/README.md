@@ -64,3 +64,18 @@ versiunea si toast-urile ascunse prin `visual/stable.css`. Baseline-uri comise i
 Actualizare baseline-uri: `cd test/e2e && npm run test:visual:update` (sau `--update-snapshots -g "<nume test>"`).
 Legitim doar cand schimbarea de aspect e intentionata (UI/CSS modificat deliberat): deschide
 `visual-baselines.html` si verifica imaginile inainte de commit. Niciodata ca sa "treaca" o diferenta neexplicata.
+
+## Validare XML la ANAF real
+
+`test/e2e/tests/anaf-validare-reala.spec.ts` (proiectul `local`, deci la fiecare `bash test/run.sh`) construieste facturi
+prin aplicatie (fixture + completare ca un utilizator), salveaza XML-ul si il trimite din procesul de test (fixture-ul
+`request`, nu din pagina) la serviciul public ANAF `POST text/plain https://webservicesp.anaf.ro/prod/FCTEL/rest/validare/FACT1`.
+Asteapta `{"stare":"ok"}`; la `nok` mesajul testului listeaza fiecare `codEroare: textEroare`. Un control negativ (K fara
+livrare) trebuie sa dea `nok` cu `BR-IC-11`, ca dovada ca apelul ajunge la ANAF. Se ruleaza fiecare XML din `docs/` si
+`test/**/fixtures/` (fixture-urile intentionat invalide sunt listate in `INTENTIONAT_INVALIDE`).
+
+- Necesita internet si ANAF disponibil. Cererile sunt seriale, cu pauza de 300 ms; la eroare de retea / 5xx se reincearca de
+  3 ori, apoi testul esueaza cu mesajul `ANAF indisponibil: ...` (nu se sare peste: fara validare reala nu se publica).
+- Notele de credit 381 se valideaza la `.../validare/FCN` cu radacina `CreditNote`; `FACT1` accepta doar radacina `Invoice`.
+  Aplicatia scrie 381 cu radacina `Invoice` -> respins (BR-CL-01, BR-RO-020): test `test.fail` marcat `BUG:`.
+- ANAF-ul din `page.route` (`mockReceiver`) ramane doar pentru butoanele din aplicatie (Validare ANAF, Cauta CIF, PDF ANAF).

@@ -11,11 +11,11 @@
  * Toate funcțiile sunt pure — fără acces DOM, fără efecte secundare.
  */
 
-import { validateCIF } from './cif.js?v=0.9-beta-21';
-import { validateIBAN } from './iban.js?v=0.9-beta-21';
+import { validateCIF } from './cif.js?v=0.9-beta-22';
+import { validateIBAN } from './iban.js?v=0.9-beta-22';
 
 // Coduri TVA valide per CIUS-RO
-const VALID_VAT_TYPES = ['S', 'AE', 'O', 'Z', 'E'];
+const VALID_VAT_TYPES = ['S', 'AE', 'O', 'Z', 'E', 'K', 'G'];
 // Coduri tip factură valide per CIUS-RO
 const VALID_INVOICE_TYPES = ['380', '381', '384', '389'];
 // Coduri țară ISO 3166-1 alfa-2 (set parțial — UE + țări comune)
@@ -50,6 +50,11 @@ function parseRoDate(str) {
     const dt = new Date(y, m - 1, d);
     if (isNaN(dt.getTime())) return null;
     return dt;
+}
+
+/** Factura conține categoria K pe linii sau pe reduceri/taxe */
+function hasCategoryK(d) {
+    return d.lineItems.some(li => li.vatType === 'K') || (d.chargeVatTypes || []).includes('K');
 }
 
 /** Compară două valori numerice cu toleranță ε */
@@ -334,6 +339,56 @@ export const BR_RULES = [
             || d.lineItems.every(li => li.vatType === 'O'),
     },
 
+    // ── Livrare intracomunitară (categoria K) ────────────────────────────────
+
+    {
+        code: 'BR-IC-11',
+        severity: 'error',
+        message: 'Factura are linii cu TVA categoria K (livrare intracomunitară), deci trebuie completată Data livrării (secțiunea Livrare).',
+        fieldRef: '[name="deliveryDate"]',
+        check: (d) => !hasCategoryK(d) || d.deliveryDate !== '',
+    },
+
+    {
+        code: 'BR-IC-12',
+        severity: 'error',
+        message: 'Factura are linii cu TVA categoria K (livrare intracomunitară), deci trebuie completată Țara de livrare (secțiunea Livrare).',
+        fieldRef: '[name="deliveryCountry"]',
+        check: (d) => !hasCategoryK(d) || d.deliveryCountry !== '',
+    },
+
+    {
+        code: 'BR-57',
+        severity: 'error',
+        message: 'Adresa de livrare completată trebuie să aibă și Țara de livrare.',
+        fieldRef: '[name="deliveryCountry"]',
+        check: (d) => !d.deliveryAddressFilled || d.deliveryCountry !== '',
+    },
+
+    {
+        code: 'BR-RO-180',
+        severity: 'error',
+        message: 'Adresa de livrare completată trebuie să aibă și Adresa (strada) de livrare.',
+        fieldRef: '[name="deliveryAddress"]',
+        check: (d) => !d.deliveryAddressFilled || d.deliveryStreet !== '',
+    },
+
+    {
+        code: 'BR-RO-201',
+        severity: 'error',
+        message: 'Adresa de livrare completată trebuie să aibă și Localitatea de livrare.',
+        fieldRef: '[name="deliveryCity"]',
+        check: (d) => !d.deliveryAddressFilled || d.deliveryCity !== '',
+    },
+
+    {
+        code: 'BR-RO-211',
+        severity: 'error',
+        message: 'Adresa de livrare completată trebuie să aibă și Județul / subdiviziunea țării de livrare (pentru țări din afara RO, cod ISO 3166-2, ex. DE-BE).',
+        fieldRef: '[name="deliveryCountrySubentity"]',
+        check: (d) => !d.deliveryAddressFilled || d.deliveryCounty !== '',
+    },
+
     // ── Factură cu cel puțin un articol ────────────────────────────────────
 
     {
@@ -376,7 +431,7 @@ export const BR_RULES = [
         severity: 'error',
         message: (d) => {
             const bad = d.vatRows.find(r => !VALID_VAT_TYPES.includes(r.type));
-            return `Codul categoriei TVA "${bad?.type ?? ''}" este invalid. Valori acceptate: S, AE, O, Z, E.`;
+            return `Codul categoriei TVA "${bad?.type ?? ''}" este invalid. Valori acceptate: S, AE, O, Z, E, K, G.`;
         },
         fieldRef: '.vat-type',
         check: (d) => d.vatRows.every(r => VALID_VAT_TYPES.includes(r.type)),

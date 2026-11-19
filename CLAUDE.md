@@ -135,7 +135,8 @@ bash test/run.sh            # sau: powershell -File test/run.ps1 ; instaleaza si
 - Dupa deploy: `cd test/e2e && LIVE_URL=https://romfast.ro/efactura-generator/ npm run smoke:live` (doar citire).
 - Nu porni doua rulari in paralel (folderul `test-results/` e comun).
 
-- Suita are nevoie de internet (Pikaday vine de pe CDN). ANAF e mock-uit (`page.route`); apelurile live doar cu `RUN_ANAF_LIVE=1`.
+- Suita are nevoie de internet (Pikaday vine de pe CDN). Mock-ul ANAF (`page.route`) e doar pentru butoanele din aplicatie (Validare ANAF, Cauta CIF, PDF ANAF); apelurile live ale acelor butoane doar cu `RUN_ANAF_LIVE=1`.
+- Validarea XML se face cu serviciul ANAF real la fiecare rulare (`anaf-validare-reala.spec.ts`); ANAF indisponibil (`ANAF indisponibil:`) = nu se publica.
 - Testele `test.fail()` marcate `BUG:` sunt bug-uri cunoscute: cand repari unul, scoate `test.fail()`.
 - Functionalitate noua sau corectie = test nou in `test/e2e/tests/` (fixturi anonimizate, CUI de test 12345674 / RO76543210).
 - Nu rula proiectele `prod-*` fara cerere explicita.

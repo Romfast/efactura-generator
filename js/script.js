@@ -1,15 +1,15 @@
-import { InvoiceFormatter } from './formatter.js?v=0.9-beta-21';
+import { InvoiceFormatter } from './formatter.js?v=0.9-beta-22';
 import {
     Big, parseStrict, parseStrictOr, formatRaw, format2,
     setRaw, getRaw, markDirty, lineTotal as numericLineTotal, wireDatasetRaw, withinTolerance
-} from './numeric.js?v=0.9-beta-21';
-import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js?v=0.9-beta-21';
+} from './numeric.js?v=0.9-beta-22';
+import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js?v=0.9-beta-22';
 import JSZip from './vendor/jszip.mjs';
-import { validateCIF } from './validation/cif.js?v=0.9-beta-21';
-import { validateIBAN } from './validation/iban.js?v=0.9-beta-21';
-import { runBRRules } from './validation/br-ro.js?v=0.9-beta-21';
-import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js?v=0.9-beta-21';
-import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-21';
+import { validateCIF } from './validation/cif.js?v=0.9-beta-22';
+import { validateIBAN } from './validation/iban.js?v=0.9-beta-22';
+import { runBRRules } from './validation/br-ro.js?v=0.9-beta-22';
+import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js?v=0.9-beta-22';
+import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-22';
 
 // Constants
 const XML_NAMESPACES = {
@@ -795,6 +795,7 @@ function parseXML(xmlContent) {
         populateBasicDetails(xmlDoc);
         populatePartyDetails(xmlDoc);
         populateBillingReference(xmlDoc);
+        populateDelivery(xmlDoc);
         populatePaymentMeans(xmlDoc);
         populateAllowanceCharges(xmlDoc);
         populateLineItems(xmlDoc);
@@ -1290,6 +1291,7 @@ function createDatePicker(input, button) {
         onSelect: function(date) {
             input.value = formatDateToRomanian(date);
             validateDateInput(input);
+            if (input.name === 'deliveryDate') _updateBRPanel();
         }
     });
     return picker;
@@ -1376,14 +1378,15 @@ function createCountyOptions() {
 
 function initializeLocationSelectors() {
     // Replace country inputs with selects for both supplier and customer
-    ['supplier', 'customer'].forEach(party => {
+    ['supplier', 'customer', 'delivery'].forEach(party => {
+        const isDelivery = party === 'delivery';
         const countryInput = document.querySelector(`[name="${party}Country"]`);
         if (countryInput) {
             const select = document.createElement('select');
             select.className = 'form-input';
             select.name = countryInput.name;
-            select.innerHTML = createCountryOptions();
-            select.value = countryInput.dataset.xmlValue || countryInput.value || 'RO';
+            select.innerHTML = (isDelivery ? '<option value=""></option>' : '') + createCountryOptions();
+            select.value = countryInput.dataset.xmlValue || countryInput.value || (isDelivery ? '' : 'RO');
             countryInput.parentNode?.replaceChild(select, countryInput);
         }
 
@@ -1392,7 +1395,7 @@ function initializeLocationSelectors() {
             const select = document.createElement('select');
             select.className = 'form-input';
             select.name = countyInput.name;
-            select.innerHTML = createCountyOptions();
+            select.innerHTML = (isDelivery ? '<option value=""></option>' : '') + createCountyOptions();
             select.value = countyInput.dataset.xmlValue || countyInput.value || '';
             countyInput.parentNode?.replaceChild(select, countyInput);
         }
@@ -1401,6 +1404,7 @@ function initializeLocationSelectors() {
     // Initialize location handlers for both parties
     setupPartyLocationHandlers('supplier');
     setupPartyLocationHandlers('customer');
+    setupPartyLocationHandlers('delivery');
 }
 
 function updateCountyVisibility(countrySelect, countySelect) {
@@ -1408,6 +1412,9 @@ function updateCountyVisibility(countrySelect, countySelect) {
     const showCounty = countrySelect.value === 'RO';
     countySelect.style.display = showCounty ? 'block' : 'none';
     countySelect.required = showCounty;
+    // livrare în afara RO: subdiviziunea ISO 3166-2 se scrie ca text (BR-RO-211)
+    const other = countySelect.name === 'deliveryCountrySubentity' ? document.querySelector('[name="deliverySubdivision"]') : null;
+    if (other) other.style.display = (countrySelect.value && !showCounty) ? 'block' : 'none';
 }
 
 function setupPartyLocationHandlers(party) {
@@ -1652,6 +1659,10 @@ function initializeUI() {
     if (invoiceForm) {
         invoiceForm.addEventListener('input', () => _markActiveDirty());
         invoiceForm.addEventListener('change', () => _markActiveDirty());
+        // Livrare: regulile BR-IC-11/12 se reevaluează live
+        ['input', 'change'].forEach(ev => invoiceForm.addEventListener(ev, (e) => {
+            if (e.target.name && e.target.name.startsWith('delivery')) _updateBRPanel();
+        }));
     }
 }
 
@@ -2052,7 +2063,88 @@ function populatePartyDetails(xmlDoc) {
     initializeLocationSelectors();
  }
 
- function populateAllowanceCharges(xmlDoc) {
+ // Livrare (BG-13): cac:Delivery opțional, la citire din XML (data, destinatar, adresă)
+function populateDelivery(xmlDoc) {
+    const delivery = Array.from(xmlDoc.documentElement.children).find(e => e.localName === 'Delivery');
+    const val = (sel) => (delivery ? getXMLValue(delivery, sel) : '').trim();
+    const rawDate = val('cbc\\:ActualDeliveryDate, ActualDeliveryDate');
+    const set = (name, v) => {
+        const el = document.querySelector(`[name="${name}"]`);
+        if (!el) return;
+        el.value = v;
+        if (el.tagName === 'SELECT') el.dataset.xmlValue = v;
+    };
+    set('deliveryDate', rawDate ? rawDate.split('-').reverse().join('.') : '');
+    set('deliveryName', val('cac\\:DeliveryParty cac\\:PartyName cbc\\:Name, DeliveryParty PartyName Name'));
+    set('deliveryAddress', val('cac\\:DeliveryLocation cac\\:Address cbc\\:StreetName, DeliveryLocation Address StreetName'));
+    set('deliveryCity', val('cac\\:DeliveryLocation cac\\:Address cbc\\:CityName, DeliveryLocation Address CityName'));
+    set('deliveryPostalZone', val('cac\\:DeliveryLocation cac\\:Address cbc\\:PostalZone, DeliveryLocation Address PostalZone'));
+    const subentity = val('cac\\:DeliveryLocation cac\\:Address cbc\\:CountrySubentity, DeliveryLocation Address CountrySubentity');
+    const country = val('cac\\:DeliveryLocation cac\\:Address cac\\:Country cbc\\:IdentificationCode, DeliveryLocation Address Country IdentificationCode');
+    set('deliveryCountrySubentity', country === 'RO' ? subentity : '');
+    set('deliverySubdivision', country === 'RO' ? '' : subentity);
+    set('deliveryCountry', country);
+    initializeLocationSelectors();
+    window.toggleDelivery(!!delivery);
+}
+
+function updateDelivery(xmlDoc) {
+    const root = xmlDoc.documentElement;
+    Array.from(root.children).filter(e => e.localName === 'Delivery').forEach(e => e.remove());
+
+    const get = (name) => (document.querySelector(`[name="${name}"]`)?.value || '').trim();
+    const dateRaw = get('deliveryDate');
+    const isoDate = /^\d{2}\.\d{2}\.\d{4}$/.test(dateRaw) ? parseRomanianDate(dateRaw) : '';
+    const name = get('deliveryName');
+    const country = get('deliveryCountry');
+    const county = country === 'RO' ? get('deliveryCountrySubentity') : get('deliverySubdivision');
+    const addr = { street: get('deliveryAddress'), city: get('deliveryCity'), zip: get('deliveryPostalZone') };
+    const hasAddress = country || county || addr.street || addr.city || addr.zip;
+    if (!isoDate && !name && !hasAddress) return;
+
+    const el = (ns, tag, text) => createXMLElement(xmlDoc, ns, tag, text);
+    const cbc = XML_NAMESPACES.cbc, cac = XML_NAMESPACES.cac;
+    const deliveryEl = el(cac, 'cac:Delivery');
+    if (isoDate) deliveryEl.appendChild(el(cbc, 'cbc:ActualDeliveryDate', isoDate));
+    if (hasAddress) {
+        const loc = el(cac, 'cac:DeliveryLocation');
+        const address = el(cac, 'cac:Address');
+        if (addr.street) address.appendChild(el(cbc, 'cbc:StreetName', addr.street));
+        if (addr.city) address.appendChild(el(cbc, 'cbc:CityName', addr.city));
+        if (addr.zip) address.appendChild(el(cbc, 'cbc:PostalZone', addr.zip));
+        if (county) address.appendChild(el(cbc, 'cbc:CountrySubentity', county));
+        if (country) {
+            const countryEl = el(cac, 'cac:Country');
+            countryEl.appendChild(el(cbc, 'cbc:IdentificationCode', country));
+            address.appendChild(countryEl);
+        }
+        loc.appendChild(address);
+        deliveryEl.appendChild(loc);
+    }
+    if (name) {
+        const party = el(cac, 'cac:DeliveryParty');
+        const partyName = el(cac, 'cac:PartyName');
+        partyName.appendChild(el(cbc, 'cbc:Name', name));
+        party.appendChild(partyName);
+        deliveryEl.appendChild(party);
+    }
+
+    // Poziție UBL: după părți, înaintea PaymentMeans/PaymentTerms/AllowanceCharge/TaxTotal
+    const before = Array.from(root.children).find(e => ['PaymentMeans', 'PaymentTerms', 'AllowanceCharge', 'TaxTotal', 'LegalMonetaryTotal', 'InvoiceLine'].includes(e.localName));
+    if (before) root.insertBefore(deliveryEl, before);
+    else root.appendChild(deliveryEl);
+}
+
+window.toggleDelivery = function(open) {
+    const fields = document.getElementById('deliveryFields');
+    const btn = document.getElementById('btnToggleDelivery');
+    if (!fields || !btn) return;
+    const show = typeof open === 'boolean' ? open : fields.style.display === 'none';
+    fields.style.display = show ? '' : 'none';
+    btn.textContent = show ? '▲ Ascunde' : '▼ Afișează';
+};
+
+function populateAllowanceCharges(xmlDoc) {
     const charges = parseAllowanceCharges(xmlDoc);
     displayAllowanceCharges(charges);
 
@@ -3216,6 +3308,7 @@ function saveXML() {
         updateBasicDetails(xmlDoc);
         updatePartyDetails(xmlDoc);
         updateBillingReference(xmlDoc);
+        updateDelivery(xmlDoc);
         updatePaymentMeans(xmlDoc);
         updateAllowanceCharges(xmlDoc);
         
@@ -4391,6 +4484,17 @@ function collectInvoiceDataForBR() {
         customerCity: (document.querySelector('[name="customerCity"]')?.value || '').trim(),
         customerCountry: (document.querySelector('[name="customerCountry"]')?.value || '').trim(),
 
+        deliveryDate: (document.querySelector('[name="deliveryDate"]')?.value || '').trim(),
+        deliveryCountry: (document.querySelector('[name="deliveryCountry"]')?.value || '').trim(),
+        deliveryAddressFilled: ['deliveryAddress', 'deliveryCity', 'deliveryPostalZone', 'deliveryCountrySubentity', 'deliverySubdivision', 'deliveryCountry']
+            .some(n => (document.querySelector(`[name="${n}"]`)?.value || '').trim() !== ''),
+        deliveryStreet: (document.querySelector('[name="deliveryAddress"]')?.value || '').trim(),
+        deliveryCity: (document.querySelector('[name="deliveryCity"]')?.value || '').trim(),
+        deliveryCounty: (document.querySelector('[name="deliveryCountry"]')?.value === 'RO'
+            ? document.querySelector('[name="deliveryCountrySubentity"]')?.value
+            : document.querySelector('[name="deliverySubdivision"]')?.value || '').trim(),
+        chargeVatTypes: Array.from(document.querySelectorAll('[name^="chargeVatType"]')).map(el => el.value),
+
         lineItems,
         vatRows,
         ibans,
@@ -4499,6 +4603,7 @@ function _updateBRPanel() {
             if (!ref) return;
             const target = document.querySelector(ref);
             if (!target) return;
+            if (target.closest('#deliveryFields')) window.toggleDelivery(true);
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
             target.classList.remove('br-field-highlight');
             void target.offsetWidth; // reflow to restart animation
@@ -4539,6 +4644,7 @@ function _currentXMLString() {
     updateBasicDetails(xmlDoc);
     updatePartyDetails(xmlDoc);
     updateBillingReference(xmlDoc);
+    updateDelivery(xmlDoc);
     updatePaymentMeans(xmlDoc);
     updateAllowanceCharges(xmlDoc);
 
@@ -5352,7 +5458,7 @@ if (typeof module !== 'undefined' && module.exports) {
     };
 }                
 
-import { InvoicePrintHandler } from './print.js?v=0.9-beta-21';
+import { InvoicePrintHandler } from './print.js?v=0.9-beta-22';
 
 // Create print handler instance
 const printHandler = new InvoicePrintHandler();

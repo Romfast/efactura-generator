@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9-beta-22 - 19.11.2026
+
+### New Features
+- Secțiune nouă „Livrare (opțional)”: data livrării, destinatarul și adresa de livrare (stradă, oraș, cod poștal, județ/subdiviziune, țară). Se scrie în XML (cac:Delivery) și se citește la încărcarea unui XML. Fără ea, facturile cu TVA categoria K (livrare intracomunitară) erau respinse de ANAF (BR-IC-11, BR-IC-12, BR-RO-211).
+- Verificări noi în panoul de probleme: BR-IC-11 (data livrării pentru categoria K), BR-IC-12 (țara de livrare pentru categoria K) și cerințele ANAF pentru adresa de livrare (BR-RO-180, BR-RO-201, BR-RO-211, BR-57). Clic pe eroare deschide secțiunea Livrare.
+
+### Bugfixes
+- Fixed: categoriile TVA K și G erau semnalate greșit ca invalide în panoul de verificare (BR-45).
+
 ## 0.9-beta-21 - 19.11.2026
 
 ### Bugfixes

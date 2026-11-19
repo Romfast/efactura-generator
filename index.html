@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=geist:400,500,600,700|geist-mono:400,500,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/css/pikaday.min.css">
-    <link rel="stylesheet" href="./styles/main.css?v=0.9-beta-21">
+    <link rel="stylesheet" href="./styles/main.css?v=0.9-beta-22">
     <link rel="shortcut icon" href="./favicon.ico" type="image/x-icon" />
 </head>
 <body>
@@ -220,6 +220,48 @@
                 </div>
             </div>            
             
+            <!-- Delivery (BG-13, opțional) -->
+            <div class="form-section" id="deliverySection">
+                <h2 class="section-title">
+                    Livrare (opțional)
+                    <button type="button" class="button button-small" id="btnToggleDelivery" onclick="window.toggleDelivery()">▼ Afișează</button>
+                </h2>
+                <div class="compact-grid" id="deliveryFields" style="display:none">
+                    <div class="form-group">
+                        <label class="form-label">Data livrării</label>
+                        <div class="date-input-container">
+                            <input type="text" class="form-input date-input num" name="deliveryDate" placeholder="dd.mm.yyyy" maxlength="10" pattern="\d{2}.\d{2}.\d{4}">
+                            <button type="button" class="calendar-button" tabindex="-1">📅</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Destinatar livrare</label>
+                        <input type="text" class="form-input" name="deliveryName">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Adresă livrare</label>
+                        <input type="text" class="form-input" name="deliveryAddress">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Oraș</label>
+                        <input type="text" class="form-input" name="deliveryCity">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cod poștal</label>
+                        <input type="text" class="form-input mono" name="deliveryPostalZone" style="text-align:left">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Județ</label>
+                        <input type="text" class="form-input" name="deliveryCountrySubentity">
+                        <input type="text" class="form-input mono" name="deliverySubdivision" placeholder="ex. DE-BE" maxlength="6" style="display:none;text-align:left">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Țară</label>
+                        <input type="text" class="form-input" name="deliveryCountry">
+                    </div>
+                </div>
+            </div>
+
             <!-- Payment Means (A5) -->
             <div class="form-section" id="paymentMeansSection">
                 <h2 class="section-title">
@@ -297,7 +339,7 @@
         </form>
 
         <footer class="app-footer">
-            <span id="app-version">v0.9-beta-21</span>
+            <span id="app-version">v0.9-beta-22</span>
             <div class="footer-brand">
                 <a href="https://romfast.ro" target="_blank" rel="noopener" class="footer-logo-link" title="romfast.ro">
                     <img src="./assets/romfast_logo.png" alt="Romfast" class="footer-logo">
@@ -308,7 +350,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/pikaday.min.js"></script>
-    <script type="module" src="./js/script.js?v=0.9-beta-21"></script> 
+    <script type="module" src="./js/script.js?v=0.9-beta-22"></script> 
 
 
 </body>
