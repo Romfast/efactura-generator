@@ -36,7 +36,7 @@ Trei targeturi de deploy:
 
 ## Run / serve
 
-No build, no package manager, no tests. Three ways to serve:
+No build, no package manager. Browser tests: `test/regression.html` and `test/numeric.html` (open via the local server). Three ways to serve:
 
 ```bash
 # Local dev: tiny Node static server on :3000 (no deps)
@@ -122,3 +122,11 @@ Citește `DESIGN.md` înainte de orice decizie vizuală sau UI. Toate alegerile 
 ## Workspace rules (from /workspace/CLAUDE.md)
 
 When invoked non-interactively (`claude -p` / `claudep.sh`), put new scratch files under `/workspace/.claude-work/<timestamp>_<task>/` rather than this repo. Modifications to existing files in this repo stay in place.
+
+## Capcane si verificare
+
+- **Release = cache-busting**: la fiecare versiune schimba `?v=` in `index.html` (css + `script.js`) si in importurile din `js/script.js` (`br-ro.js`, `catalog.js`); altfel browserele raman pe codul vechi. Versiunea vizibila e `#app-version` + `CHANGELOG.md`.
+- **Campuri numerice**: valoarea canonica e in `dataset.raw` (`js/numeric.js`). Seteaza doar cu `setRaw(el, val, zecimale)`, niciodata `el.value = ...`. In handler-ul `change`, `dataset.raw` nu e inca actualizat (se face la blur): citeste `parseStrict(el.value) ?? getRaw(el)`.
+- **CUI fara RO + linii cu TVA (S)**: valid in CIUS-RO; CUI-ul furnizorului se scrie ca BT-32 = `PartyTaxScheme/CompanyID` cu `<cac:TaxScheme/>` gol. Categoria O nu se amesteca cu alte categorii (BR-O-11). Pret negativ interzis (BR-27): storno = cantitate negativa.
+- **Validare ANAF**: API `POST text/plain` la `https://webservicesp.anaf.ro/prod/FCTEL/rest/validare/FACT1` (raspuns `"stare":"ok"`). Pentru utilizatori: `https://www.anaf.ro/uploadxmi/` = doar validare; `https://www.anaf.ro/uploadxml/` = validare + PDF.
+- **Test headless cu fisier**: incarca XML/ZIP prin `DataTransfer` pe `#fileInput` + `dispatchEvent(new Event('change'))`, apoi verifica `.line-item` si `#total`.
