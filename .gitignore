@@ -85,3 +85,4 @@ test/e2e/playwright-report/
 test/e2e/playwright-report/
 test/e2e/.cdn-cache/
 test/e2e/visual-baselines.html
+*.stackdump
