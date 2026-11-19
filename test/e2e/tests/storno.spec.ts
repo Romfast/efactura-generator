@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 import * as path from 'path';
 
 const FIXTURE = path.resolve(__dirname, '../../../docs/efactura_cu_BT_descriere2.xml');

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 
 test('full invoice flow without ANAF — prod-romfast', async ({ page }, testInfo) => {
   if (testInfo.project.name !== 'prod-romfast') {

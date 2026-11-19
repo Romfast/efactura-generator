@@ -1,42 +1,14 @@
-# Suite E2E Playwright — efactura-generator
+# Suita E2E Playwright — efactura-generator
 
-## Setup (o singură dată)
-
-```bash
-cd test/e2e
-npm install
-npx playwright install chromium
-```
-
-## Rulare
+Ghid complet: `../README.md`. Acoperire UI: `COVERAGE.md`.
 
 ```bash
-# Smoke local (rapid)
-npx playwright test --project=local --grep smoke
-
-# Full local (toate spec-urile)
-npx playwright test --project=local
-
-# Prod efactura.roa (cif lookup va fi test.fail — bug 403 cunoscut)
-npx playwright test --project=prod-roa
-
-# Prod romfast.ro
-npx playwright test --project=prod-romfast
-
-# HTML report
-npx playwright show-report
+npm install && npx playwright install chromium   # o singura data
+npm test                    # local (functional + pagini browser) + visual
+npm run test:functional     # doar functional
+npm run test:visual         # doar vizual (npm run test:visual:update pentru baseline-uri)
+npm run smoke:live          # post-deploy, doar citire (LIVE_URL)
+npm run report              # raport HTML
 ```
 
-## Environments
-
-| Project | URL |
-|---------|-----|
-| local | http://localhost:3000 |
-| prod-roa | https://efactura.roa.romfast.ro |
-| prod-romfast | https://romfast.ro/efactura-generator |
-
-## Note
-
-- `receiver.spec.ts` folosește `RECEIVER_URL` env var (default: `http://localhost:8000`)
-- Pe `prod-roa`, testul `cif lookup` este marcat `test.fail` — bug 403 cunoscut (IP gate în receiver.php blochează proxy Traefik)
-- `regression-corpus.spec.ts` rulează doar pe `local` (wrap peste `test/regression.html`)
+Porturi: `E2E_PORT` (3917), `E2E_PHP_PORT` (8917). Proiectele `prod-*` nu fac parte din `npm test`.

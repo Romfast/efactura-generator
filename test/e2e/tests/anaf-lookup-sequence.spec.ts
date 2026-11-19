@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 
 const MOCK_PLATITOR: Record<string, unknown> = {
     found: true,

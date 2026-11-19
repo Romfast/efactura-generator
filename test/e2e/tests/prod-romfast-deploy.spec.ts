@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 
 test.describe('prod-romfast deploy checks', () => {
   test('receiver.php executes PHP — not raw source served', async ({ request }, testInfo) => {

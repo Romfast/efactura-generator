@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 
 test('regression corpus pass', async ({ page }, testInfo) => {
   if (testInfo.project.name !== 'local') {

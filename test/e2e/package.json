@@ -3,9 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "playwright test",
     "test:local": "playwright test --project=local",
-    "test:all": "playwright test --project=local",
+    "test": "playwright test --project=local --project=visual",
+    "test:all": "playwright test --project=local --project=visual",
+    "test:functional": "playwright test --project=local",
+    "test:visual": "playwright test --project=visual",
+    "test:visual:update": "playwright test --project=visual --update-snapshots",
+    "smoke:live": "playwright test --project=smoke-live",
+    "sheet": "node scripts/contact-sheet.mjs",
+    "posttest": "node scripts/contact-sheet.mjs",
     "test:prod-roa": "playwright test --project=prod-roa",
     "test:prod-romfast": "playwright test --project=prod-romfast",
     "report": "playwright show-report"

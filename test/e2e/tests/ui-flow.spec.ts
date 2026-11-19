@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 import * as path from 'path';
 
 const DOCS_DIR = path.resolve(__dirname, '../../../docs');

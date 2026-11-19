@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 import { localOnly, openWithFixture, saveXml, xmlTexts, readTotals, recalc } from '../helpers/app';
 
 localOnly(test);

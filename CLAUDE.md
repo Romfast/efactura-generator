@@ -128,9 +128,12 @@ When invoked non-interactively (`claude -p` / `claudep.sh`), put new scratch fil
 **Inainte de orice push pe main destinat publicarii si inainte de orice deploy (romfast.ro, Docker), ruleaza TOATA suita si publica doar daca trece 100%:**
 
 ```bash
-cd test/e2e && npm install   # prima data
-npm run test:all             # proiect local, port E2E_PORT (implicit 3917); include test/*.html prin browser-pages.spec.ts
+bash test/run.sh            # sau: powershell -File test/run.ps1 ; instaleaza singur la prima rulare
 ```
+
+- Ruleaza tot: paginile `test/*.html`, testele functionale si cele vizuale (screenshot fata de `test/e2e/visual-baselines/`). Ghid: `test/README.md`, acoperire: `test/e2e/COVERAGE.md`.
+- Dupa deploy: `cd test/e2e && LIVE_URL=https://romfast.ro/efactura-generator/ npm run smoke:live` (doar citire).
+- Nu porni doua rulari in paralel (folderul `test-results/` e comun).
 
 - Suita are nevoie de internet (Pikaday vine de pe CDN). ANAF e mock-uit (`page.route`); apelurile live doar cu `RUN_ANAF_LIVE=1`.
 - Testele `test.fail()` marcate `BUG:` sunt bug-uri cunoscute: cand repari unul, scoate `test.fail()`.

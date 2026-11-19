@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test';
 
 // Ruleaza paginile de test din browser (test/*.html) si cere 0 esecuri.
 for (const pageName of ['regression.html', 'numeric.html', 'fixes.html']) {

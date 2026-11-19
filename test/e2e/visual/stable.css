@@ -1,0 +1,4 @@
+/* aplicat de toHaveScreenshot: elemente dinamice care nu intra in comparatie */
+#app-version { visibility: hidden !important; }
+.toast-container { visibility: hidden !important; }
+*, *::before, *::after { scroll-behavior: auto !important; }

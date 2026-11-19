@@ -80,3 +80,8 @@ test/e2e/playwright-report/
 /image.png
 /screenshot*.png
 /Screenshot*.png
+
+# E2E: artefacte generate
+test/e2e/playwright-report/
+test/e2e/.cdn-cache/
+test/e2e/visual-baselines.html
