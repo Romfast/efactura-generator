@@ -36,7 +36,7 @@ Trei targeturi de deploy:
 
 ## Run / serve
 
-No build, no package manager. Browser tests: `test/regression.html` and `test/numeric.html` (open via the local server). Three ways to serve:
+No build, no package manager. Browser tests: `test/regression.html`, `test/numeric.html` and `test/fixes.html` (corectiile ANAF: BT-32, BR-27, cote implicite, data, ZIP; ruleaza-l inainte de orice release) (open via the local server). Three ways to serve:
 
 ```bash
 # Local dev: tiny Node static server on :3000 (no deps)
