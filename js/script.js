@@ -1241,6 +1241,12 @@ function createDatePicker(input, button) {
         field: input,
         trigger: button,
         format: 'DD.MM.YYYY',
+        // fără moment.js Pikaday citește data cu Date.parse (lună.zi) și inversa 05.11 în 11.05
+        parse: (str) => {
+            const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec((str || '').trim());
+            return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+        },
+        toString: (date) => formatDateToRomanian(date),
         i18n: {
             previousMonth: 'Luna anterioară',
             nextMonth: 'Luna următoare',

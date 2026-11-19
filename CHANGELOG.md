@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9-beta-19 - 19.11.2026
+
+### Bugfixes
+- Fixed: o dată scrisă de mână cu ziua până în 12 (ex. 05.11.2026) era inversată la ieșirea din câmp în 11.05.2026, deci factura pleca cu altă dată. Acum data rămâne exact cum a fost scrisă.
+
 ## 0.9-beta-18 - 19.11.2026
 
 ### Bugfixes
