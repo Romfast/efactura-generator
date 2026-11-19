@@ -115,12 +115,14 @@ Verificare vizuala: `visual/visual.spec.ts` (vezi sectiunea de la sfarsit).
 | 77 | Stornare = Invoice 380 cu cantitati negative, preturi pozitive si BillingReference (nu CreditNote); la ANAF FACT1 ok | cnx: stornare 380; cn: stornare; hdr: buton Stornează; anaf-real: stornare 380 |
 | 78 | Factura noua (si pornirea aplicatiei) are exact un rand gol: S/21% cu furnizor RO, O/0% fara; incarcarea unui XML nu adauga rand gol | empty: primele 4 teste |
 | 79 | Rand complet gol ignorat la salvare (1 InvoiceLine, totaluri, toast, randul ramane in formular, indexare); linie partial completata se pastreaza; toate goale = BR-16-L; ANAF real ok cu rand gol la final | empty: ultimele 5 teste; anaf-real: factura noua cu rand gol |
+| 80 | Nota 381 cu scadenta si fara modalitate de plata: avertisment BR-CN-DUE in panou (apare/dispare cu plata sau cu alt tip), toast la salvare, fara PaymentDueDate in XML | cnx: scadenta fara modalitate de plata |
+| 81 | Tiparire Standard/Compact: blocul Livrare (data, destinatar, adresa pe un rand) apare doar cu date de livrare; PDF direct acelasi bloc | pp: blocul Livrare apare/lipseste (x2 sabloane) |
 
 ## Verificare vizuala (visual/visual.spec.ts)
 
 formular gol; factura incarcata; factura noua completata; calendar; detalii+identificari; reduceri/taxe; eroare IBAN;
 defalcare cu scutiri; defalcare K/G; sectiune livrare completata; modal Factura Noua; meniul Actiuni; banner an nou; toast; panou BR extins;
-sidebar multi-fisier; print standard; print compact; mobil 390x844 (formular gol, factura incarcata, meniu Actiuni).
+sidebar multi-fisier; print standard; print compact; print standard si compact cu livrare; mobil 390x844 (formular gol, factura incarcata, meniu Actiuni).
 
 ## Neacoperit
 

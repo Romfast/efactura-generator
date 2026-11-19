@@ -99,3 +99,25 @@ test.describe('nota de credit 381 scrisa ca CreditNote', () => {
     expect(a.replace('TST 0003', 'TST 0004')).toBe(b);
   });
 });
+
+test.describe('nota de credit 381: scadenta fara modalitate de plata', () => {
+  const warn = (page: any) => page.locator('#br-panel-body .br-panel__item-code', { hasText: 'BR-CN-DUE' });
+
+  test('avertisment in panou, toast la salvare, fara PaymentDueDate; dispare cu plata sau cu alt tip', async ({ page }) => {
+    await openWithFixture(page, 'nota-credit-381.xml');
+    await expect(warn(page)).toHaveCount(0);
+    await page.locator('.payment-means-row button').first().click();
+    await expect(warn(page)).toHaveCount(1);
+    await expect(page.locator('#br-panel-body')).toContainText('modalitate de plată');
+    const { xml } = await saveXml(page);
+    await expect(page.locator('.toast-warning')).toContainText('scadenței nu a fost scrisă');
+    expect(await xmlTexts(page, xml, 'PaymentDueDate')).toEqual([]);
+    expect(await xmlTexts(page, xml, 'PaymentMeans')).toEqual([]);
+    await page.locator('button[onclick="window.addPaymentMeansRow()"]').click();
+    await expect(warn(page)).toHaveCount(0);
+    await page.locator('.payment-means-row button').first().click();
+    await expect(warn(page)).toHaveCount(1);
+    await page.selectOption('[name="invoiceTypeCode"]', '380');
+    await expect(warn(page)).toHaveCount(0);
+  });
+});

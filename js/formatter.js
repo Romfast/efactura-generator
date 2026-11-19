@@ -7,7 +7,7 @@
 // țintă e RO; print PDF / display formular trebuie să fie consistent
 // între browsere și OS-uri.
 
-import { RO_LOCALE, parseStrict, parseStrictOr, format2, format3, format4 } from './numeric.js?v=0.9-beta-23';
+import { RO_LOCALE, parseStrict, parseStrictOr, format2, format3, format4 } from './numeric.js?v=0.9-beta-24';
 
 export class InvoiceFormatter {
     constructor() {

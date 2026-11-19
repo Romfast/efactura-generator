@@ -54,4 +54,32 @@ test.describe('meniul Actiuni, tiparire si PDF', () => {
       await expect(popup.locator('body')).toContainText('297');
     });
   }
+
+  for (const [label, tpl] of [['Standard', 'print.html'], ['Compact', 'print-compact.html']] as const) {
+    for (const withDelivery of [true, false]) {
+      test(`Printeaza ${label}: blocul Livrare ${withDelivery ? 'apare' : 'lipseste'}`, async ({ page, context }) => {
+        await openWithFixture(page);
+        await context.addInitScript(() => { window.print = () => {}; });
+        await page.reload();
+        await page.waitForFunction(() => typeof (window as any).saveXML === 'function');
+        await loadXmlFile(page, fx(withDelivery ? 'factura-k-livrare.xml' : 'factura-baza.xml'));
+        await page.locator('#btnActionsMenu').click();
+        const popupPromise = context.waitForEvent('page', { timeout: 15000 });
+        await page.locator(`[data-action="print"][data-template="${label.toLowerCase()}"]`).click();
+        const popup = await popupPromise;
+        await popup.waitForLoadState('domcontentloaded');
+        expect(popup.url()).toContain(tpl);
+        await expect(popup.locator('#print-supplier-details')).toContainText('FURNIZOR', { timeout: 10000 });
+        if (withDelivery) {
+          await expect(popup.locator('#print-delivery')).toBeVisible();
+          await expect(popup.locator('#print-delivery')).toContainText('Livrare');
+          await expect(popup.locator('#print-delivery')).toContainText('Depozit Test');
+          await expect(popup.locator('#print-delivery')).toContainText('12.03.2026');
+          await expect(popup.locator('#print-delivery')).toContainText('Lagerstrasse 5, Hamburg, DE-HH, 20095, DE');
+        } else {
+          await expect(popup.locator('#print-delivery')).toBeHidden();
+        }
+      });
+    }
+  }
 });

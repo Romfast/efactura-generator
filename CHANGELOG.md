@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9-beta-24 - 19.11.2026
+
+### Bugfixes
+- Nota de credit (381): dacă există dată scadentă dar nicio modalitate de plată, apare un avertisment în panoul de verificări, iar la salvare un mesaj că scadența nu a fost scrisă în XML (se scrie doar împreună cu o modalitate de plată).
+
+### New Features
+- Tipărire și PDF: blocul „Livrare” (data, destinatar, adresă) apare pe șablonul Standard, Compact și în PDF, doar când datele de livrare sunt completate.
+
 ## 0.9-beta-23 - 19.11.2026
 
 ### Bugfixes

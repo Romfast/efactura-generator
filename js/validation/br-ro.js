@@ -11,8 +11,8 @@
  * Toate funcțiile sunt pure — fără acces DOM, fără efecte secundare.
  */
 
-import { validateCIF } from './cif.js?v=0.9-beta-23';
-import { validateIBAN } from './iban.js?v=0.9-beta-23';
+import { validateCIF } from './cif.js?v=0.9-beta-24';
+import { validateIBAN } from './iban.js?v=0.9-beta-24';
 
 // Coduri TVA valide per CIUS-RO
 const VALID_VAT_TYPES = ['S', 'AE', 'O', 'Z', 'E', 'K', 'G'];
@@ -536,6 +536,14 @@ export const BR_RULES = [
             return badIdx >= 0 ? `[name="paymentMeansIBAN${badIdx}"]` : null;
         },
         check: (d) => d.ibans.every(ib => !ib || validateIBAN(ib).valid),
+    },
+
+    {
+        code: 'BR-CN-DUE',
+        severity: 'warning',
+        message: 'Nota de credit: data scadenței se scrie în XML doar împreună cu o modalitate de plată. Adăugați o modalitate de plată sau ștergeți data scadenței.',
+        fieldRef: '[name="dueDate"]',
+        check: (d) => !(d.invoiceTypeCode === '381' && d.dueDate !== '' && d.paymentMeansCount === 0),
     },
 
 ];

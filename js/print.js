@@ -1,12 +1,12 @@
-import { InvoiceFormatter } from './formatter.js?v=0.9-beta-23';
+import { InvoiceFormatter } from './formatter.js?v=0.9-beta-24';
 
 export class InvoicePrintHandler {
     constructor() {
         this.printWindow = null;
         this.formatter = new InvoiceFormatter();
         this.templates = {
-            standard: './templates/print.html',
-            compact: './templates/print-compact.html'
+            standard: './templates/print.html?v=0.9-beta-24',
+            compact: './templates/print-compact.html?v=0.9-beta-24'
         };
         this.currentTemplate = 'standard';
     }
@@ -72,6 +72,9 @@ export class InvoicePrintHandler {
             // Note
             note: document.querySelector('[name="invoiceNote"]')?.value,
 
+            // Livrare
+            delivery: this.collectDelivery(),
+
             // Get totals directly from the display elements
             totals: {
                 subtotal: document.getElementById('subtotal').textContent,
@@ -90,6 +93,14 @@ export class InvoicePrintHandler {
                 amount: row.querySelector('.vat-amount').value
             }))
         };
+    }
+
+    collectDelivery() {
+        const v = (n) => (document.querySelector(`[name="${n}"]`)?.value || '').trim();
+        const country = v('deliveryCountry');
+        const county = country === 'RO' ? v('deliveryCountrySubentity') : v('deliverySubdivision');
+        const address = [v('deliveryAddress'), v('deliveryCity'), county, v('deliveryPostalZone'), country].filter(Boolean).join(', ');
+        return { date: v('deliveryDate'), name: v('deliveryName'), address };
     }
 
     createPartyHTML(party) {
@@ -205,6 +216,13 @@ export class InvoicePrintHandler {
             const noteSection = doc.getElementById('print-note');
             noteSection.style.display = 'block';
             noteSection.querySelector('div').textContent = data.note;
+        }
+
+        // Livrare: bloc afisat doar daca exista date
+        const dl = data.delivery;
+        if (dl && (dl.date || dl.name || dl.address)) {
+            doc.getElementById('print-delivery').style.display = 'block';
+            doc.getElementById('print-delivery-text').textContent = [dl.date && `Data: ${dl.date}`, dl.name, dl.address].filter(Boolean).join(' | ');
         }
 
         // Line items - use formatted values from data

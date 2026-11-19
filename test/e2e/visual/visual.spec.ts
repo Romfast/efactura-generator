@@ -145,6 +145,20 @@ test.describe('previzualizare tiparire', () => {
       await shot(popup, name, { fullPage: true });
     });
   }
+
+  for (const label of ['standard', 'compact']) {
+    test(`print ${label} cu livrare`, async ({ page, context }) => {
+      await openStableWithFixture(page, context, 'factura-k-livrare.xml');
+      await page.locator('#btnActionsMenu').click();
+      const popupP = context.waitForEvent('page');
+      await page.locator(`[data-action="print"][data-template="${label}"]`).click();
+      const popup = await popupP;
+      await popup.waitForLoadState('load');
+      await expect(popup.locator('#print-delivery')).toBeVisible();
+      await waitFonts(popup);
+      await shot(popup, `print-${label}-cu-livrare`, { fullPage: true });
+    });
+  }
 });
 
 test.describe('mobil 390x844', () => {

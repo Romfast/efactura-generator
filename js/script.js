@@ -1,15 +1,15 @@
-import { InvoiceFormatter } from './formatter.js?v=0.9-beta-23';
+import { InvoiceFormatter } from './formatter.js?v=0.9-beta-24';
 import {
     Big, parseStrict, parseStrictOr, formatRaw, format2,
     setRaw, getRaw, markDirty, lineTotal as numericLineTotal, wireDatasetRaw, withinTolerance
-} from './numeric.js?v=0.9-beta-23';
-import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js?v=0.9-beta-23';
+} from './numeric.js?v=0.9-beta-24';
+import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js?v=0.9-beta-24';
 import JSZip from './vendor/jszip.mjs';
-import { validateCIF } from './validation/cif.js?v=0.9-beta-23';
-import { validateIBAN } from './validation/iban.js?v=0.9-beta-23';
-import { runBRRules } from './validation/br-ro.js?v=0.9-beta-23';
-import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js?v=0.9-beta-23';
-import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-23';
+import { validateCIF } from './validation/cif.js?v=0.9-beta-24';
+import { validateIBAN } from './validation/iban.js?v=0.9-beta-24';
+import { runBRRules } from './validation/br-ro.js?v=0.9-beta-24';
+import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js?v=0.9-beta-24';
+import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-24';
 
 // Constants
 const XML_NAMESPACES = {
@@ -1297,7 +1297,7 @@ function createDatePicker(input, button) {
         onSelect: function(date) {
             input.value = formatDateToRomanian(date);
             validateDateInput(input);
-            if (input.name === 'deliveryDate') _updateBRPanel();
+            if (input.name === 'deliveryDate' || input.name === 'dueDate') _updateBRPanel();
         }
     });
     return picker;
@@ -1667,7 +1667,7 @@ function initializeUI() {
         invoiceForm.addEventListener('change', () => _markActiveDirty());
         // Livrare: regulile BR-IC-11/12 se reevaluează live
         ['input', 'change'].forEach(ev => invoiceForm.addEventListener(ev, (e) => {
-            if (e.target.name && e.target.name.startsWith('delivery')) _updateBRPanel();
+            if (e.target.name && (e.target.name.startsWith('delivery') || e.target.name === 'dueDate' || e.target.name === 'invoiceTypeCode')) _updateBRPanel();
         }));
     }
 }
@@ -2257,11 +2257,13 @@ function addPaymentMeansRow(code = '30', iban = '') {
     if (!container) return;
     const index = _paymentMeansCount++;
     container.insertAdjacentHTML('beforeend', createPaymentMeansRowHTML(index, code, iban));
+    _updateBRPanel();
 }
 
 function removePaymentMeansRow(index) {
     const row = document.querySelector(`.payment-means-row[data-pm-index="${index}"]`);
     if (row) row.remove();
+    _updateBRPanel();
 }
 
 function populatePaymentMeans(xmlDoc) {
@@ -3330,6 +3332,11 @@ function saveXMLCore() {
             }
         }
     } catch (_) { /* validation must never block save */ }
+
+    // 381: scadenta se scrie doar cu o modalitate de plata
+    if (document.querySelector('[name="invoiceTypeCode"]')?.value === '381' && document.querySelector('[name="dueDate"]')?.value.trim() && !document.querySelector('.payment-means-row')) {
+        showToast('Nota de credit: data scadenței nu a fost scrisă în XML (nu există modalitate de plată).', 'warning');
+    }
 
     try {
         if (!currentInvoice) {
@@ -4597,6 +4604,7 @@ function collectInvoiceDataForBR() {
         lineItems,
         vatRows,
         ibans,
+        paymentMeansCount: document.querySelectorAll('.payment-means-row').length,
 
         subtotal: parseDisplay('subtotal'),
         allowances: parseDisplay('totalAllowances'),
@@ -5058,6 +5066,7 @@ window.downloadPDF = async function() {
         </tbody>
     </table>
     ${invoiceData.note ? `<p style="font-size:9px;color:#64748b;margin-bottom:8px;"><em>Notă: ${_escapeHtml(invoiceData.note)}</em></p>` : ''}
+    ${(d => d.date || d.name || d.address ? `<p style="font-size:9px;color:#64748b;margin-bottom:8px;">Livrare: ${_escapeHtml([d.date && `Data: ${d.date}`, d.name, d.address].filter(Boolean).join(' | '))}</p>` : '')(invoiceData.delivery)}
     <div style="display:flex;justify-content:flex-end;">
         <div class="pdf-totals">
             <div class="pdf-total-row"><span>Subtotal:</span><span>${_escapeHtml(invoiceData.totals.subtotal)}</span></div>
@@ -5562,7 +5571,7 @@ if (typeof module !== 'undefined' && module.exports) {
     };
 }                
 
-import { InvoicePrintHandler } from './print.js?v=0.9-beta-23';
+import { InvoicePrintHandler } from './print.js?v=0.9-beta-24';
 
 // Create print handler instance
 const printHandler = new InvoicePrintHandler();
