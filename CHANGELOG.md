@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9-beta-18 - 19.11.2026
+
+### Bugfixes
+- Fixed: liniile cu preț unitar negativ (ex. stornarea unei garanții) erau respinse de ANAF (eroarea BR-27). Acum prețul nu mai poate fi negativ: la introducerea unui preț negativ, sau la încărcarea unui XML care îl conține, minusul trece automat pe cantitate, iar totalul liniei rămâne același.
+- Fixed: furnizorul cu cod fiscal fără prefixul RO (ex. cod de TVA anulat, dar cu obligația de a factura cu TVA) poate emite acum facturi cu TVA (21%, 11% etc.). Înainte, toate liniile erau trecute forțat pe „Neplătitor TVA”, inclusiv la încărcarea unui XML, iar ANAF respingea factura (BR-S-02, BR-O-11, BR-O-12, BR-RO-065). Codul fiscal fără RO se scrie acum în XML ca identificator fiscal al vânzătorului (BT-32), iar panoul de verificări semnalează combinarea categoriei „Neplătitor TVA” cu alte categorii.
+- Fixed: liniile fără TVA (O, Z, E, AE) care aveau completată o cotă (ex. 21%) produceau o defalcare TVA greșită, respinsă de ANAF (BR-CO-17, BR-O-08). Acum intră în defalcare cu cota 0, pe un singur rând.
+
+### Modifications
+- Cota TVA implicită la o linie nouă este 21% (cota standard în vigoare), nu 19%.
+
 ## 0.9-beta-17 - 26.06.2026
 
 ### Modifications

@@ -303,6 +303,37 @@ export const BR_RULES = [
         }),
     },
 
+    {
+        code: 'BR-27',
+        severity: 'error',
+        message: (d) => {
+            const bad = d.lineItems.find(li => parseNum(li.unitPrice) < 0);
+            return `Linia ${bad ? bad.index + 1 : ''}: prețul unitar nu poate fi negativ. Pentru stornare folosiți cantitate negativă și preț pozitiv.`;
+        },
+        fieldRefDynamic: (d) => {
+            const bad = d.lineItems.find(li => parseNum(li.unitPrice) < 0);
+            return bad ? `[name="price${bad.index}"]` : null;
+        },
+        check: (d) => d.lineItems.every(li => !(parseNum(li.unitPrice) < 0)),
+    },
+
+    {
+        code: 'BR-S-02',
+        severity: 'error',
+        message: 'Factura are linii cu TVA (categoria S), deci trebuie completat codul fiscal al furnizorului.',
+        fieldRef: '[name="supplierVAT"]',
+        check: (d) => !d.lineItems.some(li => li.vatType === 'S') || !!d.supplierVAT,
+    },
+
+    {
+        code: 'BR-O-11',
+        severity: 'error',
+        message: 'Categoria O (Neplătitor TVA) nu se poate combina cu alte categorii pe aceeași factură.',
+        fieldRef: null,
+        check: (d) => !d.lineItems.some(li => li.vatType === 'O')
+            || d.lineItems.every(li => li.vatType === 'O'),
+    },
+
     // ── Factură cu cel puțin un articol ────────────────────────────────────
 
     {
