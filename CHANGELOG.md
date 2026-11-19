@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9-beta-20 - 19.11.2026
+
+### Bugfixes
+- Fixed: după modificarea unei sume (preț, cantitate, reducere/taxă) și trecerea la câmpul următor cu Tab, totalurile rămâneau cu o modificare în urmă. Acum se recalculează imediat.
+- Fixed: la recalcularea totalurilor se pierdeau codul și motivul de scutire din defalcarea TVA (E, AE etc.), iar salvarea era apoi blocată. Acum se păstrează.
+- Fixed: butoanele „Adaugă Cotă TVA”, ✕ și schimbarea tipului pe un rând din defalcarea TVA nu aveau efect. Rândul adăugat manual rămâne în defalcare.
+- Fixed: categoriile TVA K (livrare intracomunitară) și G (export) erau transformate la încărcare în S cu 0% și își pierdeau codul de scutire. Acum se păstrează și pot fi alese pe linii.
+- Fixed: după ștergerea primei linii (sau a primei reduceri/taxe), butonul ✕ al liniei rămase nu mai funcționa.
+- Fixed: la o linie cu reducere, baza de calcul (BaseAmount) se scria după reducere (ex. 180) în loc de înainte de reducere (200).
+- Fixed: unitatea de măsură a unui articol din catalog care nu era în listă (ex. HUR) lăsa câmpul gol. Acum unitatea se păstrează.
+
+### Modifications
+- O reducere/taxă nouă primește implicit cota 21% (nu 19%); la furnizorul fără RO pornește ca „Neplătitor TVA” (0%).
+
 ## 0.9-beta-19 - 19.11.2026
 
 ### Bugfixes

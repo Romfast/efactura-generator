@@ -217,7 +217,7 @@ export function markDirty(input) {
  */
 export function wireDatasetRaw(input, decimals = 2) {
     if (!input || input.dataset.rawWired === '1') return;
-    input.addEventListener('blur', () => {
+    const sync = () => {
         const parsed = parseStrict(input.value);
         if (parsed === null && input.value.trim() !== '') {
             input.classList.add('invalid');
@@ -228,7 +228,10 @@ export function wireDatasetRaw(input, decimals = 2) {
             setRaw(input, parsed, decimals);
             markDirty(input);
         }
-    });
+    };
+    input.addEventListener('blur', sync);
+    // change în faza de captură: dataset.raw e la zi înaintea celorlalți handleri de change
+    input.addEventListener('change', sync, true);
     // La input change, marchează dirty (dar nu reformatează — lasă user să tasteze).
     input.addEventListener('input', () => markDirty(input));
     input.dataset.rawWired = '1';

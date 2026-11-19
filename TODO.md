@@ -2,6 +2,7 @@
 
 ## Backlog
 
+- [ ] Livrare (cac:Delivery: data + tara/adresa) editabila: fara ea facturile K (intracomunitar) pica la ANAF pe BR-IC-11/12 si BR-RO-211.
 - [ ] Fix 403 receiver.php — aplică Opt A revizuită: `$publicActions = ['ping', 'cif']` (elimină IP gate pentru aceste acțiuni, Bearer ANAF neexpus)
 - [ ] Defense-in-depth Opt B — X-Forwarded-For via `trusted_proxies` în config.json (alternativă la Opt A)
 - [ ] Investigați rsync delete pe prod-romfast care lasă receiver.php afară din deploy

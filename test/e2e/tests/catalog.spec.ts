@@ -65,9 +65,7 @@ test.describe('catalog local de produse (IndexedDB)', () => {
     await expect(page.locator('.catalog-dropdown')).toHaveCount(0);
   });
 
-  // BUG: script.js:5162 _applyCatalogItem seteaza select-ul UM cu o valoare absenta din UNIT_CODES (ex. HUR) -> select ramane gol
-  test('BUG: unitatea din catalog care nu e in lista UM se pastreaza', async ({ page }) => {
-    test.fail(true, 'BUG: _applyCatalogItem (script.js:5162) lasa select-ul UM gol pentru coduri necunoscute (HUR)');
+  test('unitatea din catalog care nu e in lista UM se pastreaza', async ({ page }) => {
     await openWithFixture(page);
     await page.evaluate(async () => {
       const m = await import('/js/catalog.js');

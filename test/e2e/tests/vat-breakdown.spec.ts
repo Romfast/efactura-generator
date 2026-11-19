@@ -41,18 +41,14 @@ test.describe('defalcare TVA: incarcare si categorii', () => {
     expect(await xmlTexts(page, xml, 'InvoiceLine > Item > ClassifiedTaxCategory > ID')).toEqual(['S', 'Z', 'E', 'AE']);
   });
 
-  // BUG: script.js:323 displayTotals reconstruieste randurile TVA din linii la orice recalculare si pierde codul/motivul de scutire
-  test('BUG: recalcularea pastreaza codul si motivul de scutire', async ({ page }) => {
-    test.fail(true, 'BUG: displayTotals (script.js:323) reconstruieste defalcarea fara exemptionCode/Reason');
+  test('recalcularea pastreaza codul si motivul de scutire', async ({ page }) => {
     await openWithFixture(page, 'factura-scutiri.xml');
     await recalc(page);
     const eRow = await rowOfType(page, 'E');
     await expect(eRow.locator('.vat-exemption-reason')).toHaveValue('Bunuri second hand');
   });
 
-  // BUG: script.js:21 VAT_TYPES nu contine K (livrare intracomunitara) si G (export): la incarcare devin S cu 0% si pierd codul de scutire din XML
-  test('BUG: categoriile K si G se pastreaza la round-trip', async ({ page }) => {
-    test.fail(true, 'BUG: VAT_TYPES (script.js:21) nu are K/G; categoria devine S 0% la salvare');
+  test('categoriile K si G se pastreaza la round-trip', async ({ page }) => {
     await openWithFixture(page, 'factura-k-g.xml');
     const { xml } = await saveXml(page);
     expect(await xmlTexts(page, xml, 'TaxSubtotal > TaxCategory > ID')).toEqual(['S', 'K', 'G']);
@@ -131,24 +127,19 @@ test.describe('defalcare TVA: coduri de scutire (rand obtinut dintr-o linie)', (
 });
 
 test.describe('defalcare TVA: butoane pe rand', () => {
-  // BUG: script.js:3009/2999/2930 — defalcarea e derivata din linii: refreshTotals reconstruieste randurile, deci
-  // "Adauga Cota TVA", stergerea unui rand si schimbarea tipului pe rand nu au efect durabil.
-  test('BUG: "Adauga Cota TVA" lasa un rand vizibil', async ({ page }) => {
-    test.fail(true, 'BUG: addVATRate (script.js:3009) -> refreshTotals sterge randul nou (fara baza)');
+  test('"Adauga Cota TVA" lasa un rand vizibil', async ({ page }) => {
     await openWithFixture(page);
     await page.getByRole('button', { name: 'Adaugă Cotă TVA' }).click();
     await expect(page.locator('.vat-row')).toHaveCount(3);
   });
 
-  test('BUG: stergerea unui rand TVA (✕) il elimina din defalcare', async ({ page }) => {
-    test.fail(true, 'BUG: removeVATRow (script.js:2999) -> refreshTotals recreeaza randul din linii');
+  test('stergerea unui rand TVA (✕) il elimina din defalcare', async ({ page }) => {
     await openWithFixture(page);
     await page.locator('.vat-row').first().locator('button.button-danger').click();
     await expect(page.locator('.vat-row')).toHaveCount(1);
   });
 
-  test('BUG: schimbarea tipului pe un rand TVA ramane aplicata', async ({ page }) => {
-    test.fail(true, 'BUG: updateVATRow manual (script.js:2930) -> refreshTotals reface randul din linii');
+  test('schimbarea tipului pe un rand TVA ramane aplicata', async ({ page }) => {
     await openWithFixture(page);
     await page.locator('.vat-row').first().locator('.vat-type').selectOption('E');
     await expect(page.locator('.vat-row').first().locator('.vat-type')).toHaveValue('E');
@@ -205,5 +196,18 @@ test.describe('defalcare TVA: editare si efect pe totaluri', () => {
     const t = await readTotals(page);
     expect(t.vat).toBeCloseTo(52.5, 2);
     expect(t.total).toBeCloseTo(302.5, 2);
+  });
+});
+
+test.describe('defalcare TVA: rand manual si scutiri dupa recalculare', () => {
+  test('randul adaugat manual si scutirea K/G supravietuiesc editarilor pe linii', async ({ page }) => {
+    await openWithFixture(page, 'factura-k-g.xml');
+    await page.getByRole('button', { name: 'Adaugă Cotă TVA' }).click();
+    await page.locator('[name="price0"]').fill('110');
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.vat-row')).toHaveCount(4);
+    const gRow = await rowOfType(page, 'G');
+    await expect(gRow.locator('.vat-exemption-code')).toHaveValue('VATEX-EU-G');
+    await expect(gRow.locator('.vat-exemption-reason')).toHaveValue('Export in afara UE');
   });
 });

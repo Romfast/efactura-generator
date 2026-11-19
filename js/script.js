@@ -1,15 +1,15 @@
-import { InvoiceFormatter } from './formatter.js';
+import { InvoiceFormatter } from './formatter.js?v=0.9-beta-20';
 import {
     Big, parseStrict, parseStrictOr, formatRaw, format2,
     setRaw, getRaw, markDirty, lineTotal as numericLineTotal, wireDatasetRaw, withinTolerance
-} from './numeric.js';
-import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js';
+} from './numeric.js?v=0.9-beta-20';
+import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js?v=0.9-beta-20';
 import JSZip from './vendor/jszip.mjs';
-import { validateCIF } from './validation/cif.js';
-import { validateIBAN } from './validation/iban.js';
-import { runBRRules } from './validation/br-ro.js?v=0.9-beta-18';
-import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js';
-import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-18';
+import { validateCIF } from './validation/cif.js?v=0.9-beta-20';
+import { validateIBAN } from './validation/iban.js?v=0.9-beta-20';
+import { runBRRules } from './validation/br-ro.js?v=0.9-beta-20';
+import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js?v=0.9-beta-20';
+import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-20';
 
 // Constants
 const XML_NAMESPACES = {
@@ -23,7 +23,9 @@ const VAT_TYPES = {
     "AE": "Taxare Inversă",
     "O": "Neplătitor TVA",
     "Z": "Cotă 0% TVA",
-    "E": "Neimpozabil"
+    "E": "Neimpozabil",
+    "K": "Livrare Intracomunitară",
+    "G": "Export"
 };
 
 // PR-TIPURI (A4): UN/CEFACT 1001 InvoiceTypeCode — subset folosit în RO.
@@ -58,6 +60,10 @@ const VAT_EXEMPTION_CODES = {
     'K': {
         code: 'VATEX-EU-IC',
         reason: 'Livrare intracomunitara'
+    },
+    'G': {
+        code: 'VATEX-EU-G',
+        reason: 'Export in afara UE'
     },
     'O': {
         code: 'VATEX-EU-O',
@@ -332,18 +338,41 @@ function displayTotals(totals) {
     // Actualizează defalcarea TVA dacă există
     const container = document.getElementById('vatBreakdownRows');
     if (container) {
+        // reținem scutirile (cod/motiv) pe cotă+tip și rândurile adăugate manual înainte de reconstruire
+        const kept = new Map();
+        const manualRows = [];
+        container.querySelectorAll('.vat-row').forEach(r => {
+            const type = r.querySelector('.vat-type').value;
+            const rate = getRaw(r.querySelector('.vat-rate')).toFixed(2);
+            const code = r.querySelector('.vat-exemption-code')?.value || '';
+            const reason = r.querySelector('.vat-exemption-reason')?.value || '';
+            kept.set(`${rate}-${type}`, { code, reason });
+            if (r.dataset.manual) {
+                manualRows.push({ id: r.id, rate, type, code, reason,
+                    base: getRaw(r.querySelector('.vat-base')).toFixed(2),
+                    amount: getRaw(r.querySelector('.vat-amount')).toFixed(2) });
+            }
+        });
         container.innerHTML = '';
         if (totals.vatBreakdown) {
             totals.vatBreakdown.forEach((data, key) => {
                 const [rate, type] = key.split('-');
+                const ex = kept.get(key) || {};
                 addVATBreakdownRow(
                     parseFloat(rate),
                     data.baseAmount,
                     data.vatAmount,
-                    type
+                    type,
+                    null,
+                    ex.code || '',
+                    ex.reason || ''
                 );
             });
         }
+        manualRows.forEach(m => {
+            addVATBreakdownRow(parseFloat(m.rate), m.base, m.amount, m.type, m.id, m.code, m.reason);
+            document.getElementById(m.id).dataset.manual = '1';
+        });
     }
 }
 
@@ -360,7 +389,7 @@ function validateVATExemption() {
     
     vatRows.forEach(row => {
         const vatType = row.querySelector('.vat-type').value;
-        if (['E', 'K', 'AE', 'O'].includes(vatType)) {
+        if (['E', 'K', 'G', 'AE', 'O'].includes(vatType)) {
             const exemptionCodeInput = row.querySelector('.vat-exemption-code');
             const exemptionReasonInput = row.querySelector('.vat-exemption-reason');
             const exemptionCode = exemptionCodeInput?.value;
@@ -1004,7 +1033,7 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
                            onchange="window.updateVATRowFromAmount('${rowId}')">
                     <span class="badge vat-amount-badge"></span>
                 </div>
-                <div class="vat-exemption ${['E', 'K', 'O', 'AE'].includes(vatType) ? '' : 'hidden'}">
+                <div class="vat-exemption ${['E', 'K', 'G', 'O', 'AE'].includes(vatType) ? '' : 'hidden'}">
                     <div class="form-group">
                         <label>Cod Scutire:</label>
                         <select class="form-input vat-exemption-code" onchange="window.updateExemptionReason('${rowId}')">
@@ -1046,7 +1075,7 @@ function addVATBreakdownRow(rate, baseAmount, vatAmount, vatType = 'S', existing
         const exemptionContainer = document.querySelector(`#${rowId} .vat-exemption`);
         const newVatType = vatTypeSelect.value;
 
-        if (['E', 'K', 'O', 'AE'].includes(newVatType)) {
+        if (['E', 'K', 'G', 'O', 'AE'].includes(newVatType)) {
             exemptionContainer.classList.remove('hidden');
 
             // Update exemption code options
@@ -1072,7 +1101,7 @@ function generateExemptionCodeOptions(vatType, selectedCode = '') {
                 ${exemption.code || 'Scutit'}
             </option>`
         ).join('');
-    } else if (vatType === 'K' || vatType === 'AE' || vatType === 'O') {
+    } else if (vatType === 'K' || vatType === 'G' || vatType === 'AE' || vatType === 'O') {
         const exemption = VAT_EXEMPTION_CODES[vatType];
         return `<option value="${exemption.code}" selected>${exemption.code}</option>`;
     }
@@ -1100,7 +1129,7 @@ window.updateExemptionReason = function(rowId) {
         if (selectedExemption) {
             reasonInput.value = selectedExemption.reason;
         }
-    } else if (vatType === 'K' || vatType === 'AE') {
+    } else if (vatType === 'K' || vatType === 'G' || vatType === 'AE') {
         reasonInput.value = VAT_EXEMPTION_CODES[vatType].reason;
     }
 };
@@ -1695,6 +1724,8 @@ window.handleVatTypeChange = function(index) {
                 vatRateInput.disabled = true;
                 break;
             case 'AE':  // Taxare inversă
+            case 'K':   // Livrare intracomunitară
+            case 'G':   // Export
             case 'Z':   // Cotă 0%
             case 'E':   // Scutit
                 setRaw(vatRateInput, '0', 2);
@@ -1731,6 +1762,8 @@ function handleChargeVatTypeChange(index) {
                 vatRateInput.disabled = true;
                 break;
             case 'AE':  // Taxare inversă
+            case 'K':   // Livrare intracomunitară
+            case 'G':   // Export
             case 'Z':   // Cotă 0%
             case 'E':   // Scutit
                 setRaw(vatRateInput, '0', 2);
@@ -2398,8 +2431,8 @@ function addAllowanceCharge() {
         reasonCode: 'TV',
         reason: 'Cheltuieli transport',
         amount: 0,
-        vatRate: 19.0,
-        vatTypeId: 'S'
+        vatRate: isVATRegistered() ? 21.0 : 0,
+        vatTypeId: isVATRegistered() ? 'S' : 'O'
     };
 
     // Add the HTML
@@ -2415,6 +2448,7 @@ function addAllowanceCharge() {
 
     // Setup event listeners
     setupAllowanceChargeListeners(index);
+    if (newCharge.vatTypeId === 'O') document.querySelector(`[name="chargeVatRate${index}"]`).disabled = true;
 
     // Force refresh of totals and VAT
     refreshTotals();
@@ -2439,6 +2473,7 @@ function renumberAllowanceCharges() {
     document.querySelectorAll('.allowance-charge').forEach((charge, newIndex) => {
         // Update data-index
         charge.dataset.index = newIndex;
+        reindexHandlers(charge, newIndex);
         
         // Update all input names
         charge.querySelectorAll('input, select').forEach(input => {
@@ -2940,7 +2975,6 @@ window.updateVATRow = function(rowId, source) {
         manuallyEditedVatRows.add(rowId);
         // Keep existing values, just update totals
         updateTotalVAT();
-        refreshTotals();
         return;
     }
     
@@ -3002,14 +3036,14 @@ window.removeVATRow = function(rowId) {
         manuallyEditedVatRows.delete(rowId);
         row.remove();
         updateTotalVAT();
-        refreshTotals();
     }
 };
 
 window.addVATRate = function() {
     const container = document.getElementById('vatBreakdownRows');
     addVATBreakdownRow(21, 0, 0);
-    refreshTotals();
+    container.lastElementChild.dataset.manual = '1';
+    updateTotalVAT();
 };
 
 function updateTotalVAT() {
@@ -3447,7 +3481,7 @@ function getAllowanceCharges() {
             reasonCode: document.querySelector(`[name="chargeReasonCode${index}"]`).value,
             reason: document.querySelector(`[name="chargeReason${index}"]`).value,
             amount: parseFloat(document.querySelector(`[name="chargeAmount${index}"]`).value) || 0,
-            vatRate: parseFloat(document.querySelector(`[name="chargeVatRate${index}"]`).value) || 19.0,
+            vatRate: parseFloat(document.querySelector(`[name="chargeVatRate${index}"]`).value) || 0,
             vatTypeId: document.querySelector(`[name="chargeVatType${index}"]`).value || 'S'
         });
     });
@@ -3572,7 +3606,7 @@ function updateLineItems(xmlDoc) {
                 "cbc:AllowanceChargeReason", ALLOWANCE_REASON_CODES[reasonCode] || 'Reducere'));
             
             // BaseAmount trebuie să fie valoarea netă înainte de discount
-            const baseAmount = Math.abs(lineAmount);
+            const baseAmount = Math.abs(baseLineAmount);
             const discountAmount = Math.abs(lineDiscount);
             const multiplierFactor = (discountAmount / baseAmount * 100).toFixed(2);
 
@@ -3667,7 +3701,7 @@ function updateTaxTotals(xmlDoc) {
         taxCategory.appendChild(createXMLElement(xmlDoc, XML_NAMESPACES.cbc, "cbc:Percent", percent));
         
         // Add exemption code and reason for special VAT types
-        if (['E', 'K', 'O', 'AE'].includes(vatType)) {
+        if (['E', 'K', 'G', 'O', 'AE'].includes(vatType)) {
             const exemptionCode = row.querySelector('.vat-exemption-code')?.value;
             const exemptionReason = row.querySelector('.vat-exemption-reason')?.value;
             
@@ -3914,6 +3948,21 @@ function renumberLineItems() {
                 input.setAttribute('name', baseName + newIndex);
             }
         });
+        reindexHandlers(item, newIndex);
+    });
+}
+
+// după ștergere, onclick/onchange/id/data-* rămân pe indexul vechi: le aliniem la noul index
+function reindexHandlers(root, newIndex) {
+    root.querySelectorAll('[onclick], [onchange], [id], [data-catalog-input], [data-line-total-index], [data-line-badge-index]').forEach(el => {
+        for (const a of ['onclick', 'onchange']) {
+            const v = el.getAttribute(a);
+            if (v) el.setAttribute(a, v.replace(/\((\d+)/, `(${newIndex}`));
+        }
+        if (/^(optionalDetails|identifications)\d+$/.test(el.id)) el.id = el.id.replace(/\d+$/, newIndex);
+        for (const a of ['data-catalog-input', 'data-line-total-index', 'data-line-badge-index']) {
+            if (el.hasAttribute(a)) el.setAttribute(a, newIndex);
+        }
     });
 }
 
@@ -5162,7 +5211,11 @@ function _hideCatalogDropdown() {
 function _applyCatalogItem(item, lineIndex) {
     const set = (name, val) => {
         const el = document.querySelector(`[name="${name}${lineIndex}"]`);
-        if (el && val !== undefined) el.value = val;
+        if (el && val !== undefined) {
+            // unitatea din catalog absentă din listă: o adăugăm ca să nu rămână select-ul gol
+            if (el.tagName === 'SELECT' && ![...el.options].some(o => o.value === val)) el.add(new Option(val, val));
+            el.value = val;
+        }
     };
 
     set('description', item.name);
@@ -5296,7 +5349,7 @@ if (typeof module !== 'undefined' && module.exports) {
     };
 }                
 
-import { InvoicePrintHandler } from './print.js';
+import { InvoicePrintHandler } from './print.js?v=0.9-beta-20';
 
 // Create print handler instance
 const printHandler = new InvoicePrintHandler();

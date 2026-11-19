@@ -63,9 +63,7 @@ test.describe('reduceri si taxe globale', () => {
     expect(await xmlTexts(page, xml, 'LegalMonetaryTotal > ChargeTotalAmount')).toEqual(['10.00']);
   });
 
-  // BUG: js/script.js:2292 setupAllowanceChargeListeners — la `change` refreshTotals citeste dataset.raw inca vechi (blur il actualizeaza dupa), deci dupa Tab totalurile raman nerecalculate
-  test('BUG: totalurile se actualizeaza imediat dupa editarea sumei si Tab', async ({ page }) => {
-    test.fail(true, 'BUG: change pe chargeAmount/chargeVatRate citeste dataset.raw vechi (script.js:2292)');
+  test('totalurile se actualizeaza imediat dupa editarea sumei si Tab', async ({ page }) => {
     await openWithFixture(page);
     await page.getByRole('button', { name: 'Adaugă Reducere/Taxă' }).click();
     await page.locator('[name="chargeAmount0"]').fill('10');
@@ -131,5 +129,13 @@ test.describe('reduceri si taxe globale', () => {
     expect(t.allowances).toBe(20);
     const nodes = await xmlQuery(page, xml, 'Invoice > AllowanceCharge > Amount');
     expect(nodes[0].attrs.currencyID).toBe('RON');
+  });
+});
+
+test.describe('reduceri/taxe: valori implicite si renumerotare', () => {
+  test('reducere/taxa noua are cota implicita 21%', async ({ page }) => {
+    await openWithFixture(page);
+    await page.getByRole('button', { name: 'Adaugă Reducere/Taxă' }).click();
+    expect(parseFloat(await page.locator('[name="chargeVatRate0"]').inputValue())).toBe(21);
   });
 });

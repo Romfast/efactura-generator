@@ -139,7 +139,7 @@ npm run test:all             # proiect local, port E2E_PORT (implicit 3917); inc
 
 ## Capcane si verificare
 
-- **Release = cache-busting**: la fiecare versiune schimba `?v=` in `index.html` (css + `script.js`) si in importurile din `js/script.js` (`br-ro.js`, `catalog.js`); altfel browserele raman pe codul vechi. Versiunea vizibila e `#app-version` + `CHANGELOG.md`.
+- **Release = cache-busting**: la fiecare versiune schimba `?v=` in `index.html` (css + `script.js`) si in TOATE importurile relative din `js/` (`grep -rn "from ../" js`; aceeasi versiune peste tot, altfel un modul se incarca de doua ori); altfel browserele raman pe codul vechi. Versiunea vizibila e `#app-version` + `CHANGELOG.md`.
 - **Campuri numerice**: valoarea canonica e in `dataset.raw` (`js/numeric.js`). Seteaza doar cu `setRaw(el, val, zecimale)`, niciodata `el.value = ...`. In handler-ul `change`, `dataset.raw` nu e inca actualizat (se face la blur): citeste `parseStrict(el.value) ?? getRaw(el)`.
 - **CUI fara RO + linii cu TVA (S)**: valid in CIUS-RO; CUI-ul furnizorului se scrie ca BT-32 = `PartyTaxScheme/CompanyID` cu `<cac:TaxScheme/>` gol. Categoria O nu se amesteca cu alte categorii (BR-O-11). Pret negativ interzis (BR-27): storno = cantitate negativa.
 - **Validare ANAF**: API `POST text/plain` la `https://webservicesp.anaf.ro/prod/FCTEL/rest/validare/FACT1` (raspuns `"stare":"ok"`). Pentru utilizatori: `https://www.anaf.ro/uploadxmi/` = doar validare; `https://www.anaf.ro/uploadxml/` = validare + PDF.

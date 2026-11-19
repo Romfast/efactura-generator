@@ -58,9 +58,7 @@ test.describe('linii de factura', () => {
     expect(alerts.join('|')).toMatch(/cel puțin o linie/);
   });
 
-  // BUG: script.js:3906 renumberLineItems schimba name/data-index dar nu si onclick-urile (removeLineItem(n), toggleOptionalDetails(n), addIdentification(n,..)) nici id-urile optionalDetailsN/identificationsN
-  test('BUG: dupa stergerea primei linii, butonul ✕ al liniei ramase o sterge', async ({ page }) => {
-    test.fail(true, 'BUG: renumberLineItems (script.js:3906) lasa onclick="removeLineItem(1)" pe linia care a devenit 0');
+  test('dupa stergerea primei linii, butonul ✕ al liniei ramase o sterge', async ({ page }) => {
     await openWithFixture(page);
     await page.locator('.line-item').first().locator('.remove-line-item').click();
     await expect(page.locator('.line-item')).toHaveCount(1);
@@ -87,9 +85,7 @@ test.describe('linii de factura', () => {
     expect(await xmlTexts(page, xml, 'InvoiceLine > AllowanceCharge > AllowanceChargeReasonCode')).toEqual([reason]);
   });
 
-  // BUG: script.js:3569 — BaseAmount (BT-137) = |lineAmount| calculat DUPA discount, desi comentariul cere valoarea inainte de discount
-  test('BUG: BaseAmount din AllowanceCharge-ul liniei e valoarea inainte de discount', async ({ page }) => {
-    test.fail(true, 'BUG: updateLineItems (script.js:3569) pune BaseAmount = suma dupa discount (180) in loc de 200');
+  test('BaseAmount din AllowanceCharge-ul liniei e valoarea inainte de discount', async ({ page }) => {
     await openWithFixture(page);
     await setNum(page, 'lineDiscount0', '20');
     const { xml } = await saveXml(page);
@@ -246,10 +242,7 @@ test.describe('validateMath si totaluri', () => {
 });
 
 test.describe('totaluri dupa editare cu tastatura reala', () => {
-  // BUG: script.js:2495 handleLineItemChange / onchange="updateTotals()" — la `change` (inainte de blur) dataset.raw e inca vechi,
-  // deci totalurile raman in urma cu o editare dupa Tab (pret/cantitate/discount linii).
-  test('BUG: dupa editarea pretului si Tab, subtotalul se actualizeaza imediat', async ({ page }) => {
-    test.fail(true, 'BUG: updateTotals pe change citeste dataset.raw vechi (script.js:2495)');
+  test('dupa editarea pretului si Tab, subtotalul se actualizeaza imediat', async ({ page }) => {
     await openWithFixture(page);
     await page.locator('[name="price0"]').fill('110');
     await page.keyboard.press('Tab');
