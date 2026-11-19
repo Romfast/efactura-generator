@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9-beta-21 - 19.11.2026
+
+### Bugfixes
+- Fixed: o dată imposibilă scrisă de mână (ex. 31.02.2026) era înlocuită pe tăcute cu altă dată (03.03.2026). Acum rămâne cum a fost scrisă și câmpul e marcat cu roșu.
+
 ## 0.9-beta-20 - 19.11.2026
 
 ### Bugfixes

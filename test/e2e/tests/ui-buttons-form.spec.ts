@@ -73,13 +73,16 @@ test.describe('calendare (Pikaday) si campuri de data', () => {
     expect(await f.inputValue()).toBe('28.02.2026');
   });
 
-  test('BUG: data imposibila (31.02.2026) e inlocuita tacut cu alta data (03.03.2026) in loc sa fie marcata invalida', async ({ page }) => {
-    test.fail(true, 'BUG: js/script.js:1273 parse() din Pikaday nu valideaza ziua/luna; new Date(2026,1,31) normalizeaza la 03.03.2026 si onSelect rescrie campul');
+  test('data imposibila (31.02.2026, 99.99.2026) ramane cum a fost scrisa si e marcata invalida', async ({ page }) => {
     await fixedApp(page);
     const f = page.locator('[name="dueDate"]');
     await f.fill('31.02.2026');
     await f.blur();
     expect(await f.inputValue()).toBe('31.02.2026');
+    await expect(f).toHaveClass(/invalid/);
+    await f.fill('99.99.2026');
+    await f.blur();
+    expect(await f.inputValue()).toBe('99.99.2026');
     await expect(f).toHaveClass(/invalid/);
   });
 

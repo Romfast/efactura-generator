@@ -1,15 +1,15 @@
-import { InvoiceFormatter } from './formatter.js?v=0.9-beta-20';
+import { InvoiceFormatter } from './formatter.js?v=0.9-beta-21';
 import {
     Big, parseStrict, parseStrictOr, formatRaw, format2,
     setRaw, getRaw, markDirty, lineTotal as numericLineTotal, wireDatasetRaw, withinTolerance
-} from './numeric.js?v=0.9-beta-20';
-import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js?v=0.9-beta-20';
+} from './numeric.js?v=0.9-beta-21';
+import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js?v=0.9-beta-21';
 import JSZip from './vendor/jszip.mjs';
-import { validateCIF } from './validation/cif.js?v=0.9-beta-20';
-import { validateIBAN } from './validation/iban.js?v=0.9-beta-20';
-import { runBRRules } from './validation/br-ro.js?v=0.9-beta-20';
-import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js?v=0.9-beta-20';
-import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-20';
+import { validateCIF } from './validation/cif.js?v=0.9-beta-21';
+import { validateIBAN } from './validation/iban.js?v=0.9-beta-21';
+import { runBRRules } from './validation/br-ro.js?v=0.9-beta-21';
+import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js?v=0.9-beta-21';
+import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-21';
 
 // Constants
 const XML_NAMESPACES = {
@@ -1273,7 +1273,10 @@ function createDatePicker(input, button) {
         // fără moment.js Pikaday citește data cu Date.parse (lună.zi) și inversa 05.11 în 11.05
         parse: (str) => {
             const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec((str || '').trim());
-            return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+            if (!m) return null;
+            const d = new Date(+m[3], +m[2] - 1, +m[1]);
+            // data imposibilă (31.02) nu se normalizează tacit; câmpul rămâne și e marcat invalid
+            return (d.getMonth() === +m[2] - 1 && d.getDate() === +m[1]) ? d : null;
         },
         toString: (date) => formatDateToRomanian(date),
         i18n: {
@@ -5349,7 +5352,7 @@ if (typeof module !== 'undefined' && module.exports) {
     };
 }                
 
-import { InvoicePrintHandler } from './print.js?v=0.9-beta-20';
+import { InvoicePrintHandler } from './print.js?v=0.9-beta-21';
 
 // Create print handler instance
 const printHandler = new InvoicePrintHandler();
