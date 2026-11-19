@@ -7,9 +7,9 @@ import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js';
 import JSZip from './vendor/jszip.mjs';
 import { validateCIF } from './validation/cif.js';
 import { validateIBAN } from './validation/iban.js';
-import { runBRRules } from './validation/br-ro.js';
+import { runBRRules } from './validation/br-ro.js?v=0.9-beta-18';
 import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js';
-import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js';
+import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-18';
 
 // Constants
 const XML_NAMESPACES = {

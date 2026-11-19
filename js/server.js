@@ -15,7 +15,8 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
     // Convert URL to file path, using index.html for root
-    let filePath = req.url === '/' ? './index.html' : '.' + req.url;
+    const urlPath = req.url.split('?')[0];
+    let filePath = urlPath === '/' ? './index.html' : '.' + urlPath;
     
     // Get file extension for MIME type
     const ext = path.extname(filePath);

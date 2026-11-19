@@ -9,6 +9,7 @@
 
 ### Modifications
 - Liniile noi primesc implicit cota standard 21% (nu 19%) când furnizorul are prefixul RO; la furnizorul fără RO pornesc ca „Neplătitor TVA” (0%), dar categoria și cota se pot schimba. Tot 21% este implicit și la rândurile noi din defalcarea TVA și la produsele din catalog fără cotă salvată.
+- Fișierele aplicației se încarcă acum cu marcaj de versiune, astfel încât după o actualizare browserul folosește imediat versiunea nouă, fără Ctrl+F5.
 
 ## 0.9-beta-17 - 26.06.2026
 
