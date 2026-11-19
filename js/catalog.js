@@ -10,7 +10,7 @@
  *   unit:        string — cod UM (EA, KGM, etc.)
  *   price:       string — preț unitar canonical decimal
  *   vatType:     string — cod tip TVA (S, AE, O, Z, E)
- *   vatRate:     string — cotă TVA (19, 9, 5, 0)
+ *   vatRate:     string — cotă TVA (21, 11, 0)
  *   description: string — descriere detaliată (opțional)
  *   sellerItemID: string — cod articol furnizor (opțional, indexed)
  *   cpvCode:     string — cod CPV (opțional, indexed)
@@ -32,7 +32,7 @@ export async function catalogAdd(product) {
         unit:         (product.unit         || 'EA').trim(),
         price:        (product.price        || '0').trim(),
         vatType:      (product.vatType      || 'S').trim(),
-        vatRate:      (product.vatRate      || '19').trim(),
+        vatRate:      (product.vatRate      || '21').trim(),
         description:  (product.description  || '').trim(),
         sellerItemID: (product.sellerItemID || '').trim(),
         cpvCode:      (product.cpvCode      || '').trim(),

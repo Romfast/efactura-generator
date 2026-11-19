@@ -8,7 +8,7 @@
 - Fixed: liniile fără TVA (O, Z, E, AE) care aveau completată o cotă (ex. 21%) produceau o defalcare TVA greșită, respinsă de ANAF (BR-CO-17, BR-O-08). Acum intră în defalcare cu cota 0, pe un singur rând.
 
 ### Modifications
-- Cota TVA implicită la o linie nouă este 21% (cota standard în vigoare), nu 19%.
+- Liniile noi primesc implicit cota standard 21% (categoria „Cotă Standard”), indiferent dacă furnizorul are sau nu prefixul RO; la fel rândurile noi din defalcarea TVA și produsele din catalog fără cotă salvată. Înainte, implicit era 19%, iar pentru furnizorul fără RO linia nouă era „Neplătitor TVA”.
 
 ## 0.9-beta-17 - 26.06.2026
 

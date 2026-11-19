@@ -2188,7 +2188,7 @@ function populateLineItems(xmlDoc) {
 
         const taxCategory = itemElement.querySelector('cac\\:ClassifiedTaxCategory, ClassifiedTaxCategory');
         const vatType = getXMLValue(taxCategory, 'cbc\\:ID, ID') || 'S';
-        const vatRate = getXMLValue(taxCategory, 'cbc\\:Percent, Percent') || '19';
+        const vatRate = getXMLValue(taxCategory, 'cbc\\:Percent, Percent') || '21';
 
         // Extragem discountul și codul de motiv de pe linie dacă există
         let lineDiscount = 0;
@@ -2450,9 +2450,9 @@ function addLineItem() {
     const container = document.getElementById('lineItems');
     const index = document.querySelectorAll('.line-item').length;
     
-    // Determină tipul implicit de TVA bazat pe statusul furnizorului
-    const defaultVatType = isVATRegistered() ? 'S' : 'O';
-    const defaultVatRate = isVATRegistered() ? '21' : '0';
+    // Linie nouă: cota standard 21% (și pentru CUI fără RO, scris ca BT-32)
+    const defaultVatType = 'S';
+    const defaultVatRate = '21';
     
     const lineItemHtml = createLineItemHTML(index, '', '1', '0', defaultVatRate, 'EA', defaultVatType);
     container.insertAdjacentHTML('beforeend', lineItemHtml);
@@ -3002,7 +3002,7 @@ window.removeVATRow = function(rowId) {
 
 window.addVATRate = function() {
     const container = document.getElementById('vatBreakdownRows');
-    addVATBreakdownRow(19, 0, 0);
+    addVATBreakdownRow(21, 0, 0);
     refreshTotals();
 };
 
