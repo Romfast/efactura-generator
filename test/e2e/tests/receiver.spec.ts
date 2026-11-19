@@ -13,6 +13,10 @@ test.describe('receiver.php', () => {
   });
 
   test('cif lookup', async ({ request }, testInfo) => {
+    if (testInfo.project.name === 'local' && !process.env.RUN_ANAF_LIVE) {
+      test.skip(true, 'apeleaza ANAF real; porneste cu RUN_ANAF_LIVE=1');
+      return;
+    }
     if (testInfo.project.name === 'prod-romfast') {
       test.skip();
       return;

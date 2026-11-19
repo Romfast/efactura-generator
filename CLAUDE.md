@@ -123,6 +123,20 @@ Citește `DESIGN.md` înainte de orice decizie vizuală sau UI. Toate alegerile 
 
 When invoked non-interactively (`claude -p` / `claudep.sh`), put new scratch files under `/workspace/.claude-work/<timestamp>_<task>/` rather than this repo. Modifications to existing files in this repo stay in place.
 
+## Teste obligatorii inainte de publicare
+
+**Inainte de orice push pe main destinat publicarii si inainte de orice deploy (romfast.ro, Docker), ruleaza TOATA suita si publica doar daca trece 100%:**
+
+```bash
+cd test/e2e && npm install   # prima data
+npm run test:all             # proiect local, port E2E_PORT (implicit 3917); include test/*.html prin browser-pages.spec.ts
+```
+
+- Suita are nevoie de internet (Pikaday vine de pe CDN). ANAF e mock-uit (`page.route`); apelurile live doar cu `RUN_ANAF_LIVE=1`.
+- Testele `test.fail()` marcate `BUG:` sunt bug-uri cunoscute: cand repari unul, scoate `test.fail()`.
+- Functionalitate noua sau corectie = test nou in `test/e2e/tests/` (fixturi anonimizate, CUI de test 12345674 / RO76543210).
+- Nu rula proiectele `prod-*` fara cerere explicita.
+
 ## Capcane si verificare
 
 - **Release = cache-busting**: la fiecare versiune schimba `?v=` in `index.html` (css + `script.js`) si in importurile din `js/script.js` (`br-ro.js`, `catalog.js`); altfel browserele raman pe codul vechi. Versiunea vizibila e `#app-version` + `CHANGELOG.md`.
