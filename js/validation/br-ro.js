@@ -11,8 +11,8 @@
  * Toate funcțiile sunt pure — fără acces DOM, fără efecte secundare.
  */
 
-import { validateCIF } from './cif.js?v=0.9-beta-22';
-import { validateIBAN } from './iban.js?v=0.9-beta-22';
+import { validateCIF } from './cif.js?v=0.9-beta-23';
+import { validateIBAN } from './iban.js?v=0.9-beta-23';
 
 // Coduri TVA valide per CIUS-RO
 const VALID_VAT_TYPES = ['S', 'AE', 'O', 'Z', 'E', 'K', 'G'];

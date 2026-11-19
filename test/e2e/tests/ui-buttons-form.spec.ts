@@ -95,12 +95,12 @@ test.describe('calendare (Pikaday) si campuri de data', () => {
 
 test.describe('antet factura: tip, numar, moneda -> XML', () => {
   for (const code of ['380', '381', '384', '389']) {
-    test(`tip factura ${code}: selectul scrie InvoiceTypeCode ${code}`, async ({ page }) => {
+    test(`tip factura ${code}: selectul scrie cbc:InvoiceTypeCode (CreditNoteTypeCode la 381)`, async ({ page }) => {
       await newInvoiceFilled(page);
       await fillHeader(page, { type: code });
       if (code === '381') await setField(page, 'billingRefId', 'FV-1');
       const xml = (await saveXml(page)).xml;
-      expect(await xmlTexts(page, xml, 'Invoice > InvoiceTypeCode')).toEqual([code]);
+      expect(await xmlTexts(page, xml, code === '381' ? 'CreditNote > CreditNoteTypeCode' : 'Invoice > InvoiceTypeCode')).toEqual([code]);
     });
   }
 

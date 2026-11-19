@@ -82,7 +82,7 @@ export async function newInvoiceFilled(page: Page) {
   await fillHeader(page, { dueDate: '31.12.2030' });
   await fillParty(page, 'supplier');
   await fillParty(page, 'customer');
-  await addLine(page, { description: 'Serviciu test', quantity: '2', price: '100', vatRate: '21' });
+  await fillLine(page, 0, { description: 'Serviciu test', quantity: '2', price: '100', vatRate: '21' });
 }
 
 /** Simuleaza receiver.php disponibil (ping) + raspunsuri pentru validare/PDF/CIF. */

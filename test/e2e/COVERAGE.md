@@ -4,7 +4,7 @@ Fiecare rand e acoperit de un test care foloseste elementul si verifica rezultat
 XML salvat, descarcare). Abrevieri de fisiere (in `test/e2e/tests/`): **hdr** = ui-buttons-header, **frm** = ui-buttons-form,
 **li** = line-items, **vat** = vat-breakdown, **ac** = allowances-charges, **pay** = payment-iban-cif,
 **ni** = new-invoice, **als** = anaf-lookup-sequence, **am** = anaf-mocked, **pp** = print-pdf, **bulk** = bulk-mode,
-**cat** = catalog, **sp** = supplier-profile, **cn** = credit-note, **cur** = currency, **br** = br-validation-user-case, **del** = delivery, **anaf-real** = anaf-validare-reala.
+**cat** = catalog, **sp** = supplier-profile, **cn** = credit-note, **cnx** = credit-note-xml, **empty** = empty-line, **cur** = currency, **br** = br-validation-user-case, **del** = delivery, **anaf-real** = anaf-validare-reala.
 Verificare vizuala: `visual/visual.spec.ts` (vezi sectiunea de la sfarsit).
 
 ## Antet si butoane globale (index.html)
@@ -107,10 +107,14 @@ Verificare vizuala: `visual/visual.spec.ts` (vezi sectiunea de la sfarsit).
 | 69 | cac:Delivery in XML: pozitie UBL, fara date = fara element, round-trip | del: round-trip identic in pozitia corecta; fara date nu scrie Delivery |
 | 70 | Factura Noua goleste livrarea | del: Factura Noua goleste campurile |
 | 71 | Reguli BR-IC-11, BR-IC-12, BR-57, BR-RO-180/201/211 + clic deschide sectiunea | del: linie K fara/cu livrare; linie K adaugata in formular; adresa fara tara; click pe eroare |
-| 72 | XML salvat de aplicatie = valid la serviciul ANAF real (FACT1), 16 scenarii: S, CUI fara RO + storno, mai multe cote, E+AE, K cu livrare, K+G, export G, reducere+taxa+discount linie, EUR cu TVA in RON, categoria O, factura noua | anaf-real: validare XML la ANAF real |
+| 72 | XML salvat de aplicatie = valid la serviciul ANAF real (FACT1), 17 scenarii: S, CUI fara RO + storno, stornare 380, rand gol la final, mai multe cote, E+AE, K cu livrare, K+G, export G, reducere+taxa+discount linie, EUR cu TVA in RON, categoria O, factura noua | anaf-real: validare XML la ANAF real |
 | 73 | Control negativ: K fara livrare = nok cu BR-IC-11 (dovada ca apelul ajunge la ANAF) | anaf-real: control negativ |
 | 74 | Round-trip al fiecarui XML din docs/ si test/**/fixtures (incarcare -> salvare -> ANAF); fixture-uri intentionat invalide: factura-k-g (BR-IC-11), user-brco15-3rows (BR-S-08) | anaf-real: round-trip fixture -> aplicatie -> ANAF real |
-| 75 | **BUG** 381 scris cu radacina Invoice: ANAF FACT1 respinge (BR-CL-01, BR-RO-020); cu radacina CreditNote trece la FCN | anaf-real: nota 381, stornare, round-trip 381 (test.fail), 381 convertit la CreditNote |
+| 75 | 381 (ales manual) se scrie ca `CreditNote` (CreditNoteTypeCode, CreditNoteLine, CreditedQuantity, fara DueDate la radacina) si trece la ANAF FCN; Invoice ramane la FACT1 (standardul se alege dupa radacina) | anaf-real: nota 381, stornare, round-trip 381 |
+| 76 | Nota de credit CreditNote: radacina, linii, cantitati, ordine UBL, scadenta in PaymentMeans; 380/384/389 raman Invoice; incarcare CreditNote; round-trip identic; Invoice vechi cu 381 | cnx: toate cele 6 teste |
+| 77 | Stornare = Invoice 380 cu cantitati negative, preturi pozitive si BillingReference (nu CreditNote); la ANAF FACT1 ok | cnx: stornare 380; cn: stornare; hdr: buton Stornează; anaf-real: stornare 380 |
+| 78 | Factura noua (si pornirea aplicatiei) are exact un rand gol: S/21% cu furnizor RO, O/0% fara; incarcarea unui XML nu adauga rand gol | empty: primele 4 teste |
+| 79 | Rand complet gol ignorat la salvare (1 InvoiceLine, totaluri, toast, randul ramane in formular, indexare); linie partial completata se pastreaza; toate goale = BR-16-L; ANAF real ok cu rand gol la final | empty: ultimele 5 teste; anaf-real: factura noua cu rand gol |
 
 ## Verificare vizuala (visual/visual.spec.ts)
 
@@ -120,6 +124,6 @@ sidebar multi-fisier; print standard; print compact; mobil 390x844 (formular gol
 
 ## Neacoperit
 
-- Butoanele ANAF din aplicatie (Validare ANAF, Cauta CIF, PDF ANAF; cer receiver.php si cont) se simuleaza cu `page.route`; live cu `RUN_ANAF_LIVE=1`. Validarea XML la ANAF e reala (vezi randurile 72-75).
+- Butoanele ANAF din aplicatie (Validare ANAF, Cauta CIF, PDF ANAF; cer receiver.php si cont) se simuleaza cu `page.route`; live cu `RUN_ANAF_LIVE=1`. Validarea XML la ANAF e reala (vezi randurile 72-76).
 - Dialogul nativ de tiparire al browserului (`window.print` e inlocuit; se verifica doar sablonul si datele).
 - Continutul vizual al PDF-ului generat (se verifica doar tipul/dimensiunea fisierului).

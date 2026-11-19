@@ -1,4 +1,4 @@
-import { InvoiceFormatter } from './formatter.js?v=0.9-beta-22';
+import { InvoiceFormatter } from './formatter.js?v=0.9-beta-23';
 
 export class InvoicePrintHandler {
     constructor() {

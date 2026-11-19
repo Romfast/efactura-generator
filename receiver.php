@@ -56,8 +56,9 @@ function validateXML($xmlContent) {
     }
 
     $namespaces = $xml->getNamespaces(true);
+    $rootNs = $xml->getName() === 'CreditNote' ? 'CreditNote-2' : 'Invoice-2';
     $required = [
-        'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
+        'urn:oasis:names:specification:ubl:schema:xsd:' . $rootNs,
         'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2',
         'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2'
     ];
@@ -146,6 +147,11 @@ if (!in_array($action, ['validate', 'pdf', 'cif'])) {
 
 // === 5. ANAF proxy handlers =================================================
 
+/** Standardul ANAF după rădăcina XML: FCN pentru CreditNote, altfel FACT1. */
+function anafStandard($xmlContent) {
+    return preg_match('/<(?:\w+:)?CreditNote[\s>]/', substr($xmlContent, 0, 2000)) ? 'FCN' : 'FACT1';
+}
+
 /**
  * Proxy validare ANAF eFactura.
  * Necesită: "anaf_token": "Bearer XXX" în config.json
@@ -161,7 +167,7 @@ function handleAnafValidate() {
         $headers[] = "Authorization: Bearer $token";
     }
 
-    $result = curlPost('https://api.anaf.ro/prod/FCTEL/rest/validare/FACT1', $xmlContent, $headers);
+    $result = curlPost('https://api.anaf.ro/prod/FCTEL/rest/validare/' . anafStandard($xmlContent), $xmlContent, $headers);
 
     header('Content-Type: application/json');
     if ($result['error']) {
@@ -199,9 +205,9 @@ function handleAnafPdf() {
     $headers = ['Content-Type: text/plain; charset=utf-8'];
     if ($token) {
         $headers[] = "Authorization: Bearer $token";
-        $url = 'https://api.anaf.ro/prod/FCTEL/rest/transformare/FACT1';
+        $url = 'https://api.anaf.ro/prod/FCTEL/rest/transformare/' . anafStandard($xmlContent);
     } else {
-        $url = 'https://webservicesp.anaf.ro/prod/FCTEL/rest/transformare/FACT1';
+        $url = 'https://webservicesp.anaf.ro/prod/FCTEL/rest/transformare/' . anafStandard($xmlContent);
     }
 
     $result = curlPost($url, $xmlContent, $headers);

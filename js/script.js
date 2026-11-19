@@ -1,15 +1,15 @@
-import { InvoiceFormatter } from './formatter.js?v=0.9-beta-22';
+import { InvoiceFormatter } from './formatter.js?v=0.9-beta-23';
 import {
     Big, parseStrict, parseStrictOr, formatRaw, format2,
     setRaw, getRaw, markDirty, lineTotal as numericLineTotal, wireDatasetRaw, withinTolerance
-} from './numeric.js?v=0.9-beta-22';
-import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js?v=0.9-beta-22';
+} from './numeric.js?v=0.9-beta-23';
+import { getJSON, setJSON, cacheGet, cacheSet } from './storage.js?v=0.9-beta-23';
 import JSZip from './vendor/jszip.mjs';
-import { validateCIF } from './validation/cif.js?v=0.9-beta-22';
-import { validateIBAN } from './validation/iban.js?v=0.9-beta-22';
-import { runBRRules } from './validation/br-ro.js?v=0.9-beta-22';
-import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js?v=0.9-beta-22';
-import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-22';
+import { validateCIF } from './validation/cif.js?v=0.9-beta-23';
+import { validateIBAN } from './validation/iban.js?v=0.9-beta-23';
+import { runBRRules } from './validation/br-ro.js?v=0.9-beta-23';
+import { probeReceiver, anafValidate, anafCifLookup, anafPdf } from './anaf.js?v=0.9-beta-23';
+import { catalogAdd, catalogSearch, catalogDelete } from './catalog.js?v=0.9-beta-23';
 
 // Constants
 const XML_NAMESPACES = {
@@ -276,6 +276,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (error) {
             console.error('Eroare la încărcarea XML:', error);
         }
+    }
+
+    if (!document.querySelector('.line-item')) {
+        addLineItem();
+        document.getElementById('br-panel')?.classList.add('br-panel--hidden'); // panoul apare doar după prima editare
     }
 
     // Pre-populare număr factură din secvență dacă câmpul e gol
@@ -767,12 +772,13 @@ function setupDragAndDrop() {
 function parseXML(xmlContent) {
     try {
         const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
+        let xmlDoc = parser.parseFromString(xmlContent, "text/xml");
         
         const parserError = xmlDoc.querySelector('parsererror');
         if (parserError) {
             throw new Error('Eroare la parsarea XML: ' + parserError.textContent);
         }
+        if (xmlDoc.documentElement.localName === 'CreditNote') xmlDoc = creditNoteToInvoiceDoc(xmlDoc);
 
         // Extrage și adaugă codurile de scutire din TaxTotal
         const taxSubtotals = xmlDoc.querySelectorAll('cac\\:TaxSubtotal, TaxSubtotal');
@@ -2612,6 +2618,31 @@ function addLineItem() {
     refreshTotals();
 }
 
+// Rând complet gol: fără denumire și cu preț 0/gol (cantitatea implicită nu contează).
+function isEmptyLineItem(item) {
+    const idx = item.dataset.index;
+    const name = (item.querySelector(`[name="description${idx}"]`)?.value || '').trim();
+    const price = item.querySelector(`[name="price${idx}"]`);
+    return !name && (!price || getRaw(price).eq(0));
+}
+
+// Rulează fn fără rândurile complet goale (scoase temporar din formular, apoi puse la loc).
+function withoutEmptyLines(fn, notify = false) {
+    const empties = Array.from(document.querySelectorAll('.line-item')).filter(isEmptyLineItem);
+    if (!empties.length) return fn();
+    const marks = empties.map(el => { const m = document.createComment(''); el.replaceWith(m); return [m, el]; });
+    renumberLineItems();
+    refreshTotals();
+    if (notify) showToast('Rândul gol a fost ignorat la salvare', 'warning');
+    try {
+        return fn();
+    } finally {
+        marks.forEach(([m, el]) => m.replaceWith(el));
+        renumberLineItems();
+        refreshTotals();
+    }
+}
+
 function removeLineItem(index) {
     const lineItem = document.querySelector(`.line-item[data-index="${index}"]`);
     if (lineItem) {
@@ -2682,10 +2713,9 @@ function handleStorno() {
         billingRefDateInput.value = currentIssueDate;
     }
 
-    // PR-TIPURI (A4): la storno setăm cbc:InvoiceTypeCode = 381 (Notă de
-    // credit). User poate suprascrie din dropdown dacă vrea alt cod.
+    // Storno = factură 380 cu cantități negative; 381 doar la alegerea manuală a tipului.
     const typeSelect = document.querySelector('[name="invoiceTypeCode"]');
-    if (typeSelect) typeSelect.value = '381';
+    if (typeSelect) typeSelect.value = '380';
 
     // PR-A11: folosim getRaw/setRaw/markDirty în loc de parseFloat
     // pentru a păstra dataset.raw consistent cu input.value după negare.
@@ -3280,6 +3310,10 @@ function createEmptyInvoice() {
 }
 
 function saveXML() {
+    withoutEmptyLines(saveXMLCore, true);
+}
+
+function saveXMLCore() {
     if (!validateForm()) return;
 
     // PR-A11: math validation pre-save. Ruleaza validateMath și dacă footer
@@ -4008,9 +4042,74 @@ function formatXML(xmlString) {
     return formatted.substring(1, formatted.length - 3);
 }
 
+const CREDIT_NOTE_NS = "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2";
+
+// 381 se scrie ca <CreditNote> (ANAF FCN); documentul intern ramane <Invoice>.
+function renameXMLElement(el, localName) {
+    const n = el.ownerDocument.createElementNS(el.namespaceURI, (el.prefix ? el.prefix + ':' : '') + localName);
+    Array.from(el.attributes).forEach(a => n.setAttribute(a.name, a.value));
+    while (el.firstChild) n.appendChild(el.firstChild);
+    el.replaceWith(n);
+    return n;
+}
+
+function changeRootElement(doc, ns, name) {
+    const root = doc.documentElement;
+    const nr = doc.createElementNS(ns, name);
+    Array.from(root.attributes).forEach(a => {
+        if (a.name !== 'xmlns' && a.localName !== 'schemaLocation') nr.setAttributeNS(a.namespaceURI, a.name, a.value);
+    });
+    while (root.firstChild) nr.appendChild(root.firstChild);
+    doc.replaceChild(nr, root);
+}
+
+function renameAllXML(doc, from, to) {
+    doc.querySelectorAll(`cac\\:${from}, cbc\\:${from}, ${from}`).forEach(el => renameXMLElement(el, to));
+}
+
+function toCreditNoteDoc(xmlDoc) {
+    const doc = xmlDoc.cloneNode(true);
+    changeRootElement(doc, CREDIT_NOTE_NS, 'CreditNote');
+    const due = doc.querySelector('cbc\\:DueDate, DueDate');
+    if (due) {
+        // CreditNote nu are DueDate la radacina: scadenta merge in PaymentMeans (daca nu exista, nu se scrie)
+        const code = doc.querySelector('cac\\:PaymentMeans > cbc\\:PaymentMeansCode, PaymentMeans > PaymentMeansCode');
+        if (code && due.textContent) code.after(createXMLElement(doc, XML_NAMESPACES.cbc, 'cbc:PaymentDueDate', due.textContent));
+        due.remove();
+    }
+    const typeEl = renameXMLElement(doc.querySelector('cbc\\:InvoiceTypeCode, InvoiceTypeCode'), 'CreditNoteTypeCode');
+    const taxPoint = doc.querySelector('cbc\\:TaxPointDate, TaxPointDate');
+    if (taxPoint) typeEl.before(taxPoint);
+    renameAllXML(doc, 'InvoiceLine', 'CreditNoteLine');
+    renameAllXML(doc, 'InvoicedQuantity', 'CreditedQuantity');
+    return doc;
+}
+
+function creditNoteToInvoiceDoc(doc) {
+    changeRootElement(doc, XML_NAMESPACES.ubl, 'Invoice');
+    const typeEl = renameXMLElement(doc.querySelector('cbc\\:CreditNoteTypeCode, CreditNoteTypeCode'), 'InvoiceTypeCode');
+    const pdd = doc.querySelector('cbc\\:PaymentDueDate, PaymentDueDate');
+    if (pdd) {
+        typeEl.before(createXMLElement(doc, XML_NAMESPACES.cbc, 'cbc:DueDate', pdd.textContent));
+        pdd.remove();
+    }
+    const taxPoint = doc.querySelector('cbc\\:TaxPointDate, TaxPointDate');
+    const cur = doc.querySelector('cbc\\:DocumentCurrencyCode, DocumentCurrencyCode');
+    if (taxPoint && cur) cur.before(taxPoint);
+    renameAllXML(doc, 'CreditNoteLine', 'InvoiceLine');
+    renameAllXML(doc, 'CreditedQuantity', 'InvoicedQuantity');
+    return doc;
+}
+
+function finalXMLDoc(xmlDoc) {
+    const typeEl = xmlDoc.querySelector('cbc\\:InvoiceTypeCode, InvoiceTypeCode');
+    return typeEl && typeEl.textContent === '381' ? toCreditNoteDoc(xmlDoc) : xmlDoc;
+}
+
+
 function downloadXML(xmlDoc) {
     const serializer = new XMLSerializer();
-    let xmlString = serializer.serializeToString(xmlDoc);
+    let xmlString = serializer.serializeToString(finalXMLDoc(xmlDoc));
     
     if (!xmlString.startsWith('<?xml')) {
         xmlString = '<?xml version="1.0" encoding="UTF-8"?>\n' + xmlString;
@@ -4425,7 +4524,7 @@ window.showToast = showToast;
  * Citește valorile afișate (sau dataset.raw pentru numerice).
  */
 function collectInvoiceDataForBR() {
-    const lineItemEls = Array.from(document.querySelectorAll('.line-item'));
+    const lineItemEls = Array.from(document.querySelectorAll('.line-item')).filter(el => !isEmptyLineItem(el));
 
     const lineItems = lineItemEls.map(el => {
         const idx = el.dataset.index;
@@ -4638,6 +4737,10 @@ function _escapeHtml(str) {
  * @returns {string|null} XML string sau null dacă nu există factură.
  */
 function _currentXMLString() {
+    return withoutEmptyLines(_currentXMLStringCore);
+}
+
+function _currentXMLStringCore() {
     if (!currentInvoice) return null;
     const xmlDoc = currentInvoice;
 
@@ -4658,7 +4761,7 @@ function _currentXMLString() {
     updateLineItems(xmlDoc);
 
     const serializer = new XMLSerializer();
-    let xmlString = serializer.serializeToString(xmlDoc);
+    let xmlString = serializer.serializeToString(finalXMLDoc(xmlDoc));
     if (!xmlString.startsWith('<?xml')) {
         xmlString = '<?xml version="1.0" encoding="UTF-8"?>\n' + xmlString;
     }
@@ -4879,7 +4982,7 @@ window.downloadPDF = async function() {
         const html2pdf = await getHtml2pdf();
 
         // Pasul 2: colectează datele facturii
-        const invoiceData = printHandler.collectInvoiceData();
+        const invoiceData = withoutEmptyLines(() => printHandler.collectInvoiceData());
         const invoiceNumber = invoiceData.invoiceNumber || 'factura';
 
         // Pasul 3: randează HTML-ul facturii într-un container detașat (off-screen)
@@ -5184,6 +5287,7 @@ window.generateNewInvoice = function() {
         });
     }
 
+    addLineItem();
     window.closeNewInvoiceModal();
     _updateBRPanel();
     showToast(`Factură nouă creată: ${invoiceNumber}`, 'success', 'Contorul a fost incrementat automat.');
@@ -5458,7 +5562,7 @@ if (typeof module !== 'undefined' && module.exports) {
     };
 }                
 
-import { InvoicePrintHandler } from './print.js?v=0.9-beta-22';
+import { InvoicePrintHandler } from './print.js?v=0.9-beta-23';
 
 // Create print handler instance
 const printHandler = new InvoicePrintHandler();

@@ -17,7 +17,7 @@ test.describe('nota de credit 381 si stornare', () => {
     await openWithFixture(page, 'nota-credit-381.xml');
     const { xml, alerts } = await saveXml(page);
     expect(alerts).toEqual([]);
-    expect(await xmlTexts(page, xml, 'Invoice > InvoiceTypeCode')).toEqual(['381']);
+    expect(await xmlTexts(page, xml, 'CreditNote > CreditNoteTypeCode')).toEqual(['381']);
     expect(await xmlTexts(page, xml, 'BillingReference > InvoiceDocumentReference > ID')).toEqual(['TST 0001']);
     expect(await xmlTexts(page, xml, 'BillingReference > InvoiceDocumentReference > IssueDate')).toEqual(['2026-03-10']);
   });
@@ -31,10 +31,10 @@ test.describe('nota de credit 381 si stornare', () => {
     }
   });
 
-  test('stornare: tip 381, referinta completata, cantitati si totaluri negative', async ({ page }) => {
+  test('stornare: tip 380, referinta completata, cantitati si totaluri negative', async ({ page }) => {
     await openWithFixture(page);
     await page.getByRole('button', { name: 'Stornează' }).click();
-    expect(await getField(page, 'invoiceTypeCode')).toBe('381');
+    expect(await getField(page, 'invoiceTypeCode')).toBe('380');
     expect(await getField(page, 'billingRefId')).toBe('TST 0001');
     expect(await getField(page, 'billingRefDate')).toBe('10.03.2026');
     expect(parseFloat(await getField(page, 'quantity0'))).toBe(-2);
@@ -47,12 +47,12 @@ test.describe('nota de credit 381 si stornare', () => {
     expect(t.total).toBeCloseTo(-297.5, 2);
   });
 
-  test('stornare + salvare: XML cu 381, cantitati negative, BillingReference si total negativ', async ({ page }) => {
+  test('stornare + salvare: XML 380 (Invoice), cantitati negative, BillingReference si total negativ', async ({ page }) => {
     await openWithFixture(page);
     await page.getByRole('button', { name: 'Stornează' }).click();
     const { xml, alerts } = await saveXml(page);
     expect(alerts).toEqual([]);
-    expect(await xmlTexts(page, xml, 'Invoice > InvoiceTypeCode')).toEqual(['381']);
+    expect(await xmlTexts(page, xml, 'Invoice > InvoiceTypeCode')).toEqual(['380']);
     expect(await xmlTexts(page, xml, 'BillingReference > InvoiceDocumentReference > ID')).toEqual(['TST 0001']);
     const qty = (await xmlTexts(page, xml, 'InvoiceLine > InvoicedQuantity')).map(parseFloat);
     expect(qty).toEqual([-2, -1]);

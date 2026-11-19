@@ -16,7 +16,7 @@
  *   cpvCode:     string — cod CPV (opțional, indexed)
  */
 
-import { openCatalog } from './storage.js?v=0.9-beta-22';
+import { openCatalog } from './storage.js?v=0.9-beta-23';
 
 /**
  * Adaugă sau actualizează un produs în catalog.

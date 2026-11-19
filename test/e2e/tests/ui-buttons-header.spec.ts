@@ -34,14 +34,14 @@ test.describe('antet: incarcare fisiere', () => {
     await expect(page.locator('#xml-sidebar')).toHaveCount(0);
   });
 
-  test('ZIP fara XML: alerta "nu contine niciun fisier .xml", formularul ramane gol', async ({ page }) => {
+  test('ZIP fara XML: alerta "nu contine niciun fisier .xml", formularul ramane cu randul gol implicit', async ({ page }) => {
     await openApp(page);
     const dialogs = collectDialogs(page);
     const buffer = await makeZip({ 'readme.txt': 'nimic de incarcat' });
     await page.locator('#fileInput').setInputFiles({ name: 'gol.zip', mimeType: 'application/zip', buffer });
     await expect.poll(() => dialogs.length).toBeGreaterThan(0);
     expect(dialogs[0]).toContain('nu conține niciun fișier .xml');
-    await expect(page.locator('#lineItems .line-item')).toHaveCount(0);
+    await expect(page.locator('#lineItems .line-item')).toHaveCount(1);
   });
 
   test('drag-and-drop: dragenter pune marcajul, drop incarca XML-ul', async ({ page }) => {
@@ -74,12 +74,12 @@ test.describe('antet: incarcare fisiere', () => {
     await expect(page.locator('#xml-sidebar .xml-sidebar-item')).toHaveCount(2);
   });
 
-  test('fisier care nu e XML valid: alerta de eroare, fara linii', async ({ page }) => {
+  test('fisier care nu e XML valid: alerta de eroare, ramane doar randul gol', async ({ page }) => {
     await openApp(page);
     const dialogs = collectDialogs(page);
     await page.locator('#fileInput').setInputFiles({ name: 'rau.xml', mimeType: 'text/xml', buffer: Buffer.from('<Invoice><nu-e-inchis>') });
     await expect.poll(() => dialogs.length).toBeGreaterThan(0);
-    await expect(page.locator('#lineItems .line-item')).toHaveCount(0);
+    await expect(page.locator('#lineItems .line-item')).toHaveCount(1);
   });
 });
 
@@ -119,14 +119,14 @@ test.describe('antet: salvare, storno, factura noua (butoane)', () => {
     expect((await dl).suggestedFilename()).toMatch(/\.xml$/);
   });
 
-  test('buton "Stornează" pe factura completata: tip 381, referinta, cantitate si total negative in XML', async ({ page }) => {
+  test('buton "Stornează" pe factura completata: tip 380, referinta, cantitate si total negative in XML', async ({ page }) => {
     await newInvoiceFilled(page);
     const nr = await getField(page, 'invoiceNumber');
     await page.getByRole('button', { name: 'Stornează' }).click();
-    expect(await getField(page, 'invoiceTypeCode')).toBe('381');
+    expect(await getField(page, 'invoiceTypeCode')).toBe('380');
     expect(await getField(page, 'billingRefId')).toBe(nr);
     const xml = await savedXml(page);
-    expect(await xmlTexts(page, xml, 'InvoiceTypeCode')).toEqual(['381']);
+    expect(await xmlTexts(page, xml, 'Invoice > InvoiceTypeCode')).toEqual(['380']);
     expect(await xmlTexts(page, xml, 'InvoiceLine > InvoicedQuantity')).toEqual(['-2.000']);
     expect(await xmlTexts(page, xml, 'LegalMonetaryTotal > PayableAmount')).toEqual(['-242.00']);
   });

@@ -77,5 +77,5 @@ livrare) trebuie sa dea `nok` cu `BR-IC-11`, ca dovada ca apelul ajunge la ANAF.
 - Necesita internet si ANAF disponibil. Cererile sunt seriale, cu pauza de 300 ms; la eroare de retea / 5xx se reincearca de
   3 ori, apoi testul esueaza cu mesajul `ANAF indisponibil: ...` (nu se sare peste: fara validare reala nu se publica).
 - Notele de credit 381 se valideaza la `.../validare/FCN` cu radacina `CreditNote`; `FACT1` accepta doar radacina `Invoice`.
-  Aplicatia scrie 381 cu radacina `Invoice` -> respins (BR-CL-01, BR-RO-020): test `test.fail` marcat `BUG:`.
+  Aplicatia scrie 381 (ales manual) ca `CreditNote` (FCN); stornarea produce 380 `Invoice` (FACT1); restul tipurilor raman `Invoice` (FACT1); standardul se alege dupa radacina.
 - ANAF-ul din `page.route` (`mockReceiver`) ramane doar pentru butoanele din aplicatie (Validare ANAF, Cauta CIF, PDF ANAF).

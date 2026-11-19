@@ -16,14 +16,15 @@ test.setTimeout(180_000);
 
 const ANAF_URL = 'https://webservicesp.anaf.ro/prod/FCTEL/rest/validare/';
 const CALL_TIMEOUT = 30_000;
-// BUG: aplicatia scrie 381 cu radacina <Invoice>; ANAF FACT1 respinge (BR-CL-01 + BR-RO-020), nota de credit cere radacina <CreditNote> (FCN).
-const BUG_381 = 'BUG: 381 cu radacina Invoice respins de ANAF FACT1 (BR-CL-01, BR-RO-020); ANAF cere CreditNote + FCN';
 const sleep =(ms: number) => new Promise(r => setTimeout(r, ms));
 
 interface AnafResult { stare: string; errors: { cod: string; text: string; raw: string }[]; body: string; }
 
+/** Standardul ANAF dupa radacina XML: CreditNote -> FCN, altfel FACT1. */
+const anafService = (xml: string) => /<(?:\w+:)?CreditNote[\s>]/.test(xml.slice(0, 2000)) ? 'FCN' : 'FACT1';
+
 /** Trimite XML-ul la ANAF; reincearca la eroare de retea / 5xx (max 3 incercari), apoi esueaza cu "ANAF indisponibil:". */
-async function anafValidate(request: APIRequestContext, xml: string, service = 'FACT1'): Promise<AnafResult> {
+async function anafValidate(request: APIRequestContext, xml: string, service = anafService(xml)): Promise<AnafResult> {
   await sleep(300);
   let last = '';
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -146,26 +147,17 @@ test.describe('validare XML la ANAF real (FACT1)', () => {
   });
 
   test('nota de credit 381 (fixture)', async ({ page, request }) => {
-    test.fail(true, BUG_381);
     await openWithFixture(page, 'nota-credit-381.xml');
     await expectAnafOk(request, await saveClean(page), 'nota-credit-381');
   });
 
-  test('stornare printr-un buton Stornează (381 cu cantitati negative)', async ({ page, request }) => {
-    test.fail(true, BUG_381);
+  test('stornare printr-un buton Stornează (380 cu cantitati negative + BillingReference)', async ({ page, request }) => {
     await openWithFixture(page, 'factura-baza.xml');
     await page.getByRole('button', { name: 'Stornează' }).click();
-    await expectAnafOk(request, await saveClean(page), 'stornare factura-baza');
-  });
-
-  test('381 din aplicatie, cu radacina convertita in CreditNote, trece la ANAF FCN', async ({ page, request }) => {
-    await openWithFixture(page, 'nota-credit-381.xml');
-    const xml = (await saveClean(page))
-      .replace(/<Invoice\b/, '<CreditNote').replace('xsd:Invoice-2', 'xsd:CreditNote-2').replace('</Invoice>', '</CreditNote>')
-      .replace(/\s*<cbc:DueDate>[^<]*<\/cbc:DueDate>/, '').replace(/InvoiceTypeCode/g, 'CreditNoteTypeCode')
-      .replace(/InvoiceLine>/g, 'CreditNoteLine>').replace(/InvoicedQuantity/g, 'CreditedQuantity');
-    const r = await anafValidate(request, xml, 'FCN');
-    expect(r.stare, `ANAF FCN:\n${fmt(r)}`).toBe('ok');
+    const xml = await saveClean(page);
+    expect(xml).toMatch(/<Invoice\b[\s\S]*<cbc:InvoiceTypeCode>380</);
+    expect(xml).toContain('<cac:BillingReference>');
+    await expectAnafOk(request, xml, 'stornare factura-baza');
   });
 
   test('reducere + taxa la nivel de document si discount pe linie', async ({ page, request }) => {
@@ -208,6 +200,14 @@ test.describe('validare XML la ANAF real (FACT1)', () => {
     await expectAnafOk(request, await saveClean(page), 'factura noua');
   });
 
+  test('factura noua cu rand gol necompletat la final', async ({ page, request }) => {
+    await newInvoiceFilled(page);
+    await addLine(page);
+    const xml = await saveClean(page);
+    expect(xml.match(/<cac:InvoiceLine>/g)).toHaveLength(1);
+    await expectAnafOk(request, xml, 'factura noua cu rand gol');
+  });
+
   test('factura noua cu mai multe linii si cote diferite', async ({ page, request }) => {
     await newInvoiceFilled(page);
     await addLine(page, { description: 'Produs cota redusa', quantity: '3', price: '10', vatRate: '11' });
@@ -242,7 +242,6 @@ test.describe('round-trip fixture -> aplicatie -> ANAF real', () => {
   for (const rel of allXml) {
     if (NEINCARCABILE.has(rel)) continue;
     test(`round-trip ${rel}`, async ({ page, request }) => {
-      if (rel === 'test/e2e/fixtures/nota-credit-381.xml') test.fail(true, BUG_381);
       await openApp(page);
       await loadXmlFile(page, path.join(repoRoot, rel));
       const xml = await saveClean(page);

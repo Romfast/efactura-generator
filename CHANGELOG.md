@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9-beta-23 - 19.11.2026
+
+### Bugfixes
+- Fixed: nota de credit (tip 381 ales manual) se salvează acum ca document CreditNote și este acceptată de ANAF (înainte era respinsă: BR-CL-01, BR-RO-020). Un XML CreditNote se încarcă și se salvează fără pierderi; scadența, dacă există, se scrie în plata (PaymentMeans). Validarea ANAF din aplicație alege automat standardul potrivit.
+
+### Modifications
+- „Stornează” produce acum o factură normală de tip 380 (document Invoice) cu cantități negative și prețuri pozitive, păstrând referința la factura stornată (număr și dată). Tipul 381 rămâne disponibil doar dacă îl alegeți manual.
+- Factura nouă (și aplicația la pornire, fără factură încărcată) începe cu un rând de articol gol, gata de completat (21% / S la furnizor cu RO, altfel Neplătitor TVA / 0%). Încărcarea unui XML înlocuiește rândurile ca până acum.
+- Un rând complet gol (fără denumire și cu preț 0) este ignorat la salvare, la validarea ANAF și la PDF: nu intră în XML, în totaluri sau în verificări; rămâne în formular și apare un mesaj. Dacă toate rândurile sunt goale, apare eroarea BR-16-L (cel puțin o linie). Panoul de verificări nu mai ține cont de rândul gol.
+
 ## 0.9-beta-22 - 19.11.2026
 
 ### New Features

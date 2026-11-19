@@ -16,6 +16,8 @@ test('storno flips quantities and totals', async ({ page }, testInfo) => {
   // Click Stornează
   await page.getByText('Stornează', { exact: false }).click();
 
+  expect(await page.locator('[name="invoiceTypeCode"]').inputValue()).toBe('380');
+
   // Assert quantities are negative
   const qtyInputs = page.locator('input[name^="quantity"]');
   const count = await qtyInputs.count();
